@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.EbookMapper">
+    <select id="getDetailEbook" resultType="com.naskah.demo.model.pojo.EbookPojo">
+        SELECT id, title, author, year, epub
+        FROM ebooks
+        WHERE id = #{id}
+    </select>
+
+    <select id="getListEbook" resultType="com.naskah.demo.model.pojo.EbookPojo">
+        SELECT id, title, author, year, epub
+        FROM ebooks
+        <if test="sortField != null and sortOrder != null">
+            ORDER BY ${sortField} ${sortOrder}
+        </if>
+        <if test="offset >= 0">
+            OFFSET #{offset}
+        </if>
+        <if test="limit >= 0">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+</mapper>
