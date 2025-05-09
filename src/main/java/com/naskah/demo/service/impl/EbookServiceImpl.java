@@ -1,6 +1,6 @@
 package com.naskah.demo.service.impl;
 
-import com.naskah.demo.exception.NotFoundException;
+import com.naskah.demo.exception.custom.NotFoundException;
 import com.naskah.demo.mapper.EbookMapper;
 import com.naskah.demo.model.pojo.EbookPojo;
 import com.naskah.demo.model.response.*;
