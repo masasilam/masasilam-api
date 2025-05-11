@@ -22,9 +22,7 @@
 		<mybatis.version>3.0.4</mybatis.version>
 	</properties>
 	<dependencies>
-		<dependency>omcat-shutdown] o.s.b.w.e.t.GracefulShutdown             : Graceful shutdown complete
-
-Process finished with exit code 130 (interrupted by signal 2:SIGINT)
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
 			<exclusions>
