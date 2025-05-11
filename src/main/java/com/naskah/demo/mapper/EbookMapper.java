@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Mapper
-@Repository
 public interface EbookMapper {
     List<EbookPojo> getListEbook(@Param("offset") int offset, @Param("limit") int limit,
                                  @Param("sortField") String sortField, @Param("sortOrder") String sortOrder);

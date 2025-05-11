@@ -5,24 +5,26 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.18</version>
+		<version>3.4.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.guidelines</groupId>
+	<groupId>com.naskah</groupId>
 	<artifactId>demo</artifactId>
 	<version>1.0.0</version>
 	<packaging>war</packaging>
 	<name>demo</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
-		<java.version>8</java.version>
+		<java.version>24.0.1</java.version>
 		<springdoc.version>1.8.0</springdoc.version>
 		<json-simple.version>1.1.1</json-simple.version>
-		<commons-lang3.version>3.8.1</commons-lang3.version>
-		<mybatis.version>2.2.2</mybatis.version>
+		<commons-lang3.version>3.17.0</commons-lang3.version>
+		<mybatis.version>3.0.4</mybatis.version>
 	</properties>
 	<dependencies>
-		<dependency>
+		<dependency>omcat-shutdown] o.s.b.w.e.t.GracefulShutdown             : Graceful shutdown complete
+
+Process finished with exit code 130 (interrupted by signal 2:SIGINT)
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
 			<exclusions>

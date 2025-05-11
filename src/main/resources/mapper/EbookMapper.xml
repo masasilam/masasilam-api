@@ -2,13 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.naskah.demo.mapper.EbookMapper">
     <select id="getDetailEbook" resultType="com.naskah.demo.model.pojo.EbookPojo">
-        SELECT id, title, author, year, epub
+        SELECT id, title, author, year, file_path
         FROM ebooks
         WHERE id = #{id}
     </select>
 
     <select id="getListEbook" resultType="com.naskah.demo.model.pojo.EbookPojo">
-        SELECT id, title, author, year, epub
+        SELECT id, title, author, year, file_path
         FROM ebooks
         <if test="sortField != null and sortOrder != null">
             ORDER BY ${sortField} ${sortOrder}

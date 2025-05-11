@@ -12,4 +12,5 @@ public class DataResponse<T> {
     String detail ;
     int code ;
     T data;
+
 }
