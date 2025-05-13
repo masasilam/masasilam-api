@@ -1,6 +1,5 @@
 package com.naskah.demo.model.pojo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,7 +20,6 @@ public class EbookPojo {
     private String author;
     @NotNull(message = "Tahun tidak boleh kosong.")
     private int year;
-    @NotBlank(message = "File path tidak boleh kosong.")
     private String filePath;
 }
 

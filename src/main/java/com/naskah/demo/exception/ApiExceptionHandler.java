@@ -1,5 +1,6 @@
 package com.naskah.demo.exception;
 
+import com.naskah.demo.exception.custom.AlreadyExistsException;
 import com.naskah.demo.exception.custom.NotFoundException;
 import com.naskah.demo.model.response.DefaultResponse;
 import com.naskah.demo.model.response.ResponseMessage;
@@ -20,5 +21,10 @@ public class ApiExceptionHandler {
         return new ResponseEntity<>(response, new HttpHeaders(), status);
     }
 
-
+    @ExceptionHandler(value = AlreadyExistsException.class)
+    public ResponseEntity<DefaultResponse> handleAlreadyExistsException(AlreadyExistsException e) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        DefaultResponse response = new DefaultResponse(SUCCESS, ResponseMessage.DATA_ALREADY_EXISTS,  status.value());
+        return new ResponseEntity<>(response, new HttpHeaders(), status);
+    }
 }
