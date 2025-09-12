@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ProjectMapper">
+
+    <resultMap id="ProjectResponseMap" type="com.naskah.demo.model.dto.response.ProjectResponse">
+        <!-- Basic info -->
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="author" column="author"/>
+        <result property="originalSource" column="original_source"/>
+
+        <!-- Project metadata - Let MyBatis auto-map enums -->
+        <result property="difficulty" column="difficulty"/>
+        <result property="status" column="status"/>
+        <result property="priority" column="priority"/>
+        <result property="originalLanguage" column="original_language" jdbcType="VARCHAR"/>
+        <result property="genre" column="genre"/>
+        <result property="originalPublicationYear" column="original_publication_year"/>
+        <result property="isPublicDomain" column="is_public_domain"/>
+
+        <!-- Progress tracking -->
+        <result property="totalPages" column="total_pages"/>
+        <result property="pagesCompleted" column="pages_completed"/>
+        <result property="overallProgress" column="overall_progress"/>
+
+        <!-- Timeline -->
+        <result property="startDate" column="start_date"/>
+        <result property="expectedCompletionDate" column="expected_completion_date"/>
+        <result property="actualCompletionDate" column="actual_completion_date"/>
+
+        <!-- Media & URLs -->
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="bookSlug" column="book_slug"/>
+
+        <!-- Community metrics -->
+        <result property="contributorCount" column="contributor_count"/>
+        <result property="commentCount" column="comment_count"/>
+
+        <!-- Quality metrics -->
+        <result property="qualityScore" column="quality_score"/>
+
+        <!-- Audit info -->
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="getProjectListWithFilters" resultMap="ProjectResponseMap">
+        SELECT
+        p.*,
+        (SELECT COUNT(DISTINCT pr.user_id)
+        FROM project_roles pr
+        WHERE pr.project_id = p.id) AS contributor_count,
+        (SELECT COUNT(*)
+        FROM project_comments pc
+        WHERE pc.project_id = p.id) AS comment_count,
+        (SELECT COUNT(*)
+        FROM project_pages pp
+        WHERE pp.project_id = p.id) AS total_pages,
+        (SELECT COUNT(*)
+        FROM project_pages pp
+        WHERE pp.project_id = p.id AND p.status = 'COMPLETED') AS pages_completed,
+        COALESCE(p.quality_score, 0) AS quality_score
+        FROM
+        projects p
+        <where>
+            <if test="status != null and status != ''">
+                AND p.status = #{status}
+            </if>
+            <if test="difficulty != null and difficulty != ''">
+                AND p.difficulty = #{difficulty}
+            </if>
+            <if test="title != null and title != ''">
+                AND LOWER(p.title) LIKE LOWER(CONCAT('%', #{title}, '%'))
+            </if>
+            <if test="genre != null and genre != ''">
+                AND p.genre = #{genre}
+            </if>
+        </where>
+        ORDER BY ${sortColumn} ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Fixed insert with proper PostgreSQL enum casting -->
+    <insert id="insertProject" parameterType="com.naskah.demo.model.entity.Project" useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO projects (
+        title, description, author, original_source, difficulty, status, priority,
+        original_language, original_title, is_public_domain, copyright_status,
+        estimated_pages, estimated_word_count, created_by, created_at, updated_at,
+        total_pages, transcription_completed_pages, translation_completed_pages,
+        editing_completed_pages, illustration_completed_pages, formatted_pages,
+        pages_completed, overall_progress, issues_reported, issues_resolved, is_published
+        ) VALUES (
+        #{title}, #{description}, #{author}, #{originalSource},
+        CAST(#{difficulty} AS difficulty_level),
+        CAST(#{status} AS project_status),
+        CAST(#{priority} AS project_priority),
+        #{originalLanguage}, #{originalTitle}, #{isPublicDomain}, #{copyrightStatus},
+        #{estimatedPages}, #{estimatedWordCount}, #{createdBy}, #{createdAt}, #{updatedAt},
+        #{totalPages}, #{transcriptionCompletedPages}, #{translationCompletedPages},
+        #{editingCompletedPages}, #{illustrationCompletedPages}, #{formattedPages},
+        #{pagesCompleted}, #{overallProgress}, #{issuesReported}, #{issuesResolved}, #{isPublished}
+        )
+    </insert>
+
+    <!-- ADD THIS: Update Project method -->
+    <update id="updateProject" parameterType="com.naskah.demo.model.entity.Project">
+        UPDATE projects
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="author != null">author = #{author},</if>
+            <if test="originalSource != null">original_source = #{originalSource},</if>
+            <if test="difficulty != null">difficulty = CAST(#{difficulty} AS difficulty_level),</if>
+            <if test="status != null">status = CAST(#{status} AS project_status),</if>
+            <if test="priority != null">priority = CAST(#{priority} AS project_priority),</if>
+            <if test="originalLanguage != null">original_language = #{originalLanguage},</if>
+            <if test="originalTitle != null">original_title = #{originalTitle},</if>
+            <if test="isPublicDomain != null">is_public_domain = #{isPublicDomain},</if>
+            <if test="copyrightStatus != null">copyright_status = #{copyrightStatus},</if>
+            <if test="estimatedPages != null">estimated_pages = #{estimatedPages},</if>
+            <if test="estimatedWordCount != null">estimated_word_count = #{estimatedWordCount},</if>
+            <if test="totalPages != null">total_pages = #{totalPages},</if>
+            <if test="transcriptionCompletedPages != null">transcription_completed_pages =
+                #{transcriptionCompletedPages},
+            </if>
+            <if test="translationCompletedPages != null">translation_completed_pages = #{translationCompletedPages},
+            </if>
+            <if test="editingCompletedPages != null">editing_completed_pages = #{editingCompletedPages},</if>
+            <if test="illustrationCompletedPages != null">illustration_completed_pages =
+                #{illustrationCompletedPages},
+            </if>
+            <if test="formattedPages != null">formatted_pages = #{formattedPages},</if>
+            <if test="pagesCompleted != null">pages_completed = #{pagesCompleted},</if>
+            <if test="overallProgress != null">overall_progress = #{overallProgress},</if>
+            <if test="issuesReported != null">issues_reported = #{issuesReported},</if>
+            <if test="issuesResolved != null">issues_resolved = #{issuesResolved},</if>
+            <if test="isPublished != null">is_published = #{isPublished},</if>
+            <if test="startDate != null">start_date = #{startDate},</if>
+            <if test="expectedCompletionDate != null">expected_completion_date = #{expectedCompletionDate},</if>
+            <if test="actualCompletionDate != null">actual_completion_date = #{actualCompletionDate},</if>
+            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
+            <if test="bookSlug != null">book_slug = #{bookSlug},</if>
+            <if test="originalPublicationYear != null">original_publication_year = #{originalPublicationYear},</if>
+            <if test="qualityScore != null">quality_score = #{qualityScore},</if>
+            updated_at = #{updatedAt}
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="getProjectById" resultMap="ProjectResponseMap">
+        SELECT
+        p.*,
+        (SELECT COUNT(DISTINCT pr.user_id) FROM project_roles pr WHERE pr.project_id = p.id) AS contributor_count,
+        (SELECT COUNT(*) FROM project_comments pc WHERE pc.project_id = p.id) AS comment_count,
+        (SELECT COUNT(*) FROM project_pages pp WHERE pp.project_id = p.id) AS total_pages,
+        (SELECT COUNT(*) FROM project_pages pp WHERE pp.project_id = p.id AND p.status = 'COMPLETED') AS
+        pages_completed,
+        COALESCE(p.quality_score, 0) AS quality_score
+        FROM projects p
+        WHERE p.id = #{id}
+    </select>
+
+    <select id="getProjectBySlug" resultType="com.naskah.demo.model.entity.Project">
+        SELECT * FROM projects
+        WHERE slug = #{slug}
+    </select>
+
+    <!-- Get project entity -->
+    <select id="getProjectByIdEntity" resultType="com.naskah.demo.model.entity.Project">
+        SELECT * FROM projects WHERE id = #{projectId}
+    </select>
+
+    <!-- Update progress methods -->
+    <update id="updateTranslationCompletedPages">
+        UPDATE projects
+        SET translation_completed_pages = #{completedPages},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateEditingCompletedPages">
+        UPDATE projects
+        SET editing_completed_pages = #{completedPages},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateIllustrationCompletedPages">
+        UPDATE projects
+        SET illustration_completed_pages = #{completedPages},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateProofreadingCompletedPages">
+        UPDATE projects
+        SET proofreading_completed_pages = #{completedPages},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateTranscriptionCompletedPages">
+        UPDATE projects
+        SET transcription_completed_pages = #{completedPages},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateOverallProgress">
+        UPDATE projects
+        SET overall_progress = #{overallProgress},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <update id="updateProjectTimestamp">
+        UPDATE projects
+        SET updated_at = #{now}
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Update member count -->
+    <update id="updateMemberCount">
+        UPDATE projects
+        SET member_count = #{memberCount},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Increment view count -->
+    <update id="incrementViewCount">
+        UPDATE projects
+        SET view_count = COALESCE(view_count, 0) + 1
+        WHERE id = #{id}
+    </update>
+
+    <!-- Get projects by creator -->
+    <select id="getProjectsByCreator" resultMap="ProjectResponseMap">
+        SELECT
+        p.*,
+        (SELECT COUNT(DISTINCT pr.user_id) FROM project_roles pr WHERE pr.project_id = p.id) AS contributor_count,
+        (SELECT COUNT(*) FROM project_comments pc WHERE pc.project_id = p.id) AS comment_count,
+        (SELECT COUNT(*) FROM project_pages pp WHERE pp.project_id = p.id) AS total_pages,
+        (SELECT COUNT(*) FROM project_pages pp
+        WHERE pp.project_id = p.id
+        AND (pp.translation_status = 'COMPLETED'
+        OR pp.editing_status = 'COMPLETED'
+        OR pp.illustration_status = 'COMPLETED')) AS pages_completed,
+        COALESCE(p.quality_score, 0) AS quality_score
+        FROM projects p
+        WHERE p.created_by = #{userId}
+    </select>
+
+    <!-- Insert quality assessment -->
+    <insert id="insertQualityAssessment" parameterType="com.naskah.demo.model.entity.ProjectQualityAssessment"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_quality_assessments (
+        project_id, assessor_id, quality_score, content_accuracy, language_quality,
+        formatting_quality, overall_readability, recommendations, created_at
+        ) VALUES (
+        #{projectId}, #{assessorId}, #{qualityScore}, #{contentAccuracy}, #{languageQuality},
+        #{formattingQuality}, #{overallReadability}, #{recommendations}, #{createdAt}
+        )
+    </insert>
+
+    <!-- Update reaction count -->
+    <update id="updateReactionCount">
+        UPDATE projects
+        SET reaction_count = #{reactionCount},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Update comment count -->
+    <update id="updateCommentCount">
+        UPDATE projects
+        SET comment_count = #{commentCount},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Update follower count -->
+    <update id="updateFollowerCount">
+        UPDATE projects
+        SET follower_count = #{followerCount},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Get recent project activity -->
+    <select id="getRecentProjectActivity" resultType="com.naskah.demo.model.dto.response.ProjectActivityResponse">
+        SELECT
+        pa.id,
+        pa.activity_type,
+        pa.description,
+        pa.user_id,
+        u.username,
+        pa.created_at
+        FROM project_activities pa
+        INNER JOIN users u ON pa.user_id = u.id
+        WHERE pa.project_id = #{projectId}
+        ORDER BY pa.created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- Get user created project count -->
+    <select id="getUserCreatedProjectCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM projects WHERE created_by = #{userId}
+    </select>
+
+    <!-- Get user average quality score -->
+    <select id="getUserAverageQualityScore" resultType="java.math.BigDecimal">
+        SELECT COALESCE(AVG(quality_score), 0)
+        FROM projects
+        WHERE created_by = #{userId}
+    </select>
+
+    <!-- Get user recent activity -->
+    <select id="getUserRecentActivity" resultType="com.naskah.demo.model.dto.response.UserActivityResponse">
+        SELECT
+        pa.id,
+        pa.activity_type,
+        pa.description,
+        pa.project_id,
+        p.title as project_title,
+        pa.page_number,
+        pa.created_at
+        FROM project_activities pa
+        INNER JOIN projects p ON pa.project_id = p.id
+        WHERE pa.user_id = #{userId}
+        ORDER BY pa.created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- Get project average quality score -->
+    <select id="getProjectAverageQualityScore" resultType="java.math.BigDecimal">
+        SELECT COALESCE(AVG(quality_score), 0)
+        FROM project_quality_assessments
+        WHERE project_id = #{projectId}
+    </select>
+
+    <!-- Update project quality score -->
+    <update id="updateProjectQualityScore">
+        UPDATE projects
+        SET quality_score = #{averageScore},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{projectId}
+    </update>
+
+    <!-- Insert project activity -->
+    <insert id="insertProjectActivity" parameterType="com.naskah.demo.model.entity.ProjectActivity"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_activities (
+        project_id, user_id, activity_type, description, page_number, metadata, created_at
+        ) VALUES (
+        #{projectId}, #{userId}, CAST(#{activityType} AS project_activity_type), #{description},
+        #{pageNumber}, #{metadata}, #{createdAt}
+        )
+    </insert>
+
+</mapper>

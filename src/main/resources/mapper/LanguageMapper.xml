@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.LanguageMapper">
+
+    <select id="findLanguageByName" resultType="com.naskah.demo.model.entity.Language">
+        SELECT id, code, name, native_name, created_at, updated_at
+        FROM languages
+        WHERE LOWER(name) LIKE LOWER(CONCAT('%', #{name}, '%'))
+    </select>
+
+    <select id="findLanguageNameById" resultType="String">
+        SELECT name FROM languages WHERE id = #{id}
+    </select>
+
+</mapper>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.ReadingMapper">
+
+    <select id="findReadingProgressByUserAndBook" resultType="com.naskah.demo.model.entity.ReadingProgress">
+        SELECT *
+        FROM reading_progress
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+    </select>
+
+    <insert id="insertReadingProgress" parameterType="com.naskah.demo.model.entity.ReadingProgress" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_progress
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="bookId != null">book_id,</if>
+            <if test="currentPage != null">current_page,</if>
+            <if test="totalPages != null">total_pages,</if>
+            <if test="currentPosition != null">current_position,</if>
+            <if test="percentageCompleted != null">percentage_completed,</if>
+            <if test="readingTimeMinutes != null">reading_time_minutes,</if>
+            <if test="status != null">status,</if>
+            <if test="isFavorite != null">is_favorite,</if>
+            <if test="notes != null">notes,</if>
+            <if test="startedAt != null">started_at,</if>
+            <if test="completedAt != null">completed_at,</if>
+            <if test="lastReadAt != null">last_read_at,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="bookId != null">#{bookId},</if>
+            <if test="currentPage != null">#{currentPage},</if>
+            <if test="totalPages != null">#{totalPages},</if>
+            <if test="currentPosition != null">#{currentPosition},</if>
+            <if test="percentageCompleted != null">#{percentageCompleted},</if>
+            <if test="readingTimeMinutes != null">#{readingTimeMinutes},</if>
+            <if test="status != null">#{status},</if>
+            <if test="isFavorite != null">#{isFavorite},</if>
+            <if test="notes != null">#{notes},</if>
+            <if test="startedAt != null">#{startedAt},</if>
+            <if test="completedAt != null">#{completedAt},</if>
+            <if test="lastReadAt != null">#{lastReadAt},</if>
+        </trim>
+    </insert>
+
+    <update id="updateReadingProgress" parameterType="com.naskah.demo.model.entity.ReadingProgress">
+        UPDATE reading_progress
+        <set>
+            <if test="currentPage != null">current_page = #{currentPage},</if>
+            <if test="totalPages != null">total_pages = #{totalPages},</if>
+            <if test="currentPosition != null">current_position = #{currentPosition},</if>
+            <if test="percentageCompleted != null">percentage_completed = #{percentageCompleted},</if>
+            <if test="readingTimeMinutes != null">reading_time_minutes = #{readingTimeMinutes},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="isFavorite != null">is_favorite = #{isFavorite},</if>
+            <if test="notes != null">notes = #{notes},</if>
+            <if test="startedAt != null">started_at = #{startedAt},</if>
+            <if test="completedAt != null">completed_at = #{completedAt},</if>
+            <if test="lastReadAt != null">last_read_at = #{lastReadAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertReadingSession" parameterType="com.naskah.demo.model.entity.ReadingSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_sessions
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="bookId != null">book_id,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="deviceClass != null">device_class,</if>
+            <if test="deviceName != null">device_name,</if>
+            <if test="deviceBrand != null">device_brand,</if>
+            <if test="agentNameVersion != null">agent_name_version,</if>
+            <if test="operatingSystem != null">operating_system,</if>
+            <if test="layoutEngine != null">layout_engine,</if>
+            <if test="deviceCpu != null">device_cpu,</if>
+            <if test="ipAddress != null">ip_address,</if>
+            <if test="createdAt != null">created_at,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="bookId != null">#{bookId},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="deviceClass != null">#{deviceClass},</if>
+            <if test="deviceName != null">#{deviceName},</if>
+            <if test="deviceBrand != null">#{deviceBrand},</if>
+            <if test="agentNameVersion != null">#{agentNameVersion},</if>
+            <if test="operatingSystem != null">#{operatingSystem},</if>
+            <if test="layoutEngine != null">#{layoutEngine},</if>
+            <if test="deviceCpu != null">#{deviceCpu},</if>
+            <if test="ipAddress != null">#{ipAddress},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+        </trim>
+    </insert>
+
+</mapper>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ProjectFollowMapper">
+
+    <select id="getProjectFollowByUserAndProject" resultType="com.naskah.demo.model.entity.ProjectFollow">
+        SELECT *
+        FROM project_follows
+        WHERE user_id = #{userId}
+        AND project_id = #{id}
+    </select>
+
+    <update id="reactivateProjectFollow">
+        UPDATE project_follows
+        SET is_active = TRUE,
+        followed_at = NOW() -- atau #{followedAt} jika perlu
+        WHERE id = #{id}
+    </update>
+
+    <update id="deactivateProjectFollow">
+        UPDATE project_follows
+        SET is_active = FALSE
+        WHERE id = #{id}
+    </update>
+
+    <select id="getActiveFollowerCountByProjectId" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM project_follows
+        WHERE project_id = #{id}
+        AND is_active = TRUE
+    </select>
+
+    <!-- Query ini mungkin sangat kompleks dan perlu disesuaikan dengan struktur tabel Anda -->
+    <select id="getUserFollowedProjects" resultType="com.naskah.demo.model.dto.response.ProjectResponse">
+        SELECT p.*
+        FROM projects p
+        INNER JOIN project_follows pf ON p.id = pf.project_id
+        WHERE pf.user_id = #{userId}
+        AND pf.is_active = TRUE
+        -- Anda mungkin perlu menambahkan lebih banyak field atau join untuk memenuhi struktur ProjectResponse
+    </select>
+
+    <insert id="insertProjectFollow" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_follows (project_id, user_id, followed_at, is_active)
+        VALUES (#{projectId}, #{userId}, #{followedAt}, #{isActive})
+    </insert>
+
+    <!-- INI ADALAH QUERY YANG DIBUTUHKAN UNTUK MEMPERBAIKI ERROR -->
+    <select id="getActiveFollowerIdsByProjectId" resultType="java.lang.Long">
+        SELECT user_id
+        FROM project_follows
+        WHERE project_id = #{projectId}
+        AND is_active = TRUE
+    </select>
+
+    <select id="getUserFollowedProjectCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM project_follows
+        WHERE user_id = #{userId}
+        AND is_active = TRUE
+    </select>
+
+</mapper>

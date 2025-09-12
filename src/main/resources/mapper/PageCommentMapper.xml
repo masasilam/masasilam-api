@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.PageCommentMapper">
+
+    <resultMap id="PageCommentResponseMap" type="com.naskah.demo.model.dto.response.PageCommentResponse">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <result property="commentType" column="comment_type"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userAvatar" column="user_avatar"/>
+        <result property="parentCommentId" column="parent_comment_id"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="isEdited" column="is_edited"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insertPageComment" parameterType="com.naskah.demo.model.entity.PageComment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO page_comments (
+        page_id, user_id, content, comment_type, parent_comment_id,
+        is_edited, is_deleted, created_at, updated_at
+        ) VALUES (
+        #{pageId}, #{userId}, #{content}, CAST(#{commentType} AS comment_type), #{parentCommentId},
+        #{isEdited}, #{isDeleted}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="getPageCommentById" resultType="com.naskah.demo.model.entity.PageComment">
+        SELECT * FROM page_comments WHERE id = #{parentCommentId}
+    </select>
+
+    <select id="getPageCommentWithUserInfo" resultMap="PageCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM page_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM page_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.id = #{id}
+    </select>
+
+    <select id="getPageCommentsWithUserInfo" resultMap="PageCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM page_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM page_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.page_id = #{id} AND pc.parent_comment_id IS NULL
+        ORDER BY pc.created_at ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getPageCommentReplyCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM page_comments WHERE parent_comment_id = #{id}
+    </select>
+
+    <select id="getPageCommentReplies" resultMap="PageCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM page_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM page_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.parent_comment_id = #{id}
+        ORDER BY pc.created_at ASC
+        LIMIT #{i1} OFFSET #{i}
+    </select>
+
+    <select id="getPageCommentCount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM page_comments WHERE page_id = #{pageId}
+    </select>
+
+    <select id="getUserTotalPageCommentsReceived" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM page_comments pc
+        INNER JOIN project_pages pp ON pc.page_id = pp.id
+        WHERE pp.assigned_user_id = #{userId}
+    </select>
+
+</mapper>

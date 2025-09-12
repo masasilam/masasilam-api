@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.PageReactionMapper">
+
+    <resultMap id="PageReactionMap" type="com.naskah.demo.model.entity.PageReaction">
+        <id property="id" column="id"/>
+        <result property="pageId" column="page_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="reactionType" column="reaction_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="getPageReactionByUserAndPage" resultMap="PageReactionMap">
+        SELECT * FROM page_reactions
+        WHERE user_id = #{userId} AND page_id = #{id}
+    </select>
+
+    <delete id="deletePageReaction">
+        DELETE FROM page_reactions WHERE id = #{id}
+    </delete>
+
+    <update id="updatePageReaction">
+        UPDATE page_reactions
+        SET reaction_type = #{existingReaction.reactionType}::reaction_type_enum,
+        updated_at = NOW()
+        WHERE id = #{existingReaction.id}
+    </update>
+
+    <insert id="insertPageReaction" useGeneratedKeys="true" keyProperty="newReaction.id">
+        INSERT INTO page_reactions (
+        page_id, user_id, reaction_type, created_at, updated_at
+        ) VALUES (
+        #{newReaction.pageId},
+        #{newReaction.userId},
+        #{newReaction.reactionType}::reaction_type_enum,
+        NOW(),
+        NOW()
+        )
+    </insert>
+
+    <select id="getPageReactionCount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM page_reactions WHERE page_id = #{pageId}
+    </select>
+
+    <select id="getUserTotalPageReactionsReceived" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM page_reactions pr
+        INNER JOIN project_pages pp ON pr.page_id = pp.id
+        WHERE pp.assigned_user_id = #{userId}
+    </select>
+
+</mapper>

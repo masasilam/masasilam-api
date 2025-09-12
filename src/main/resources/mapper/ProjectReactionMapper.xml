@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.ProjectReactionMapper">
+
+    <resultMap id="ProjectReactionResultMap" type="com.naskah.demo.model.entity.ProjectReaction">
+        <id property="id" column="id" />
+        <result property="projectId" column="project_id" />
+        <result property="userId" column="user_id" />
+        <result property="reactionType" column="reaction_type"
+                javaType="com.naskah.demo.model.enums.ReactionType"
+                jdbcType="VARCHAR"/>
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <resultMap id="ReactionSummaryResultMap" type="com.naskah.demo.model.dto.response.ReactionSummary">
+        <result property="reactionType" column="reaction_type"
+                javaType="com.naskah.demo.model.enums.ReactionType"
+                jdbcType="VARCHAR"/>
+        <result property="count" column="reaction_count" />
+    </resultMap>
+
+    <select id="getProjectReactionByUserAndProject" resultMap="ProjectReactionResultMap">
+        SELECT
+        id,
+        project_id,
+        user_id,
+        reaction_type,
+        created_at,
+        updated_at
+        FROM project_reactions
+        WHERE user_id = #{userId}
+        AND project_id = #{projectId}
+    </select>
+
+    <delete id="deleteProjectReaction">
+        DELETE FROM project_reactions
+        WHERE id = #{id}
+    </delete>
+
+    <update id="updateProjectReaction">
+        UPDATE project_reactions
+        SET reaction_type = #{existingReaction.reactionType}::reaction_type_enum,
+        updated_at = NOW()
+        WHERE id = #{existingReaction.id}
+    </update>
+
+    <insert id="insertProjectReaction" useGeneratedKeys="true" keyProperty="newReaction.id">
+        INSERT INTO project_reactions (project_id, user_id, reaction_type, created_at, updated_at)
+        VALUES (#{newReaction.projectId},
+        #{newReaction.userId},
+        #{newReaction.reactionType}::reaction_type_enum,
+        NOW(),
+        NOW())
+    </insert>
+
+    <select id="getProjectReactionCount" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM project_reactions
+        WHERE project_id = #{projectId}
+    </select>
+
+    <select id="getProjectReactionBreakdown" resultMap="ReactionSummaryResultMap">
+        SELECT reaction_type, COUNT(*) as reaction_count
+        FROM project_reactions
+        WHERE project_id = #{projectId}
+        GROUP BY reaction_type
+        ORDER BY reaction_count DESC
+    </select>
+
+    <select id="getUserTotalProjectReactionsReceived" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM project_reactions pr
+        JOIN projects p ON pr.project_id = p.id
+        WHERE p.created_by = #{userId}
+        AND pr.user_id != #{userId}
+    </select>
+
+</mapper>

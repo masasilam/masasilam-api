@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.TagMapper">
+
+    <select id="findTagsByBookId" resultType="com.naskah.demo.model.entity.Tag">
+        SELECT
+        t.id, t.name, t.slug
+        FROM tags t
+        INNER JOIN book_tags bt ON t.id = bt.tag_id
+        WHERE bt.book_id = #{bookId}
+    </select>
+
+</mapper>

@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.ProjectPageMapper">
+
+    <insert id="insertProjectPage" parameterType="com.naskah.demo.model.entity.ProjectPage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_pages (
+        project_id, page_number, image_url, transcribed_text,
+        original_filename, ocr_status, ocr_confidence, created_at, updated_at
+        ) VALUES (
+        #{projectId},
+        #{pageNumber},
+        #{imageUrl},
+        #{transcribedText},
+        #{originalFilename},
+        #{ocrStatus}::ocr_status,
+        #{ocrConfidence},
+        #{createdAt},
+        #{updatedAt}
+        )
+    </insert>
+
+    <select id="getProjectPageByProjectIdAndPageNumber" resultType="com.naskah.demo.model.entity.ProjectPage">
+        SELECT * FROM project_pages
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </select>
+
+    <update id="assignTranslatorToPage">
+        UPDATE project_pages SET
+        translator_id = #{userId},
+        translation_status = 'ASSIGNED',
+        translation_assigned_at = NOW()
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="assignEditorToPage">
+        UPDATE project_pages SET
+        editor_id = #{userId},
+        editing_status = 'ASSIGNED',
+        editing_assigned_at = NOW()
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="assignIllustratorToPage">
+        UPDATE project_pages SET
+        illustrator_id = #{userId},
+        illustration_status = 'ASSIGNED',
+        illustration_assigned_at = NOW()
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="assignProofreaderToPage">
+        UPDATE project_pages SET
+        proofreader_id = #{userId},
+        proofreading_status = 'ASSIGNED',
+        proofreading_assigned_at = NOW()
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="assignReviewerToPage">
+        UPDATE project_pages SET
+        reviewer_id = #{userId},
+        review_status = 'ASSIGNED',
+        review_assigned_at = NOW()
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <!-- Update content methods -->
+    <update id="updateTranslationContent">
+        UPDATE project_pages
+        SET translation_content = #{workContent},
+        translation_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP,
+        modified_by = #{userId}
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+
+    <update id="updateEditingContent">
+        UPDATE project_pages
+        SET editing_content = #{workContent},
+        editing_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="updateIllustrationContent">
+        UPDATE project_pages
+        SET illustration_content = #{workContent},
+        illustration_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="updateProofreadingContent">
+        UPDATE project_pages
+        SET proofreading_content = #{workContent},
+        proofreading_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="updateTranscriptionContent">
+        UPDATE project_pages
+        SET transcription_content = #{workContent},
+        transcription_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="updateReviewContent">
+        UPDATE project_pages
+        SET review_content = #{workContent},
+        review_notes = #{notes},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <!-- Mark completion methods -->
+    <update id="markTranslationCompleted">
+        UPDATE project_pages
+        SET translation_completed_by = #{userId},
+        translation_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="markEditingCompleted">
+        UPDATE project_pages
+        SET editing_completed_by = #{userId},
+        editing_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="markIllustrationCompleted">
+        UPDATE project_pages
+        SET illustration_completed_by = #{userId},
+        illustration_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="markProofreadingCompleted">
+        UPDATE project_pages
+        SET proofreading_completed_by = #{userId},
+        proofreading_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="markTranscriptionCompleted">
+        UPDATE project_pages
+        SET transcription_completed_by = #{userId},
+        transcription_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <update id="markReviewCompleted">
+        UPDATE project_pages
+        SET review_completed_by = #{userId},
+        review_completed_at = CURRENT_TIMESTAMP,
+        last_modified = CURRENT_TIMESTAMP
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <!-- Get completed pages count methods -->
+    <select id="getCompletedTranslationPagesCount" resultType="int">
+        SELECT COUNT(*) FROM project_pages
+        WHERE project_id = #{projectId}
+        AND translation_completed_by IS NOT NULL
+    </select>
+
+    <select id="getCompletedEditingPagesCount" resultType="int">
+        SELECT COUNT(*) FROM project_pages
+        WHERE project_id = #{projectId}
+        AND editing_completed_by IS NOT NULL
+    </select>
+
+    <select id="getCompletedIllustrationPagesCount" resultType="int">
+        SELECT COUNT(*) FROM project_pages
+        WHERE project_id = #{projectId}
+        AND illustration_completed_by IS NOT NULL
+    </select>
+
+    <select id="getCompletedProofreadingPagesCount" resultType="int">
+        SELECT COUNT(*) FROM project_pages
+        WHERE project_id = #{projectId}
+        AND proofreading_completed_by IS NOT NULL
+    </select>
+
+    <select id="getCompletedTranscriptionPagesCount" resultType="int">
+        SELECT COUNT(*) FROM project_pages
+        WHERE project_id = #{projectId}
+        AND transcription_completed_by IS NOT NULL
+    </select>
+
+    <!-- Update page timestamp -->
+    <update id="updatePageLastModified">
+        UPDATE project_pages
+        SET last_modified = #{now}
+        WHERE project_id = #{projectId}
+        AND page_number = #{pageNumber}
+    </update>
+
+    <!-- Update page reaction count -->
+    <update id="updatePageReactionCount">
+        UPDATE project_pages
+        SET reaction_count = #{reactionCount},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE id = #{pageId}
+    </update>
+
+    <!-- Update page comment count -->
+    <update id="updatePageCommentCount">
+        UPDATE project_pages
+        SET comment_count = #{commentCount},
+        last_modified = CURRENT_TIMESTAMP
+        WHERE id = #{pageId}
+    </update>
+
+    <!-- Get user task count methods -->
+    <select id="getUserEditingCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE editor_id = #{userId}
+    </select>
+
+    <select id="getUserTranslationCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE translator_id = #{userId}
+    </select>
+
+    <select id="getUserProofreadingCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE proofreader_id = #{userId}
+    </select>
+
+    <select id="getUserIllustrationCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE illustrator_id = #{userId}
+    </select>
+
+    <select id="getUserTranscriptionCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE transcription_completed_by = #{userId}
+    </select>
+
+    <select id="getUserReviewCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_pages
+        WHERE reviewer_id = #{userId}
+    </select>
+
+</mapper>

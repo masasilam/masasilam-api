@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.AuthorMapper">
+
+    <select id="findAuthorByName" resultType="com.naskah.demo.model.entity.Author">
+        SELECT * FROM authors
+        WHERE name = #{name}
+    </select>
+
+    <update id="updateAuthor" parameterType="com.naskah.demo.model.entity.Author">
+        UPDATE authors
+        <set>
+            <trim suffixOverrides=",">
+                <if test="name != null">name = #{name},</if>
+                <if test="slug != null">slug = #{slug},</if>
+                <if test="birthDate != null">birth_date = #{birthDate},</if>
+                <if test="deathDate != null">death_date = #{deathDate},</if>
+                <if test="birthPlace != null">birth_place = #{birthPlace},</if>
+                <if test="nationality != null">nationality = #{nationality},</if>
+                <if test="biography != null">biography = #{biography},</if>
+                <if test="photoUrl != null">photo_url = #{photoUrl},</if>
+                <if test="totalBooks != null">total_books = #{totalBooks},</if>
+                updated_at = #{updatedAt},
+            </trim>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertAuthor" parameterType="com.naskah.demo.model.entity.Author" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO authors
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null">name,</if>
+            <if test="slug != null">slug,</if>
+            <if test="birthDate != null">birth_date,</if>
+            <if test="deathDate != null">death_date,</if>
+            <if test="birthPlace != null">birth_place,</if>
+            <if test="nationality != null">nationality,</if>
+            <if test="biography != null">biography,</if>
+            <if test="photoUrl != null">photo_url,</if>
+            <if test="photoPath != null">photo_path,</if>
+            <if test="totalBooks != null">total_books,</if>
+            created_at,
+            updated_at,
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null">#{name},</if>
+            <if test="slug != null">#{slug},</if>
+            <if test="birthDate != null">#{birthDate},</if>
+            <if test="deathDate != null">#{deathDate},</if>
+            <if test="birthPlace != null">#{birthPlace},</if>
+            <if test="nationality != null">#{nationality},</if>
+            <if test="biography != null">#{biography},</if>
+            <if test="photoUrl != null">#{photoUrl},</if>
+            <if test="photoPath != null">#{photoPath},</if>
+            <if test="totalBooks != null">#{totalBooks},</if>
+            #{createdAt},
+            #{updatedAt},
+        </trim>
+    </insert>
+
+    <select id="findAuthorsByBookId" resultType="com.naskah.demo.model.dto.response.AuthorResponse">
+        SELECT
+        a.id, a.name, a.slug, a.birth_date, a.death_date, a.birth_place, a.nationality, a.photo_url
+        FROM authors a
+        INNER JOIN book_authors ba ON a.id = ba.author_id
+        WHERE ba.book_id = #{bookId}
+    </select>
+
+</mapper>

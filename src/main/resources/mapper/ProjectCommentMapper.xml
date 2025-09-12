@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ProjectCommentMapper">
+
+    <resultMap id="ProjectCommentResponseMap" type="com.naskah.demo.model.dto.response.ProjectCommentResponse">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userAvatar" column="user_avatar"/>
+        <result property="parentCommentId" column="parent_comment_id"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="isEdited" column="is_edited"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="insertProjectComment" parameterType="com.naskah.demo.model.entity.ProjectComment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO project_comments (
+        project_id, user_id, content, parent_comment_id,
+        is_edited, is_deleted, created_at, updated_at
+        ) VALUES (
+        #{projectId}, #{userId}, #{content}, #{parentCommentId},
+        #{isEdited}, #{isDeleted}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="getProjectCommentById" resultType="com.naskah.demo.model.entity.ProjectComment">
+        SELECT * FROM project_comments WHERE id = #{parentCommentId}
+    </select>
+
+    <select id="getProjectCommentWithUserInfo" resultMap="ProjectCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM project_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM project_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.id = #{id}
+    </select>
+
+    <select id="getProjectCommentsWithUserInfo" resultMap="ProjectCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM project_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM project_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.project_id = #{id} AND pc.parent_comment_id IS NULL
+        ORDER BY pc.created_at ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getProjectCommentCount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM project_comments WHERE project_id = #{id}
+    </select>
+
+    <select id="getCommentReplyCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_comments WHERE parent_comment_id = #{id}
+    </select>
+
+    <select id="getCommentReplies" resultMap="ProjectCommentResponseMap">
+        SELECT
+        pc.*,
+        u.username,
+        u.user_avatar,
+        (SELECT COUNT(*) FROM project_comments WHERE parent_comment_id = pc.id) as reply_count
+        FROM project_comments pc
+        INNER JOIN users u ON pc.user_id = u.id
+        WHERE pc.parent_comment_id = #{id}
+        ORDER BY pc.created_at ASC
+        LIMIT #{i1} OFFSET #{i}
+    </select>
+
+    <select id="getUserTotalProjectCommentsReceived" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM project_comments pc
+        INNER JOIN projects p ON pc.project_id = p.id
+        WHERE p.created_by = #{userId}
+    </select>
+
+</mapper>

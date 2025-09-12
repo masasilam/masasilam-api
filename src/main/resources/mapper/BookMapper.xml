@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.BookMapper">
+
+    <resultMap id="BookResponseMap" type="com.naskah.demo.model.dto.response.BookResponse">
+        <id property="id" column="book_id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="isbn" column="isbn"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="publisher" column="publisher"/>
+        <result property="publicationYear" column="publication_year"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="fileFormat" column="file_format"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="totalPages" column="total_pages"/>
+        <result property="description" column="description"/>
+        <result property="summary" column="summary"/>
+        <result property="estimatedReadTime" column="estimated_read_time"/>
+        <result property="language" column="language"/>
+        <result property="totalWord" column="total_word"/>
+        <result property="difficultyLevel" column="difficulty_level"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="readCount" column="read_count"/>
+        <result property="downloadCount" column="download_count"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="totalReviews" column="total_reviews"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="seriesOrder" column="series_order"/>
+        <result property="copyrightStatus" column="copyright_status"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="category" column="category"/>
+        <collection property="authors" ofType="com.naskah.demo.model.dto.response.AuthorResponse">
+            <id property="id" column="author_id"/>
+            <result property="name" column="author_name"/>
+            <result property="slug" column="author_slug"/>
+            <result property="birthDate" column="birth_date"/>
+            <result property="deathDate" column="death_date"/>
+            <result property="birthPlace" column="birth_place"/>
+            <result property="nationality" column="nationality"/>
+            <result property="photoUrl" column="photo_url"/>
+        </collection>
+        <collection property="genres" ofType="com.naskah.demo.model.dto.response.GenreResponse">
+            <id property="id" column="genre_id"/>
+            <result property="name" column="genre_name"/>
+            <result property="slug" column="genre_slug"/>
+            <result property="colorHex" column="color_hex"/>
+            <result property="isFiction" column="is_fiction"/>
+        </collection>
+        <collection property="tags" ofType="com.naskah.demo.model.entity.Tag">
+            <id property="id" column="tag_id"/>
+            <result property="name" column="tag_name"/>
+            <result property="slug" column="tag_slug"/>
+        </collection>
+    </resultMap>
+
+    <select id="countByTitleAndPublicationYear" resultType="int">
+        SELECT COUNT(*) FROM books
+        WHERE title = #{title}
+        AND publication_year = #{publicationYear}
+    </select>
+
+    <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO books
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null">title,</if>
+            <if test="slug != null">slug,</if>
+            <if test="subtitle != null">subtitle,</if>
+            <if test="seriesId != null">series_id,</if>
+            <if test="seriesOrder != null">series_order,</if>
+            <if test="isbn != null">isbn,</if>
+            <if test="publicationYear != null">publication_year,</if>
+            <if test="publisher != null">publisher,</if>
+            <if test="languageId != null">language_id,</if>
+            <if test="description != null">description,</if>
+            <if test="summary != null">summary,</if>
+            <if test="coverImageUrl != null">cover_image_url,</if>
+            <if test="coverImagePath != null">cover_image_path,</if>
+            <if test="fileUrl != null">file_url,</if>
+            <if test="filePath != null">file_path,</if>
+            <if test="fileFormat != null">file_format,</if>
+            <if test="fileSize != null">file_size,</if>
+            <if test="totalWord != null">total_word,</if>
+            <if test="totalPages != null">total_pages,</if>
+            <if test="estimatedReadTime != null">estimated_read_time,</if>
+            <if test="difficultyLevel != null">difficulty_level,</if>
+            <if test="copyrightStatusId != null">copyright_status_id,</if>
+            <if test="viewCount != null">view_count,</if>
+            <if test="downloadCount != null">download_count,</if>
+            <if test="averageRating != null">average_rating,</if>
+            <if test="totalReviews != null">total_reviews,</if>
+            <if test="isFeatured != null">is_featured,</if>
+            <if test="isActive != null">is_active,</if>
+            <if test="publishedAt != null">published_at,</if>
+            <if test="category != null">category,</if>
+            created_at,
+            updated_at,
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null">#{title},</if>
+            <if test="slug != null">#{slug},</if>
+            <if test="subtitle != null">#{subtitle},</if>
+            <if test="seriesId != null">#{seriesId},</if>
+            <if test="seriesOrder != null">#{seriesOrder},</if>
+            <if test="isbn != null">#{isbn},</if>
+            <if test="publicationYear != null">#{publicationYear},</if>
+            <if test="publisher != null">#{publisher},</if>
+            <if test="languageId != null">#{languageId},</if>
+            <if test="description != null">#{description},</if>
+            <if test="summary != null">#{summary},</if>
+            <if test="coverImageUrl != null">#{coverImageUrl},</if>
+            <if test="coverImagePath != null">#{coverImagePath},</if>
+            <if test="fileUrl != null">#{fileUrl},</if>
+            <if test="filePath != null">#{filePath},</if>
+            <if test="fileFormat != null">#{fileFormat},</if>
+            <if test="fileSize != null">#{fileSize},</if>
+            <if test="totalWord != null">#{totalWord},</if>
+            <if test="totalPages != null">#{totalPages},</if>
+            <if test="estimatedReadTime != null">#{estimatedReadTime},</if>
+            <if test="difficultyLevel != null">#{difficultyLevel},</if>
+            <if test="copyrightStatusId != null">#{copyrightStatusId},</if>
+            <if test="viewCount != null">#{viewCount},</if>
+            <if test="downloadCount != null">#{downloadCount},</if>
+            <if test="averageRating != null">#{averageRating},</if>
+            <if test="totalReviews != null">#{totalReviews},</if>
+            <if test="isFeatured != null">#{isFeatured},</if>
+            <if test="isActive != null">#{isActive},</if>
+            <if test="publishedAt != null">#{publishedAt},</if>
+            <if test="category != null">#{category},</if>
+            #{createdAt},
+            #{updatedAt},
+        </trim>
+    </insert>
+
+    <insert id="insertBookGenre">
+        INSERT INTO book_genres (book_id, genre_id)
+        VALUES (#{bookId}, #{genreId})
+    </insert>
+
+    <insert id="insertBookTag">
+        INSERT INTO book_tags (book_id, tag_id)
+        VALUES (#{bookId}, #{tagId})
+    </insert>
+
+    <insert id="insertBookAuthor">
+        INSERT INTO book_authors (book_id, author_id)
+        VALUES (#{bookId}, #{authorId})
+    </insert>
+
+    <select id="getBookDetailBySlug" resultMap="BookResponseMap">
+        SELECT
+        b.id as book_id,
+        b.title,
+        b.slug,
+        b.isbn,
+        b.cover_image_url,
+        b.publisher,
+        b.publication_year,
+        b.file_url,
+        b.file_format,
+        b.file_size,
+        b.total_pages,
+        b.description,
+        b.summary,
+        b.estimated_read_time,
+        l.name as language,
+        b.total_word,
+        b.difficulty_level,
+        b.view_count,
+        b.read_count,
+        b.download_count,
+        b.average_rating,
+        b.total_reviews,
+        b.subtitle,
+        b.series_id,
+        b.series_order,
+        cs.name as copyright_status,
+        b.published_at,
+        b.category,
+        a.id as author_id,
+        a.name as author_name,
+        a.slug as author_slug,
+        a.birth_date,
+        a.death_date,
+        a.birth_place,
+        a.nationality,
+        a.photo_url,
+        g.id as genre_id,
+        g.name as genre_name,
+        g.slug as genre_slug,
+        g.color_hex,
+        g.is_fiction,
+        t.id as tag_id,
+        t.name as tag_name,
+        t.slug as tag_slug
+        FROM
+        books b
+        LEFT JOIN languages l ON b.language_id = l.id
+        LEFT JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN book_authors ba ON b.id = ba.book_id
+        LEFT JOIN authors a ON ba.author_id = a.id
+        LEFT JOIN book_genres bg ON b.id = bg.book_id
+        LEFT JOIN genres g ON bg.genre_id = g.id
+        LEFT JOIN book_tags bt ON b.id = bt.book_id
+        LEFT JOIN tags t ON bt.tag_id = t.id
+        WHERE
+        b.slug = #{slug}
+    </select>
+
+    <select id="findBookBySlug" resultType="com.naskah.demo.model.entity.Book">
+        SELECT *
+        FROM books
+        WHERE slug = #{slug}
+    </select>
+
+    <update id="incrementReadCount" parameterType="com.naskah.demo.model.entity.Book">
+        UPDATE books
+        SET read_count = read_count + 1
+        WHERE id = #{bookId}
+    </update>
+
+    <select id="getBookListWithFilters" resultMap="BookResponseMap">
+        SELECT DISTINCT ON (b.id)
+        b.id as book_id,
+        b.title,
+        b.slug,
+        b.isbn,
+        b.cover_image_url,
+        b.publisher,
+        b.publication_year,
+        b.file_url,
+        b.file_format,
+        b.file_size,
+        b.total_pages,
+        b.description,
+        b.summary,
+        b.estimated_read_time,
+        b.language_id,
+        b.total_word,
+        b.difficulty_level,
+        b.view_count,
+        b.read_count,
+        b.download_count,
+        b.average_rating,
+        b.total_reviews,
+        b.subtitle,
+        b.series_id,
+        b.series_order,
+        b.copyright_status_id,
+        b.published_at,
+        b.category,
+        a.id as author_id,
+        a.name as author_name,
+        a.slug as author_slug,
+        a.birth_date,
+        a.death_date,
+        a.birth_place,
+        a.nationality,
+        a.photo_url,
+        g.id as genre_id,
+        g.name as genre_name,
+        g.slug as genre_slug,
+        g.color_hex,
+        g.is_fiction,
+        t.id as tag_id,
+        t.name as tag_name,
+        t.slug as tag_slug
+        FROM books b
+        LEFT JOIN book_authors ba ON b.id = ba.book_id
+        LEFT JOIN authors a ON ba.author_id = a.id
+        LEFT JOIN book_genres bg ON b.id = bg.book_id
+        LEFT JOIN genres g ON bg.genre_id = g.id
+        LEFT JOIN book_tags bt ON b.id = bt.book_id
+        LEFT JOIN tags t ON bt.tag_id = t.id
+        <where>
+            <if test="searchTitle != null and searchTitle != ''">
+                AND LOWER(b.title) LIKE CONCAT('%', LOWER(#{searchTitle}), '%')
+            </if>
+            <if test="seriesId != null">
+                AND b.series_id = #{seriesId}
+            </if>
+            <if test="genreId != null">
+                AND EXISTS (
+                SELECT 1 FROM book_genres bg2
+                WHERE bg2.book_id = b.id AND bg2.genre_id = #{genreId}
+                )
+            </if>
+            <if test="subGenreId != null">
+                AND EXISTS (
+                SELECT 1 FROM book_genres bg3
+                JOIN genres g3 ON bg3.genre_id = g3.id
+                WHERE bg3.book_id = b.id AND g3.parent_genre_id = #{subGenreId}
+                )
+            </if>
+<!--            <if test="tagIds != null and tagIds.size() > 0">-->
+<!--                AND EXISTS (-->
+<!--                SELECT 1 FROM book_tags bt2-->
+<!--                WHERE bt2.book_id = b.id AND bt2.tag_id IN-->
+<!--                <foreach collection="tagIds" item="tagId" open="(" separator="," close=")">-->
+<!--                    #{tagId}-->
+<!--                </foreach>-->
+<!--                )-->
+<!--            </if>-->
+        </where>
+        ORDER BY b.id,
+        <choose>
+            <when test="sortColumn == 'AUTHOR_NAME'">
+                a.name ${sortType}
+            </when>
+            <when test="sortColumn == 'PUBLISHED_AT'">
+                b.published_at ${sortType}
+            </when>
+            <when test="sortColumn == 'ESTIMATED_READ_TIME'">
+                b.estimated_read_time ${sortType}
+            </when>
+            <when test="sortColumn == 'TOTAL_WORD'">
+                b.total_word ${sortType}
+            </when>
+            <when test="sortColumn == 'AVERAGE_RATING'">
+                b.average_rating ${sortType}
+            </when>
+            <when test="sortColumn == 'VIEW_COUNT'">
+                b.view_count ${sortType}
+            </when>
+            <otherwise>
+                b.title ${sortType}
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+
+
+
+
+
+
+    <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
+        SELECT id, title, author, year, file_path
+        FROM ebooks
+        WHERE id = #{id}
+    </select>
+
+    <select id="getListEbook" resultType="com.naskah.demo.model.entity.Book">
+        SELECT id, title, author, year, file_path
+        FROM ebooks
+        <if test="sortField != null and sortOrder != null">
+            ORDER BY ${sortField} ${sortOrder}
+        </if>
+        <if test="offset >= 0">
+            OFFSET #{offset}
+        </if>
+        <if test="limit >= 0">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <update id="updateEbook" parameterType="com.naskah.demo.model.entity.Book">
+        UPDATE ebooks
+        SET
+        <trim suffixOverrides=",">
+            <if test="id != null">id = #{id},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="author != null">author = #{author},</if>
+            <if test="year != null">year = #{year},</if>
+            <if test="filePath != null">file_path = #{filePath},</if>
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteEbook">
+        DELETE FROM ebooks
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

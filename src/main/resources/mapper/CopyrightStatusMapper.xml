@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.CopyrightStatusMapper">
+
+    <select id="findByCopyrightStatusCode" resultType="com.naskah.demo.model.entity.CopyrightStatus">
+        SELECT id, code, name, description, created_at, updated_at
+        FROM copyright_statuses
+        WHERE LOWER(code) LIKE LOWER(CONCAT('%', #{code}, '%'))
+    </select>
+
+    <select id="findCopyrightStatusNameById" resultType="String">
+        SELECT name FROM copyright_statuses WHERE id = #{id}
+    </select>
+
+</mapper>

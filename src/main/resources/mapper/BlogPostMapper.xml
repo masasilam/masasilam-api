@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.BlogPostMapper">
+
+    <!-- Result Maps -->
+    <resultMap id="BlogPostResultMap" type="com.naskah.demo.model.entity.BlogPost">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="content" property="content"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="featured_image" property="featuredImage"/>
+        <result column="status" property="status"/>
+        <result column="author_id" property="authorId"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="scheduled_at" property="scheduledAt"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <resultMap id="BlogPostResponseMap" type="com.naskah.demo.model.dto.response.BlogPostResponse">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="featured_image" property="featuredImage"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="author_name" property="authorName"/>
+        <result column="author_avatar" property="authorAvatar"/>
+        <result column="categories" property="categories"/>
+        <result column="tags" property="tags"/>
+    </resultMap>
+
+    <resultMap id="BlogPostDetailResponseMap" type="com.naskah.demo.model.dto.response.BlogPostDetailResponse">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="content" property="content"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="featured_image" property="featuredImage"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="author_id" property="authorId"/>
+        <result column="author_name" property="authorName"/>
+        <result column="author_avatar" property="authorAvatar"/>
+        <result column="author_bio" property="authorBio"/>
+        <result column="categories" property="categories"/>
+        <result column="tags" property="tags"/>
+        <result column="linked_books" property="linkedBooks"/>
+    </resultMap>
+
+    <resultMap id="BlogCommentResultMap" type="com.naskah.demo.model.entity.BlogComment">
+        <id column="id" property="id"/>
+        <result column="blog_post_id" property="blogPostId"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <resultMap id="BlogCommentResponseMap" type="com.naskah.demo.model.dto.response.BlogCommentResponse">
+        <id column="id" property="id"/>
+        <result column="blog_post_id" property="blogPostId"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="user_name" property="userName"/>
+        <result column="user_avatar" property="userAvatar"/>
+        <result column="reply_count" property="replyCount"/>
+    </resultMap>
+
+    <!-- Blog Post CRUD Operations -->
+    <insert id="insertBlogPost" parameterType="com.naskah.demo.model.entity.BlogPost" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO blog_posts (
+        title, slug, content, excerpt, featured_image_url, status, user_id,
+        view_count, like_count, comment_count, scheduled_at, published_at,
+        created_at, updated_at
+        ) VALUES (
+        #{title}, #{slug}, #{content}, #{excerpt}, #{featuredImage}, #{status}, #{authorId},
+        #{viewCount}, #{likeCount}, #{commentCount}, #{scheduledAt}, #{publishedAt},
+        #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateBlogPost" parameterType="com.naskah.demo.model.entity.BlogPost">
+        UPDATE blog_posts SET
+        <if test="title != null">title = #{title},</if>
+        <if test="slug != null">slug = #{slug},</if>
+        <if test="content != null">content = #{content},</if>
+        <if test="excerpt != null">excerpt = #{excerpt},</if>
+        <if test="featuredImage != null">featured_image_url = #{featuredImage},</if>
+        <if test="status != null">status = #{status},</if>
+        <if test="scheduledAt != null">scheduled_at = #{scheduledAt},</if>
+        <if test="publishedAt != null">published_at = #{publishedAt},</if>
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteBlogPost">
+        DELETE FROM blog_posts WHERE id = #{id}
+    </delete>
+
+    <select id="getBlogPostEntityById" resultMap="BlogPostResultMap">
+        SELECT * FROM blog_posts WHERE id = #{id}
+    </select>
+
+    <select id="getBlogPostById" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        WHERE bp.id = #{id}
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+    </select>
+
+    <select id="getBlogPostBySlug" resultMap="BlogPostDetailResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.content, bp.excerpt, bp.featured_image_url,
+        bp.status, bp.view_count, bp.like_count, bp.comment_count,
+        bp.published_at, bp.created_at, bp.updated_at, bp.user_id,
+        u.full_name as author_name, u.profile_picture_url as author_avatar, u.bio as author_bio,
+        STRING_AGG(DISTINCT bc.id || ':' || bc.name || ':' || bc.slug, '|') as categories,
+        STRING_AGG(DISTINCT bt.id || ':' || bt.name || ':' || bt.slug, '|') as tags,
+        STRING_AGG(DISTINCT b.id || ':' || b.title || ':' || b.slug, '|') as linked_books
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        LEFT JOIN blog_post_books bpb ON bp.id = bpb.blog_post_id
+        LEFT JOIN books b ON bpb.book_id = b.id
+        WHERE bp.slug = #{slug} AND bp.status = 'PUBLISHED'
+        GROUP BY bp.id, u.full_name, u.profile_picture_url, u.bio
+    </select>
+
+    <select id="isSlugExists" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM blog_posts WHERE slug = #{slug}
+    </select>
+
+    <!-- Blog Post Listings with Filters -->
+    <select id="getBlogPostsWithFilters" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        <where>
+            bp.status = 'PUBLISHED'
+            <if test="status != null and status != ''">
+                AND bp.status = #{status}
+            </if>
+            <if test="category != null and category != ''">
+                AND bc.slug = #{category}
+            </if>
+            <if test="tag != null and tag != ''">
+                AND bt.slug = #{tag}
+            </if>
+            <if test="search != null and search != ''">
+                AND (bp.title LIKE '%' || #{search} || '%'
+                OR bp.content LIKE '%' || #{search} || '%'
+                OR bp.excerpt LIKE '%' || #{search} || '%')
+            </if>
+            <if test="authorId != null">
+                AND bp.user_id = #{authorId}
+            </if>
+        </where>
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'TITLE'">bp.title</when>
+            <when test="sortColumn == 'VIEW_COUNT'">bp.view_count</when>
+            <when test="sortColumn == 'LIKE_COUNT'">bp.like_count</when>
+            <when test="sortColumn == 'COMMENT_COUNT'">bp.comment_count</when>
+            <when test="sortColumn == 'UPDATED_AT'">bp.updated_at</when>
+            <otherwise>bp.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getTrendingBlogPosts" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags,
+        (bp.view_count * 0.3 + bp.like_count * 0.5 + bp.comment_count * 0.2) as trend_score
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        WHERE bp.status = 'PUBLISHED'
+        AND bp.published_at >= CURRENT_DATE - INTERVAL '#{days} days'
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY trend_score DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getBlogPostsByCategory" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc2.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        INNER JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        INNER JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc2 ON bp.id = bpc2.blog_post_id
+        LEFT JOIN blog_categories bc2 ON bpc2.category_id = bc2.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        WHERE bp.status = 'PUBLISHED' AND bc.slug = #{categorySlug}
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'TITLE'">bp.title</when>
+            <otherwise>bp.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getBlogPostsByTag" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt2.name, ', ') as tags
+        FROM blog_posts bp
+        INNER JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        INNER JOIN blog_tags bt ON bpt.tag_id = bt.id
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt2 ON bp.id = bpt2.blog_post_id
+        LEFT JOIN blog_tags bt2 ON bpt2.tag_id = bt2.id
+        WHERE bp.status = 'PUBLISHED' AND bt.slug = #{tagSlug}
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'TITLE'">bp.title</when>
+            <otherwise>bp.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getBlogPostsByAuthor" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        <where>
+            bp.user_id = #{authorId}
+            <if test="status != null and status != ''">
+                AND bp.status = #{status}
+            </if>
+        </where>
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'TITLE'">bp.title</when>
+            <otherwise>bp.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="searchBlogPosts" resultMap="BlogPostResponseMap">
+        SELECT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        <where>
+            bp.status = 'PUBLISHED'
+            AND (bp.title LIKE '%' || #{query} || '%'
+            OR bp.content LIKE '%' || #{query} || '%'
+            OR bp.excerpt LIKE '%' || #{query} || '%')
+            <if test="category != null and category != ''">
+                AND bc.slug = #{category}
+            </if>
+            <if test="tag != null and tag != ''">
+                AND bt.slug = #{tag}
+            </if>
+        </where>
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'TITLE'">bp.title</when>
+            <otherwise>bp.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="getRelatedBlogPosts" resultMap="BlogPostResponseMap">
+        SELECT DISTINCT
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.view_count, bp.like_count, bp.comment_count, bp.published_at,
+        bp.created_at, bp.updated_at,
+        u.full_name as author_name, u.profile_picture_url as author_avatar,
+        STRING_AGG(DISTINCT bc.name, ', ') as categories,
+        STRING_AGG(DISTINCT bt.name, ', ') as tags
+        FROM blog_posts bp
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        WHERE bp.status = 'PUBLISHED'
+        AND bp.id != #{blogPostId}
+        AND (bp.id IN (
+        SELECT DISTINCT bp2.id FROM blog_posts bp2
+        INNER JOIN blog_post_categories bpc2 ON bp2.id = bpc2.blog_post_id
+        WHERE bpc2.category_id IN (
+        SELECT category_id FROM blog_post_categories WHERE blog_post_id = #{blogPostId}
+        )
+        ) OR bp.id IN (
+        SELECT DISTINCT bp3.id FROM blog_posts bp3
+        INNER JOIN blog_post_tags bpt3 ON bp3.id = bpt3.blog_post_id
+        WHERE bpt3.tag_id IN (
+        SELECT tag_id FROM blog_post_tags WHERE blog_post_id = #{blogPostId}
+        )
+        ))
+        GROUP BY bp.id, u.full_name, u.profile_picture_url
+        ORDER BY bp.published_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- Blog Post Categories -->
+    <insert id="insertBlogPostCategory">
+        INSERT INTO blog_post_categories (blog_post_id, category_id)
+        VALUES (#{blogPostId}, #{categoryId})
+    </insert>
+
+    <delete id="deleteBlogPostCategories">
+        DELETE FROM blog_post_categories WHERE blog_post_id = #{blogPostId}
+    </delete>
+
+    <!-- Blog Post Tags -->
+    <insert id="insertBlogPostTag">
+        INSERT INTO blog_post_tags (blog_post_id, tag_id)
+        VALUES (#{blogPostId}, #{tagId})
+    </insert>
+
+    <delete id="deleteBlogPostTags">
+        DELETE FROM blog_post_tags WHERE blog_post_id = #{blogPostId}
+    </delete>
+
+    <select id="getOrCreateBlogTag" resultType="long">
+        WITH existing_tag AS (
+        SELECT id FROM blog_tags WHERE name = #{tagName}
+        ),
+        new_tag AS (
+        INSERT INTO blog_tags (name, slug, created_at)
+        SELECT #{tagName}, LOWER(REPLACE(#{tagName}, ' ', '-')), CURRENT_TIMESTAMP
+        WHERE NOT EXISTS (SELECT 1 FROM existing_tag)
+        RETURNING id
+        )
+        SELECT id FROM existing_tag
+        UNION ALL
+        SELECT id FROM new_tag
+    </select>
+
+    <insert id="createBlogTag">
+        INSERT INTO blog_tags (name, slug, created_at)
+        VALUES (#{tagName}, LOWER(REPLACE(#{tagName}, ' ', '-')), CURRENT_TIMESTAMP)
+        ON CONFLICT (name) DO NOTHING
+    </insert>
+
+    <!-- Blog Post Books -->
+    <insert id="insertBlogPostBook">
+        INSERT INTO blog_post_books (blog_post_id, book_id)
+        VALUES (#{blogPostId}, #{bookId})
+    </insert>
+
+    <delete id="deleteBlogPostBooks">
+        DELETE FROM blog_post_books WHERE blog_post_id = #{blogPostId}
+    </delete>
+
+    <!-- Blog Post Likes -->
+    <insert id="insertBlogPostLike">
+        INSERT INTO blog_post_likes (blog_post_id, user_id, created_at)
+        VALUES (#{blogPostId}, #{userId}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <delete id="deleteBlogPostLike">
+        DELETE FROM blog_post_likes
+        WHERE blog_post_id = #{blogPostId} AND user_id = #{userId}
+    </delete>
+
+    <delete id="deleteBlogPostLikes">
+        DELETE FROM blog_post_likes WHERE blog_post_id = #{blogPostId}
+    </delete>
+
+    <select id="isBlogPostLikedByUser" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM blog_post_likes
+        WHERE blog_post_id = #{blogPostId} AND user_id = #{userId}
+    </select>
+
+    <select id="getBlogPostLikeCount" resultType="long">
+        SELECT COUNT(*) FROM blog_post_likes WHERE blog_post_id = #{blogPostId}
+    </select>
+
+    <update id="incrementLikeCount">
+        UPDATE blog_posts SET like_count = like_count + 1 WHERE id = #{blogPostId}
+    </update>
+
+    <update id="decrementLikeCount">
+        UPDATE blog_posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = #{blogPostId}
+    </update>
+
+    <!-- Blog Comments CRUD -->
+    <insert id="insertBlogComment" parameterType="com.naskah.demo.model.entity.BlogComment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO blog_comments (blog_post_id, user_id, content, parent_id, created_at, updated_at)
+        VALUES (#{blogPostId}, #{userId}, #{content}, #{parentId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="updateBlogComment" parameterType="com.naskah.demo.model.entity.BlogComment">
+        UPDATE blog_comments SET
+        content = #{content},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteBlogComment">
+        DELETE FROM blog_comments WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteBlogPostComments">
+        DELETE FROM blog_comments WHERE blog_post_id = #{blogPostId}
+    </delete>
+
+    <select id="getBlogCommentEntityById" resultMap="BlogCommentResultMap">
+        SELECT * FROM blog_comments WHERE id = #{id}
+    </select>
+
+    <select id="getBlogCommentById" resultMap="BlogCommentResponseMap">
+        SELECT
+        bc.id, bc.blog_post_id, bc.user_id, bc.content, bc.parent_id,
+        bc.created_at, bc.updated_at,
+        u.full_name as user_name, u.profile_picture_url as user_avatar,
+        (SELECT COUNT(*) FROM blog_comments WHERE parent_id = bc.id) as reply_count
+        FROM blog_comments bc
+        LEFT JOIN users u ON bc.user_id = u.id
+        WHERE bc.id = #{id}
+    </select>
+
+    <select id="getBlogPostComments" resultMap="BlogCommentResponseMap">
+        SELECT
+        bc.id, bc.blog_post_id, bc.user_id, bc.content, bc.parent_id,
+        bc.created_at, bc.updated_at,
+        u.full_name as user_name, u.profile_picture_url as user_avatar,
+        (SELECT COUNT(*) FROM blog_comments WHERE parent_id = bc.id) as reply_count
+        FROM blog_comments bc
+        LEFT JOIN users u ON bc.user_id = u.id
+        WHERE bc.blog_post_id = #{blogPostId}
+        ORDER BY
+        <choose>
+            <when test="sortColumn == 'CREATED_AT'">bc.created_at</when>
+            <otherwise>bc.created_at</otherwise>
+        </choose>
+        ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="incrementCommentCount">
+        UPDATE blog_posts SET comment_count = comment_count + 1 WHERE id = #{blogPostId}
+    </update>
+
+    <update id="decrementCommentCount">
+        UPDATE blog_posts SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = #{blogPostId}
+    </update>
+
+    <!-- View Count -->
+    <update id="incrementViewCount">
+        UPDATE blog_posts SET view_count = view_count + 1 WHERE id = #{blogPostId}
+    </update>
+
+    <!-- Statistics -->
+    <select id="getTotalBlogPostsByUser" resultType="long">
+        SELECT COUNT(*) FROM blog_posts WHERE author_id = #{userId}
+    </select>
+
+    <select id="getTotalViewsByUser" resultType="long">
+        SELECT COALESCE(SUM(view_count), 0) FROM blog_posts WHERE author_id = #{userId}
+    </select>
+
+    <select id="getTotalLikesByUser" resultType="long">
+        SELECT COALESCE(SUM(like_count), 0) FROM blog_posts WHERE author_id = #{userId}
+    </select>
+
+    <select id="getTotalCommentsByUser" resultType="long">
+        SELECT COALESCE(SUM(comment_count), 0) FROM blog_posts WHERE author_id = #{userId}
+    </select>
+
+    <select id="getPublishedBlogPostsByUser" resultType="long">
+        SELECT COUNT(*) FROM blog_posts WHERE author_id = #{userId} AND status = 'PUBLISHED'
+    </select>
+
+    <select id="getDraftBlogPostsByUser" resultType="long">
+        SELECT COUNT(*) FROM blog_posts WHERE author_id = #{userId} AND status = 'DRAFT'
+    </select>
+
+    <select id="getMonthlyStatsByUser" resultType="com.naskah.demo.model.dto.response.MonthlyStatsResponse">
+        SELECT
+        TO_CHAR(created_at, 'YYYY-MM') as month,
+        COUNT(*) as posts,
+        COALESCE(SUM(view_count), 0) as views,
+        COALESCE(SUM(like_count), 0) as likes,
+        COALESCE(SUM(comment_count), 0) as comments
+        FROM blog_posts
+        WHERE author_id = #{userId}
+        AND created_at >= CURRENT_DATE - INTERVAL '#{months} months'
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM')
+        ORDER BY month DESC
+    </select>
+
+</mapper>

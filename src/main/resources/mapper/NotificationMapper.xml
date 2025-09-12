@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.NotificationMapper">
+
+    <resultMap id="NotificationResponseMap" type="com.naskah.demo.model.dto.response.NotificationResponse">
+        <id property="id" column="id"/>
+        <result property="message" column="message"/>
+        <result property="type" column="type"/>
+        <result property="projectId" column="project_id"/>
+        <result property="projectTitle" column="project_title"/>
+        <result property="pageNumber" column="page_number"/>
+        <result property="isRead" column="is_read"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="getUserNotifications" resultMap="NotificationResponseMap">
+        SELECT
+        n.*,
+        p.title as project_title
+        FROM notifications n
+        LEFT JOIN projects p ON n.project_id = p.id
+        WHERE n.user_id = #{userId}
+        ORDER BY n.created_at ${desc}
+        LIMIT #{i1} OFFSET #{i}
+    </select>
+
+    <insert id="insertNotification" parameterType="com.naskah.demo.model.entity.Notification" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notifications (
+        user_id, message, type, project_id, page_number,
+        related_entity_id, is_read, created_at
+        ) VALUES (
+        #{userId}, #{message}, CAST(#{type} AS notification_type), #{projectId}, #{pageNumber},
+        #{relatedEntityId}, #{isRead}, #{createdAt}
+        )
+    </insert>
+
+</mapper>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.UserMapper">
+
+    <select id="findUserByUsername" resultType="com.naskah.demo.model.entity.User">
+        SELECT *
+        FROM users
+        WHERE username = #{username}
+    </select>
+
+    <select id="findUserRoles" resultType="com.naskah.demo.model.entity.Role">
+        SELECT r.*
+        FROM roles r
+        JOIN user_roles ur ON r.id = ur.role_id
+        WHERE ur.user_id = #{userId}
+    </select>
+
+    <insert id="insertUserActivity" parameterType="com.naskah.demo.model.entity.UserActivity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_activities
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="activityType != null">activity_type,</if>
+            <if test="entityType != null">entity_type,</if>
+            <if test="entityId != null">entity_id,</if>
+            <if test="metadata != null">metadata,</if>
+            <if test="status != null">status,</if>
+            <if test="createdAt != null">created_at,</if>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="activityType != null">#{activityType},</if>
+            <if test="entityType != null">#{entityType},</if>
+            <if test="entityId != null">#{entityId},</if>
+            <if test="metadata != null">#{metadata}::jsonb,</if>
+            <if test="status != null">#{status},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+        </trim>
+    </insert>
+
+    <update id="updateLastLogin">
+        UPDATE users
+        SET last_login_at = #{lastLoginAt}
+        WHERE id = #{userId}
+    </update>
+
+    <select id="findUserByEmail" resultType="com.naskah.demo.model.entity.User">
+        SELECT * FROM users WHERE email = #{email}
+    </select>
+
+    <insert id="insertUser" parameterType="com.naskah.demo.model.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (
+        username, email, password_hash, full_name, profile_picture_url, bio,
+        total_books_read, reading_streak_days, is_active, email_verified, status,
+        google_id, contributed_books_count, average_rating, experience_points,
+        email_notifications, level, last_active_date, created_at, updated_at, last_login_at
+        ) VALUES (
+        #{username}, #{email}, #{passwordHash}, #{fullName}, #{profilePictureUrl}, #{bio},
+        #{totalBooksRead}, #{readingStreakDays}, #{isActive}, #{emailVerified}, #{status},
+        #{googleId}, #{contributedBooksCount}, #{averageRating}, #{experiencePoints},
+        #{emailNotifications}, #{level}, #{lastActiveDate}, #{createdAt}, #{updatedAt}, #{lastLoginAt}
+        )
+    </insert>
+
+    <insert id="savePasswordResetToken">
+        INSERT INTO password_reset_tokens (user_id, token, expires_at)
+        VALUES (#{id}, #{token}, #{expiresAt})
+    </insert>
+
+    <select id="findUserById" resultType="com.naskah.demo.model.entity.User">
+        SELECT * FROM users WHERE id = #{id}
+    </select>
+
+    <update id="updateUserPassword">
+        UPDATE users
+        SET password_hash = #{passwordHash}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deletePasswordResetToken">
+        DELETE FROM password_reset_tokens
+        WHERE user_id = #{id}
+    </delete>
+
+    <select id="findRoleByName" resultType="com.naskah.demo.model.entity.Role">
+        SELECT * FROM roles WHERE name = #{roleName}
+    </select>
+
+    <insert id="assignRoleToUser">
+        INSERT INTO user_roles (user_id, role_id)
+        VALUES (#{userId}, #{roleId})
+    </insert>
+
+    <insert id="saveVerificationToken">
+        INSERT INTO verification_tokens (user_id, token, expires_at)
+        VALUES (#{userId}, #{token}, #{expiresAt})
+    </insert>
+
+    <update id="linkGoogleAccount">
+        UPDATE users
+        SET google_id = #{googleId}
+        WHERE id = #{userId}
+    </update>
+
+    <update id="verifyUserEmail">
+        UPDATE users
+        SET email_verified = true
+        WHERE id = #{userId}
+    </update>
+
+    <delete id="deleteVerificationToken">
+        DELETE FROM verification_tokens
+        WHERE user_id = #{userId}
+    </delete>
+
+</mapper>

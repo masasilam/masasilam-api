@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ProjectMemberMapper">
+
+    <select id="getProjectMemberByProjectIdAndUserId" resultType="com.naskah.demo.model.entity.ProjectMember">
+        SELECT * FROM project_members
+        WHERE project_id = #{projectId}
+        AND user_id = #{userId}
+    </select>
+
+    <select id="getProjectMembersByProjectIdAndRole" resultType="com.naskah.demo.model.entity.ProjectMember">
+        SELECT * FROM project_members
+        WHERE project_id = #{projectId}
+        AND role = #{role}
+        AND is_active = true
+    </select>
+
+    <insert id="insertProjectMember" parameterType="com.naskah.demo.model.entity.ProjectMember" useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO project_members (
+        project_id,
+        user_id,
+        role,
+        assigned_pages,
+        is_active,
+        joined_at
+        ) VALUES (
+        #{projectId},
+        #{userId},
+        #{role},
+        #{assignedPages},
+        #{isActive},
+        #{joinedAt}
+        )
+    </insert>
+
+    <select id="getActiveMemberCountByProjectId" resultType="int">
+        SELECT COUNT(*) FROM project_members
+        WHERE project_id = #{projectId}
+        AND is_active = true
+    </select>
+
+    <!-- Get project member role breakdown -->
+    <select id="getProjectMemberRoleBreakdown" resultType="com.naskah.demo.model.dto.response.MemberRoleSummary">
+        SELECT
+        role,
+        CASE
+        WHEN role = 'TRANSLATOR' THEN 'Translator'
+        WHEN role = 'EDITOR' THEN 'Editor'
+        WHEN role = 'PROOFREADER' THEN 'Proofreader'
+        WHEN role = 'ILLUSTRATOR' THEN 'Illustrator'
+        WHEN role = 'REVIEWER' THEN 'Reviewer'
+        ELSE role
+        END as displayName,
+        COUNT(*) as count
+        FROM project_members
+        WHERE project_id = #{id}
+        AND is_active = true
+        GROUP BY role
+        ORDER BY count DESC
+    </select>
+
+    <!-- Get user project memberships -->
+    <select id="getUserProjectMemberships" resultType="com.naskah.demo.model.dto.response.ProjectMembershipResponse">
+        SELECT
+        pm.project_id as projectId,
+        p.title as projectTitle,
+        p.slug as projectSlug,
+        pm.role as role,
+        pm.assigned_pages as assignedPages,
+        pm.joined_at as joinedAt,
+        p.overall_progress as projectProgress,
+        p.status as projectStatus,
+        (SELECT COUNT(*) FROM project_pages pp
+        WHERE pp.project_id = p.id AND pp.assigned_user_id = #{userId}) as myCompletedPages,
+        p.updated_at as lastActivity
+        FROM project_members pm
+        INNER JOIN projects p ON pm.project_id = p.id
+        WHERE pm.user_id = #{userId}
+        AND pm.is_active = true
+        ORDER BY pm.joined_at DESC
+    </select>
+
+    <!-- Get active member IDs by project ID -->
+    <select id="getActiveMemberIdsByProjectId" resultType="java.lang.Long">
+        SELECT user_id FROM project_members
+        WHERE project_id = #{projectId}
+        AND is_active = true
+    </select>
+
+    <!-- Get user joined project count -->
+    <select id="getUserJoinedProjectCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM project_members
+        WHERE user_id = #{userId}
+        AND is_active = true
+    </select>
+
+</mapper>
