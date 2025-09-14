@@ -16,7 +16,8 @@
 	<description>Demo project for Spring Boot</description>
 
 	<properties>
-		<java.version>24.0.1</java.version>
+		<!-- PERBAIKAN 1: Turunkan versi Java ke 21 (LTS) -->
+		<java.version>21</java.version>
 		<springdoc.version>1.8.0</springdoc.version>
 		<json-simple.version>1.1.1</json-simple.version>
 		<commons-lang3.version>3.17.0</commons-lang3.version>
@@ -144,13 +145,14 @@
 			<version>${json-simple.version}</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/nl.basjes.parse.useragent/yauaa -->
+		<!-- User Agent Analysis -->
 		<dependency>
 			<groupId>nl.basjes.parse.useragent</groupId>
 			<artifactId>yauaa</artifactId>
 			<version>${yauaa.version}</version>
 		</dependency>
 
+		<!-- JWT -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -171,14 +173,10 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-crypto</artifactId>
-			<version>5.8.5</version> <!-- sesuaikan dengan versi yang kamu pakai -->
 		</dependency>
-
-
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
-			<version>1.15</version>
 		</dependency>
 
 		<!-- OCR Processing -->
@@ -188,35 +186,36 @@
 			<version>5.16.0</version>
 		</dependency>
 
-		<!-- For Word document processing -->
+		<!-- Word document processing -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.2.4</version>
 		</dependency>
 
-		<!--  -->
+		<!-- Google API -->
 		<dependency>
 			<groupId>com.google.api-client</groupId>
 			<artifactId>google-api-client</artifactId>
 			<version>2.8.0</version>
 		</dependency>
 
+		<!-- Email -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<!-- Thymeleaf -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-commons -->
+		<!-- PERBAIKAN 2: Hapus version spring-data-commons -->
 		<dependency>
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-commons</artifactId>
-			<version>4.0.0-M4</version>
 		</dependency>
 
 		<!-- Testing -->
