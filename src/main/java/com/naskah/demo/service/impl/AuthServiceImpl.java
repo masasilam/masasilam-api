@@ -48,8 +48,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public DataResponse<LoginResponse> login(LoginRequest request) {
         User user = userMapper.findUserByUsername(request.getUsername());
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash()) ||
-                !user.getIsActive() || !user.getEmailVerified()) {
+        if (Boolean.TRUE.equals(user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash()) ||
+                !user.getIsActive()) || Boolean.TRUE.equals(!user.getEmailVerified())) {
             throw new UnauthorizedException();
         }
 
@@ -263,7 +263,7 @@ public class AuthServiceImpl implements AuthService {
         }
         log.info("User found: {}", user.getEmail());
 
-        if (user.getEmailVerified()) {
+        if (Boolean.TRUE.equals(user.getEmailVerified())) {
             log.warn("Email already verified for user: {}", userId);
             throw new BadRequestException();
         }
@@ -280,7 +280,7 @@ public class AuthServiceImpl implements AuthService {
             throw new DataNotFoundException();
         }
 
-        if (user.getEmailVerified()) {
+        if (Boolean.TRUE.equals(user.getEmailVerified())) {
             throw new BadRequestException();
         }
 
@@ -337,7 +337,7 @@ public class AuthServiceImpl implements AuthService {
         String username = jwtUtil.extractUsername(refreshToken);
         User user = userMapper.findUserByUsername(username);
 
-        if (!jwtUtil.validateToken(refreshToken) || !"REFRESH".equals(tokenType) || user == null || !user.getIsActive()) {
+        if (!jwtUtil.validateToken(refreshToken) || !"REFRESH".equals(tokenType) || user == null || Boolean.TRUE.equals(!user.getIsActive())) {
             throw new UnauthorizedException();
         }
 

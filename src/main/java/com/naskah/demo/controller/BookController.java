@@ -45,7 +45,14 @@ public class BookController {
     }
 
     @GetMapping
-    public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) int limit, @RequestParam(defaultValue = "updateAt", required = false) String sortField, @RequestParam(defaultValue = "DESC", required = false) String sortOrder, @RequestParam(required = false) String searchTitle, @RequestParam(required = false) Long seriesId, @RequestParam(required = false) Long genreId, @RequestParam(required = false) Long subGenreId) {
+    public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                                                             @RequestParam(defaultValue = "10") @Min(1) int limit,
+                                                                             @RequestParam(defaultValue = "updateAt", required = false) String sortField,
+                                                                             @RequestParam(defaultValue = "DESC", required = false) String sortOrder,
+                                                                             @RequestParam(required = false) String searchTitle,
+                                                                             @RequestParam(required = false) Long seriesId,
+                                                                             @RequestParam(required = false) Long genreId,
+                                                                             @RequestParam(required = false) Long subGenreId) {
 
         DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(page, limit, sortField, sortOrder, searchTitle, seriesId, genreId, subGenreId);
         return ResponseEntity.ok(response);

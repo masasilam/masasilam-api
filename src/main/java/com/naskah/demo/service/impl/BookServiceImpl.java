@@ -331,40 +331,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-
-    private boolean hasBookAccess(User user, Book book) {
-        List<Role> userRoles = userMapper.findUserRoles(user.getId());
-
-        boolean isAdmin = userRoles.stream().anyMatch(role ->
-                "SUPER_ADMIN".equals(role.getName()) ||
-                        "LIBRARIAN".equals(role.getName()));
-        if (isAdmin) {
-            return true;
-        }
-
-        boolean isPremiumBook = book.getCategory().equals("PREMIUM");
-        boolean hasPremiumAccess = userRoles.stream().anyMatch(role ->
-                "PREMIUM_MEMBER".equals(role.getName()) ||
-                        "PREMIUM_DOWNLOADER".equals(role.getName()));
-
-        if (isPremiumBook && !hasPremiumAccess) {
-            return false;
-        }
-
-        boolean isRestrictedBook = book.getCategory().equals("RESTRICTED");
-        boolean canAccessRestricted = userRoles.stream().anyMatch(role ->
-                !"RESTRICTED_READER".equals(role.getName()) &&
-                        !"GUEST".equals(role.getName()));
-
-        if (isRestrictedBook && !canAccessRestricted) {
-            return false;
-        }
-
-        return userRoles.stream().anyMatch(role ->
-                !"GUEST".equals(role.getName()) &&
-                        !"TRIAL_USER".equals(role.getName()));
-    }
-
 //    @Override
 //    public DataResponse<Book> update(String id, Book book, MultipartFile file) throws IOException {
 //        try {
