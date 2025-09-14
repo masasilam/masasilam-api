@@ -34,8 +34,9 @@ WORKDIR /app
 # Copy jar dari build stage
 COPY --from=builder /app/target/*.jar app.jar
 
-# Change ownership ke non-root user
-RUN chown appuser:appgroup app.jar
+# Create storage directories dengan proper ownership
+RUN mkdir -p /app/storage/covers /app/storage/books /app/storage/authors && \
+    chown -R appuser:appgroup /app
 
 # Switch ke non-root user
 USER appuser
