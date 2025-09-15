@@ -18,17 +18,28 @@ import com.naskah.demo.util.file.FileUtil;
 import com.naskah.demo.util.interceptor.HeaderHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import static com.naskah.demo.util.file.FileUtil.sanitizeFilename;
 
 @Slf4j
 @Service
@@ -68,7 +79,7 @@ public class BookServiceImpl implements BookService {
 
             Book book = new Book();
             book.setTitle(request.getTitle());
-            book.setSlug(FileUtil.sanitizeFilename(request.getTitle()));
+            book.setSlug(sanitizeFilename(request.getTitle()));
             book.setSubtitle(request.getSubtitle());
             book.setSeriesId(request.getSeriesId());
             book.setSeriesOrder(request.getSeriesOrder());
@@ -123,7 +134,7 @@ public class BookServiceImpl implements BookService {
                 } else {
                     Author newAuthor = new Author();
                     newAuthor.setName(authorRequest.getName());
-                    newAuthor.setSlug(FileUtil.sanitizeFilename(authorRequest.getName()));
+                    newAuthor.setSlug(sanitizeFilename(authorRequest.getName()));
                     newAuthor.setBirthDate(authorRequest.getBirthDate());
                     newAuthor.setDeathDate(authorRequest.getDeathDate());
                     newAuthor.setBirthPlace(authorRequest.getBirthPlace());
@@ -173,114 +184,146 @@ public class BookServiceImpl implements BookService {
     @Transactional
     public DataResponse<ReadingResponse> startReading(String slug) {
         try {
-            if (headerHolder.getUsername() == null || headerHolder.getUsername().isEmpty()) {
-                throw new UnauthorizedException();
-            }
-
-            User user = userMapper.findUserByUsername(headerHolder.getUsername());
-            if (user == null) {
-                throw new DataNotFoundException();
-            }
-
-            Long userId = user.getId();
-
             Book book = bookMapper.findBookBySlug(slug);
             if (book == null) {
                 throw new DataNotFoundException();
             }
 
-//            if (!hasBookAccess(user, book)) {
-//                throw new ForbiddenException();
-//            }
+            String username = headerHolder.getUsername();
+            boolean isAuthenticated = username != null && !username.isEmpty();
 
-            ReadingProgress existingProgress = readingMapper.findReadingProgressByUserAndBook(userId, book.getId());
+            ReadingProgress existingProgress = null;
+            ReadingSession session = null;
+            Long userId = null;
 
-            if (existingProgress == null) {
-                ReadingProgress newProgress = new ReadingProgress();
-                newProgress.setUserId(userId);
-                newProgress.setBookId(book.getId());
-                newProgress.setCurrentPage(1);
-                newProgress.setTotalPages(book.getTotalPages());
-                newProgress.setCurrentPosition("0");
-                newProgress.setPercentageCompleted(BigDecimal.ZERO);
-                newProgress.setReadingTimeMinutes(0);
-                newProgress.setStatus("READING");
-                newProgress.setIsFavorite(false);
-                newProgress.setStartedAt(LocalDateTime.now());
-                newProgress.setLastReadAt(LocalDateTime.now());
-
-                readingMapper.insertReadingProgress(newProgress);
-
-                existingProgress = newProgress;
-            } else {
-                // Update last read time
-                existingProgress.setLastReadAt(LocalDateTime.now());
-                if (!"COMPLETED".equals(existingProgress.getStatus())) {
-                    existingProgress.setStatus("READING");
+            if (isAuthenticated) {
+                // User is logged in - full functionality
+                User user = userMapper.findUserByUsername(username);
+                if (user == null) {
+                    throw new DataNotFoundException();
                 }
-                readingMapper.updateReadingProgress(existingProgress);
+                userId = user.getId();
+
+                // Handle reading progress for authenticated user
+                existingProgress = readingMapper.findReadingProgressByUserAndBook(userId, book.getId());
+
+                if (existingProgress == null) {
+                    ReadingProgress newProgress = new ReadingProgress();
+                    newProgress.setUserId(userId);
+                    newProgress.setBookId(book.getId());
+                    newProgress.setCurrentPage(1);
+                    newProgress.setTotalPages(book.getTotalPages());
+                    newProgress.setCurrentPosition("0");
+                    newProgress.setPercentageCompleted(BigDecimal.ZERO);
+                    newProgress.setReadingTimeMinutes(0);
+                    newProgress.setStatus("READING");
+                    newProgress.setIsFavorite(false);
+                    newProgress.setStartedAt(LocalDateTime.now());
+                    newProgress.setLastReadAt(LocalDateTime.now());
+
+                    readingMapper.insertReadingProgress(newProgress);
+                    existingProgress = newProgress;
+                } else {
+                    // Update last read time
+                    existingProgress.setLastReadAt(LocalDateTime.now());
+                    if (!"COMPLETED".equals(existingProgress.getStatus())) {
+                        existingProgress.setStatus("READING");
+                    }
+                    readingMapper.updateReadingProgress(existingProgress);
+                }
+
+                // Create new reading session with device info
+                session = new ReadingSession();
+                session.setUserId(userId);
+                session.setBookId(book.getId());
+                session.setStartTime(LocalDateTime.now());
+                session.setDeviceClass(headerHolder.getDeviceType());
+                session.setDeviceName(headerHolder.getDeviceName());
+                session.setDeviceBrand(headerHolder.getDeviceBrand());
+                session.setAgentNameVersion(headerHolder.getBrowser());
+                session.setOperatingSystem(headerHolder.getOs());
+                session.setLayoutEngine(headerHolder.getLayoutEngine());
+                session.setDeviceCpu(headerHolder.getDeviceCpu());
+                session.setIpAddress(headerHolder.getIpAddress());
+                session.setCreatedAt(LocalDateTime.now());
+
+                readingMapper.insertReadingSession(session);
+
+                // Create user activity for authenticated users
+                Map<String, Object> metadata = Map.of(
+                        "action", "start_reading",
+                        "book_title", book.getTitle(),
+                        "book_slug", book.getSlug(),
+                        "device_info", Map.of(
+                                "type", headerHolder.getDeviceType(),
+                                "name", headerHolder.getDeviceName(),
+                                "browser", headerHolder.getBrowser(),
+                                "os", headerHolder.getOs(),
+                                "ip", headerHolder.getIpAddress()
+                        )
+                );
+
+                UserActivity activity = new UserActivity();
+                activity.setUserId(userId);
+                activity.setActivityType("read");
+                activity.setEntityType("BOOK");
+                activity.setEntityId(book.getId());
+
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                    activity.setMetadata(objectMapper.writeValueAsString(metadata));
+                } catch (JsonProcessingException e) {
+                    log.error("Gagal mengkonversi metadata ke JSON", e);
+                    activity.setMetadata("{}");
+                }
+
+                activity.setCreatedAt(LocalDateTime.now());
+                userMapper.insertUserActivity(activity);
             }
 
-            // Create new reading session with device info from interceptor
-            ReadingSession session = new ReadingSession();
-            session.setUserId(userId);
-            session.setBookId(book.getId());
-            session.setStartTime(LocalDateTime.now());
-            session.setDeviceClass(headerHolder.getDeviceType());
-            session.setDeviceName(headerHolder.getDeviceName());
-            session.setDeviceBrand(headerHolder.getDeviceBrand());
-            session.setAgentNameVersion(headerHolder.getBrowser());
-            session.setOperatingSystem(headerHolder.getOs());
-            session.setLayoutEngine(headerHolder.getLayoutEngine());
-            session.setDeviceCpu(headerHolder.getDeviceCpu());
-            session.setIpAddress(headerHolder.getIpAddress());
-
-            session.setCreatedAt(LocalDateTime.now());
-
-            readingMapper.insertReadingSession(session);
-
-            // Update book view count
+            // Always increment book view count (for both authenticated and guest users)
             bookMapper.incrementReadCount(book.getId());
 
-            Map<String, Object> metadata = Map.of(
-                    "action", "start_reading",
-                    "book_title", book.getTitle(),
-                    "book_slug", book.getSlug(),
-                    "device_info", Map.of(
-                            "type", headerHolder.getDeviceType(),
-                            "name", headerHolder.getDeviceName(),
-                            "browser", headerHolder.getBrowser(),
-                            "os", headerHolder.getOs(),
-                            "ip", headerHolder.getIpAddress()
-                    )
-            );
-
-            // Create and save activity
-            UserActivity activity = new UserActivity();
-            activity.setUserId(userId);
-            activity.setActivityType("READ");
-            activity.setEntityType("BOOK");
-            activity.setEntityId(book.getId());
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                activity.setMetadata(objectMapper.writeValueAsString(metadata));
-            } catch (JsonProcessingException e) {
-                log.error("Gagal mengkonversi metadata ke JSON", e);
-                activity.setMetadata("{}"); // Fallback ke JSON kosong
+            // Create reading response
+            ReadingResponse readingResponse;
+            if (isAuthenticated) {
+                // Full response for authenticated users
+                readingResponse = getReadingResponse(book, existingProgress, session);
+            } else {
+                // Limited response for guest users
+                readingResponse = getGuestReadingResponse(book);
             }
 
-            activity.setCreatedAt(LocalDateTime.now());
+            String message = isAuthenticated ?
+                    "Berhasil memulai membaca buku" :
+                    "Membaca sebagai tamu - Login untuk menyimpan progres";
 
-            userMapper.insertUserActivity(activity);
+            return new DataResponse<>(SUCCESS, message, HttpStatus.OK.value(), readingResponse);
 
-            ReadingResponse readingResponse = getReadingResponse(book, existingProgress, session);
-
-            return new DataResponse<>(SUCCESS, "Berhasil memulai membaca buku", HttpStatus.OK.value(), readingResponse);
         } catch (Exception e) {
             log.error("Error saat memulai membaca buku: {} untuk user: {}", slug, headerHolder.getUsername(), e);
             throw e;
         }
+    }
+
+    private ReadingResponse getGuestReadingResponse(Book book) {
+        ReadingResponse response = new ReadingResponse();
+
+        // Basic book information
+        response.setBookId(book.getId());
+        response.setTitle(book.getTitle());
+        response.setSlug(book.getSlug());
+        response.setFileUrl(book.getFileUrl());
+        response.setTotalPages(book.getTotalPages());
+        response.setCurrentPage(1);
+        response.setCurrentPosition("0");
+        response.setPercentageCompleted(BigDecimal.ZERO);
+        response.setReadingTimeMinutes(0);
+        response.setStatus("GUEST_READING");
+        response.setIsFavorite(false);
+        response.setSessionId(null);
+
+        return response;
     }
 
     private ReadingResponse getReadingResponse(Book book, ReadingProgress existingProgress, ReadingSession session) {
@@ -299,6 +342,115 @@ public class BookServiceImpl implements BookService {
         readingResponse.setSessionId(session.getId());
         return readingResponse;
     }
+
+    @Override
+    @Transactional
+    public ResponseEntity<byte[]> downloadBookAsBytes(String slug) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            String username = headerHolder.getUsername();
+            boolean isAuthenticated = username != null && !username.isEmpty();
+
+            // Always allow download, but track differently for authenticated users
+            if (isAuthenticated) {
+                User user = userMapper.findUserByUsername(username);
+                if (user != null) {
+                    // Log download activity for authenticated users
+                    Map<String, Object> metadata = Map.of(
+                            "action", "download_book",
+                            "book_title", book.getTitle(),
+                            "book_slug", book.getSlug(),
+                            "device_info", Map.of(
+                                    "type", headerHolder.getDeviceType(),
+                                    "browser", headerHolder.getBrowser(),
+                                    "os", headerHolder.getOs(),
+                                    "ip", headerHolder.getIpAddress()
+                            )
+                    );
+
+                    UserActivity activity = new UserActivity();
+                    activity.setUserId(user.getId());
+                    activity.setActivityType("download");
+                    activity.setEntityType("BOOK");
+                    activity.setEntityId(book.getId());
+
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    try {
+                        activity.setMetadata(objectMapper.writeValueAsString(metadata));
+                    } catch (JsonProcessingException e) {
+                        log.error("Gagal mengkonversi metadata ke JSON", e);
+                        activity.setMetadata("{}");
+                    }
+
+                    activity.setCreatedAt(LocalDateTime.now());
+                    userMapper.insertUserActivity(activity);
+                }
+            }
+
+            String fileUrl = book.getFileUrl();
+            if (fileUrl == null || fileUrl.isEmpty()) {
+                throw new DataNotFoundException();
+            }
+
+            byte[] fileContent;
+
+            if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+                // Download from remote URL
+                try {
+                    RestTemplate restTemplate = new RestTemplate();
+                    ResponseEntity<byte[]> response = restTemplate.getForEntity(fileUrl, byte[].class);
+
+                    if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                        throw new RuntimeException("Gagal mengunduh file dari URL: " + fileUrl);
+                    }
+
+                    fileContent = response.getBody();
+                    log.info("Successfully downloaded {} bytes from: {}", fileContent.length, fileUrl);
+
+                } catch (Exception e) {
+                    log.error("Error downloading from URL: {}", fileUrl, e);
+                    throw new RuntimeException("Gagal mengunduh file dari URL: " + e.getMessage());
+                }
+            } else {
+                // Read local file
+                try {
+                    Path path = Paths.get(fileUrl);
+                    fileContent = Files.readAllBytes(path);
+                    log.info("Successfully read {} bytes from local file: {}", fileContent.length, fileUrl);
+
+                } catch (Exception e) {
+                    log.error("Error reading local file: {}", fileUrl, e);
+                    throw new RuntimeException("Gagal membaca file lokal: " + e.getMessage());
+                }
+            }
+
+            // Prepare filename
+            String filename = book.getTitle() != null ?
+                    sanitizeFilename(book.getTitle()) + ".epub" :
+                    slug + ".epub";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", filename);
+            headers.setCacheControl("no-cache, no-store, must-revalidate");
+            headers.setPragma("no-cache");
+            headers.setExpires(0);
+
+            return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
+
+        } catch (DataNotFoundException e) {
+            log.warn("Book not found for download: {}", slug);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            log.error("Error downloading book: {}", slug, e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @Override
     public DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,

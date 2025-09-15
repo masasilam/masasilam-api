@@ -5,6 +5,8 @@ import com.naskah.demo.model.dto.response.BookResponse;
 import com.naskah.demo.model.dto.response.DataResponse;
 import com.naskah.demo.model.dto.response.DatatableResponse;
 import com.naskah.demo.model.dto.response.ReadingResponse;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -19,6 +21,6 @@ public interface BookService {
                                                       String searchTitle, Long seriesId, Long genreId, Long subGenreId);
 //    DataResponse<Book> update(String id, Book book, MultipartFile file) throws IOException;
 //    DefaultResponse delete(String id) throws IOException;
-//    Resource downloadEbook(String id) throws MalformedURLException;
+    ResponseEntity<byte[]> downloadBookAsBytes(String slug);
 //    Resource readEbook(String id) throws MalformedURLException;
 }

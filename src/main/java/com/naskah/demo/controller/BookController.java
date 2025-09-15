@@ -1,15 +1,19 @@
 package com.naskah.demo.controller;
 
+import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.model.dto.request.BookRequest;
 import com.naskah.demo.model.dto.response.BookResponse;
 import com.naskah.demo.model.dto.response.DataResponse;
 import com.naskah.demo.model.dto.response.DatatableResponse;
 import com.naskah.demo.model.dto.response.ReadingResponse;
+import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.service.BookService;
 import com.naskah.demo.util.FileTypeUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +60,11 @@ public class BookController {
 
         DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(page, limit, sortField, sortOrder, searchTitle, seriesId, genreId, subGenreId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{slug}/download")
+    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug) {
+        return bookService.downloadBookAsBytes(slug);
     }
 
 //
