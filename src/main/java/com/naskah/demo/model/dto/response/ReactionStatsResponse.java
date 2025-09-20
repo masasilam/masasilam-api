@@ -1,21 +1,9 @@
 package com.naskah.demo.model.dto.response;
 
 import lombok.Data;
-import java.time.LocalDateTime;
 
 @Data
-public class ReactionResponse {
-    private Long id;
-    private Long userId;
-    private String userName;
-    private Long bookId;
-    private String reactionType;
-    private Integer rating;
-    private String comment;
-    private Integer page;
-    private String position;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+public class ReactionStatsResponse {
     private Long totalRatings;
     private Long totalAngry;
     private Long totalLikes;

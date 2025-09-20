@@ -1,13 +1,12 @@
 package com.naskah.demo.model.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class ReactionRequest {
-    @NotBlank
-    private String reactionType; // LIKE, LOVE, STAR, THUMB_UP, etc.
-
+    private String type; // Frontend mengirim "type"
+    private Integer rating; // Frontend mengirim rating untuk type "rating"
+    private String comment; // Frontend mengirim comment
     private Integer page;
     private String position;
 }

@@ -160,15 +160,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // 10. Export Highlight & Notes
-    @PostMapping("/{slug}/export")
-    public ResponseEntity<DataResponse<ExportResponse>> exportHighlightsAndNotes(
-            @PathVariable String slug,
-            @RequestParam(defaultValue = "PDF") String format) {
-        DataResponse<ExportResponse> response = bookService.exportHighlightsAndNotes(slug, format);
-        return ResponseEntity.ok(response);
-    }
-
     // 11. Terjemahan otomatis (GRATIS)
     @PostMapping("/{slug}/translate")
     public ResponseEntity<DataResponse<TranslationResponse>> translateText(
@@ -178,69 +169,85 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-//    // 12. Multilingual Side-by-Side View
-//    @GetMapping("/{slug}/dual-language")
-//    public ResponseEntity<DataResponse<DualLanguageResponse>> getDualLanguageView(
-//            @PathVariable String slug,
-//            @RequestParam String targetLanguage,
-//            @RequestParam(defaultValue = "1") int page) {
-//        DataResponse<DualLanguageResponse> response = bookService.getDualLanguageView(slug, targetLanguage, page);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 13. Highlight Auto-Translate
-//    @PostMapping("/{slug}/translate-highlight")
-//    public ResponseEntity<DataResponse<TranslatedHighlightResponse>> translateHighlight(
-//            @PathVariable String slug,
-//            @Valid @RequestBody TranslateHighlightRequest request) {
-//        DataResponse<TranslatedHighlightResponse> response = bookService.translateHighlight(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 14. Reaksi / Rating / Emoji di Buku
-//    @PostMapping("/{slug}/reactions")
-//    public ResponseEntity<DataResponse<ReactionResponse>> addReaction(
-//            @PathVariable String slug,
-//            @Valid @RequestBody ReactionRequest request) {
-//        DataResponse<ReactionResponse> response = bookService.addReaction(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 15. Discussion Forum / Comments
-//    @GetMapping("/{slug}/discussions")
-//    public ResponseEntity<DataResponse<List<DiscussionResponse>>> getDiscussions(
-//            @PathVariable String slug,
-//            @RequestParam(defaultValue = "1") int page,
-//            @RequestParam(defaultValue = "20") int limit) {
-//        DataResponse<List<DiscussionResponse>> response = bookService.getDiscussions(slug, page, limit);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @PostMapping("/{slug}/discussions")
-//    public ResponseEntity<DataResponse<DiscussionResponse>> addDiscussion(
-//            @PathVariable String slug,
-//            @Valid @RequestBody DiscussionRequest request) {
-//        DataResponse<DiscussionResponse> response = bookService.addDiscussion(slug, request);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//    }
-//
-//    // 16. Text-to-Speech server-side
-//    @PostMapping("/{slug}/tts")
-//    public ResponseEntity<DataResponse<TTSResponse>> generateTextToSpeech(
-//            @PathVariable String slug,
-//            @Valid @RequestBody TTSRequest request) {
-//        DataResponse<TTSResponse> response = bookService.generateTextToSpeech(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 17. Audiobook Hybrid Mode
-//    @PostMapping("/{slug}/sync-audio")
-//    public ResponseEntity<DataResponse<AudioSyncResponse>> syncAudioWithText(
-//            @PathVariable String slug,
-//            @Valid @RequestBody AudioSyncRequest request) {
-//        DataResponse<AudioSyncResponse> response = bookService.syncAudioWithText(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
+    // 13. Highlight Auto-Translate
+    @PostMapping("/{slug}/translate-highlight")
+    public ResponseEntity<DataResponse<TranslatedHighlightResponse>> translateHighlight(
+            @PathVariable String slug,
+            @Valid @RequestBody TranslateHighlightRequest request) {
+        DataResponse<TranslatedHighlightResponse> response = bookService.translateHighlight(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 14. Reaksi / Rating / Emoji di Buku
+    @GetMapping("/{slug}/reactions")
+    public ResponseEntity<DataResponse<List<ReactionResponse>>> getReactions(
+            @PathVariable String slug,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        DataResponse<List<ReactionResponse>> response = bookService.getReactions(slug, page, limit);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{slug}/reactions")
+    public ResponseEntity<DataResponse<ReactionResponse>> addReaction(
+            @PathVariable String slug,
+            @RequestBody @Valid ReactionRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.addReaction(slug, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{slug}/reactions/stats")
+    public ResponseEntity<DataResponse<ReactionStatsResponse>> getReactionStats(@PathVariable String slug) {
+        DataResponse<ReactionStatsResponse> response = bookService.getReactionStats(slug);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{slug}/reactions/{reactionId}")
+    public ResponseEntity<DataResponse<Void>> removeReaction(
+            @PathVariable String slug,
+            @PathVariable Long reactionId) {
+
+        DataResponse<Void> response = bookService.removeReaction(slug, reactionId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 15. Discussion Forum / Comments
+    @GetMapping("/{slug}/discussions")
+    public ResponseEntity<DataResponse<List<DiscussionResponse>>> getDiscussions(
+            @PathVariable String slug,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+        DataResponse<List<DiscussionResponse>> response = bookService.getDiscussions(slug, page, limit);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{slug}/discussions")
+    public ResponseEntity<DataResponse<DiscussionResponse>> addDiscussion(
+            @PathVariable String slug,
+            @Valid @RequestBody DiscussionRequest request) {
+        DataResponse<DiscussionResponse> response = bookService.addDiscussion(slug, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // 16. Text-to-Speech server-side
+    @PostMapping("/{slug}/tts")
+    public ResponseEntity<DataResponse<TTSResponse>> generateTextToSpeech(
+            @PathVariable String slug,
+            @Valid @RequestBody TTSRequest request) {
+        DataResponse<TTSResponse> response = bookService.generateTextToSpeech(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 17. Audiobook Hybrid Mode
+    @PostMapping("/{slug}/sync-audio")
+    public ResponseEntity<DataResponse<AudioSyncResponse>> syncAudioWithText(
+            @PathVariable String slug,
+            @Valid @RequestBody AudioSyncRequest request) {
+        DataResponse<AudioSyncResponse> response = bookService.syncAudioWithText(slug, request);
+        return ResponseEntity.ok(response);
+    }
 //
 //    // 18. Voice Notes
 //    @PostMapping("/{slug}/voice-notes")

@@ -2,7 +2,6 @@ package com.naskah.demo.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.naskah.demo.exception.custom.DataAlreadyExistsException;
 import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.exception.custom.UnauthorizedException;
@@ -18,22 +17,18 @@ import com.naskah.demo.util.file.FileUtil;
 import com.naskah.demo.util.interceptor.HeaderHolder;
 import com.naskah.demo.util.translation.MicrosoftTranslatorUtil;
 import com.naskah.demo.util.tts.MicrosoftTTSUtil;
-import com.naskah.demo.util.voice.VoiceCommandProcessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -41,12 +36,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.naskah.demo.util.file.FileUtil.sanitizeFilename;
 
 @Slf4j
 @Service
@@ -67,8 +59,8 @@ public class BookServiceImpl implements BookService {
     private final NoteMapper noteMapper;
     private final ReactionMapper reactionMapper;
     private final DiscussionMapper discussionMapper;
-    private final VoiceNoteMapper voiceNoteMapper;
-    private final CollaborativeNoteMapper collaborativeNoteMapper;
+    private final HighlightTranslationMapper highlightTranslationMapper;
+    private final AudioSyncMapper audioSyncMapper;
 
     // Utility services
     private final MicrosoftTranslatorUtil translatorUtil;
@@ -903,48 +895,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 10. Export Highlights and Notes
-    @Override
-    public DataResponse<ExportResponse> exportHighlightsAndNotes(String slug, String format) {
-        try {
-            String username = headerHolder.getUsername();
-            if (username == null || username.isEmpty()) {
-                throw new UnauthorizedException();
-            }
-
-            User user = userMapper.findUserByUsername(username);
-            Book book = bookMapper.findBookBySlug(slug);
-
-            if (user == null || book == null) {
-                throw new DataNotFoundException();
-            }
-
-            List<Highlight> highlights = highlightMapper.findHighlightsByUserAndBook(user.getId(), book.getId());
-            List<Note> notes = noteMapper.findNotesByUserAndBook(user.getId(), book.getId());
-
-            // Generate export file
-            String fileName = sanitizeFilename(book.getTitle()) + "_highlights_notes." + format.toLowerCase();
-            String exportContent = generateExportContent(highlights, notes, book, format);
-            String filePath = saveExportFile(fileName, exportContent, format);
-
-            ExportResponse response = new ExportResponse();
-            response.setFileName(fileName);
-            response.setDownloadUrl(filePath);
-            response.setFormat(format);
-            response.setFileSize((long) exportContent.length());
-            response.setTotalHighlights(highlights.size());
-            response.setTotalNotes(notes.size());
-            response.setGeneratedAt(LocalDateTime.now());
-            response.setExpiresAt(LocalDateTime.now().plusDays(7).toString());
-
-            return new DataResponse<>(SUCCESS, "Export generated successfully", HttpStatus.OK.value(), response);
-
-        } catch (Exception e) {
-            log.error("Error exporting highlights and notes for book: {}", slug, e);
-            throw new RuntimeException("Export failed: " + e.getMessage());
-        }
-    }
-
     // 11. Translate Text
     @Override
     public DataResponse<TranslationResponse> translateText(String slug, TranslationRequest request) {
@@ -977,976 +927,609 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-//    // 12. Get Dual Language View
-//    @Override
-//    public DataResponse<DualLanguageResponse> getDualLanguageView(String slug, String targetLanguage, int page) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Get page content
-//            String originalText = getPageContent(book.getFileUrl(), page);
-//
-//            // Check cache for existing translation
-//            String translatedText = getCachedTranslation(book.getId(), page, targetLanguage);
-//            boolean isCached = translatedText != null;
-//
-//            if (!isCached) {
-//                // Translate and cache
-//                translatedText = translatorUtil.translate(originalText, null, targetLanguage);
-//                cacheTranslation(book.getId(), page, targetLanguage, translatedText);
-//            }
-//
-//            DualLanguageResponse response = new DualLanguageResponse();
-//            response.setPage(page);
-//            response.setOriginalText(originalText);
-//            response.setTranslatedText(translatedText);
-//            response.setSourceLanguage(getBookLanguage(book));
-//            response.setTargetLanguage(targetLanguage);
-//            response.setIsTranslationCached(isCached);
-//
-//            return new DataResponse<>(SUCCESS, "Dual language view loaded", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting dual language view for book: {}", slug, e);
-//            throw new RuntimeException("Dual language view failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 13. Translate Highlight
-//    @Override
-//    @Transactional
-//    public DataResponse<TranslatedHighlightResponse> translateHighlight(String slug, TranslateHighlightRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Highlight highlight = highlightMapper.findHighlightById(request.getHighlightId());
-//
-//            if (user == null || highlight == null || !highlight.getUserId().equals(user.getId())) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            String translatedText = translatorUtil.translate(
-//                    highlight.getHighlightedText(),
-//                    null,
-//                    request.getTargetLanguage()
-//            );
-//
-//            // Save translation for future use
-//            saveHighlightTranslation(highlight.getId(), request.getTargetLanguage(), translatedText);
-//
-//            TranslatedHighlightResponse response = new TranslatedHighlightResponse();
-//            response.setHighlightId(highlight.getId());
-//            response.setOriginalText(highlight.getHighlightedText());
-//            response.setTranslatedText(translatedText);
-//            response.setTargetLanguage(request.getTargetLanguage());
-//            response.setTranslatedAt(LocalDateTime.now());
-//            response.setIsSaved(true);
-//
-//            return new DataResponse<>(SUCCESS, "Highlight translated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error translating highlight: {}", request.getHighlightId(), e);
-//            throw new RuntimeException("Highlight translation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 14. Add Reaction
-//    @Override
-//    @Transactional
-//    public DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Check if user already reacted
-//            Reaction existingReaction = reactionMapper.findReactionByUserAndBook(
-//                    user.getId(), book.getId(), request.getPage(), request.getPosition()
-//            );
-//
-//            if (existingReaction != null) {
-//                // Update existing reaction
-//                existingReaction.setReactionType(request.getReactionType());
-//                existingReaction.setUpdatedAt(LocalDateTime.now());
-//                reactionMapper.updateReaction(existingReaction);
-//            } else {
-//                // Create new reaction
-//                Reaction reaction = new Reaction();
-//                reaction.setUserId(user.getId());
-//                reaction.setBookId(book.getId());
-//                reaction.setReactionType(request.getReactionType());
-//                reaction.setPage(request.getPage());
-//                reaction.setPosition(request.getPosition());
-//                reaction.setCreatedAt(LocalDateTime.now());
-//
-//                reactionMapper.insertReaction(reaction);
-//                existingReaction = reaction;
-//            }
-//
-//            ReactionResponse response = mapToReactionResponse(existingReaction, user.getUsername());
-//            return new DataResponse<>(SUCCESS, "Reaction added successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error adding reaction for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    // 15. Get Discussions & Add Discussion
-//    @Override
-//    public DataResponse<List<DiscussionResponse>> getDiscussions(String slug, int page, int limit) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            int offset = (page - 1) * limit;
-//            List<Discussion> discussions = discussionMapper.findDiscussionsByBook(book.getId(), offset, limit);
-//            List<DiscussionResponse> responses = discussions.stream()
-//                    .map(this::mapToDiscussionResponse)
-//                    .collect(Collectors.toList());
-//
-//            return new DataResponse<>(SUCCESS, "Discussions retrieved successfully", HttpStatus.OK.value(), responses);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting discussions for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    @Override
-//    @Transactional
-//    public DataResponse<DiscussionResponse> addDiscussion(String slug, DiscussionRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            Discussion discussion = new Discussion();
-//            discussion.setBookId(book.getId());
-//            discussion.setUserId(user.getId());
-//            discussion.setTitle(request.getTitle());
-//            discussion.setContent(request.getContent());
-//            discussion.setPage(request.getPage());
-//            discussion.setPosition(request.getPosition());
-//            discussion.setParentId(request.getParentId());
-//            discussion.setCreatedAt(LocalDateTime.now());
-//
-//            discussionMapper.insertDiscussion(discussion);
-//
-//            DiscussionResponse response = mapToDiscussionResponse(discussion);
-//            return new DataResponse<>(SUCCESS, "Discussion added successfully", HttpStatus.CREATED.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error adding discussion for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    // 16. Generate Text-to-Speech
-//    @Override
-//    public DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Use Microsoft Edge TTS (free)
-//            byte[] audioData = ttsUtil.generateSpeech(
-//                    request.getText(),
-//                    request.getVoice(),
-//                    request.getSpeed(),
-//                    request.getPitch()
-//            );
-//
-//            // Save audio file
-//            String fileName = "tts_" + System.currentTimeMillis() + ".mp3";
-//            String audioPath = saveTTSFile(fileName, audioData);
-//
-//            TTSResponse response = new TTSResponse();
-//            response.setAudioUrl(audioPath);
-//            response.setText(request.getText());
-//            response.setVoice(request.getVoice());
-//            response.setDuration(estimateAudioDuration(request.getText()));
-//            response.setFormat("mp3");
-//            response.setFileSize((long) audioData.length);
-//            response.setGeneratedAt(LocalDateTime.now());
-//            response.setExpiresAt(LocalDateTime.now().plusDays(1).toString());
-//
-//            return new DataResponse<>(SUCCESS, "Text-to-speech generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating TTS for book: {}", slug, e);
-//            throw new RuntimeException("TTS generation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 17. Sync Audio with Text
-//    @Override
-//    @Transactional
-//    public DataResponse<AudioSyncResponse> syncAudioWithText(String slug, AudioSyncRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Create or update sync point
-//            AudioSync sync = new AudioSync();
-//            sync.setBookId(book.getId());
-//            sync.setPage(request.getPage());
-//            sync.setTextPosition(request.getTextPosition());
-//            sync.setAudioTimestamp(request.getAudioTimestamp());
-//            sync.setCreatedAt(LocalDateTime.now());
-//
-//            // Save sync point (implementation depends on your audio sync strategy)
-//            Long syncId = saveAudioSync(sync);
-//
-//            // Get all sync points for this page
-//            List<AudioSyncResponse.SyncPoint> syncPoints = getSyncPointsForPage(book.getId(), request.getPage());
-//
-//            AudioSyncResponse response = new AudioSyncResponse();
-//            response.setSyncId(syncId);
-//            response.setPage(request.getPage());
-//            response.setSyncPoints(syncPoints);
-//            response.setStatus("SYNCED");
-//
-//            return new DataResponse<>(SUCCESS, "Audio sync updated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error syncing audio for book: {}", slug, e);
-//            throw new RuntimeException("Audio sync failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 18. Voice Notes
-//    @Override
-//    @Transactional
-//    public DataResponse<VoiceNoteResponse> addVoiceNote(String slug, MultipartFile audioFile, int page, String position) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Save audio file
-//            String fileName = "voice_note_" + System.currentTimeMillis() + ".wav";
-//            String audioPath = saveVoiceNoteFile(audioFile, fileName);
-//
-//            // Generate transcription (optional, using speech-to-text)
-//            String transcription = generateTranscription(audioFile);
-//
-//            VoiceNote voiceNote = new VoiceNote();
-//            voiceNote.setUserId(user.getId());
-//            voiceNote.setBookId(book.getId());
-//            voiceNote.setPage(page);
-//            voiceNote.setPosition(position);
-//            voiceNote.setAudioUrl(audioPath);
-//            voiceNote.setDuration(getAudioDuration(audioFile));
-//            voiceNote.setTranscription(transcription);
-//            voiceNote.setCreatedAt(LocalDateTime.now());
-//
-//            voiceNoteMapper.insertVoiceNote(voiceNote);
-//
-//            VoiceNoteResponse response = mapToVoiceNoteResponse(voiceNote);
-//            return new DataResponse<>(SUCCESS, "Voice note added successfully", HttpStatus.CREATED.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error adding voice note for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    @Override
-//    public DataResponse<List<VoiceNoteResponse>> getVoiceNotes(String slug) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            List<VoiceNote> voiceNotes = voiceNoteMapper.findVoiceNotesByUserAndBook(user.getId(), book.getId());
-//            List<VoiceNoteResponse> responses = voiceNotes.stream()
-//                    .map(this::mapToVoiceNoteResponse)
-//                    .collect(Collectors.toList());
-//
-//            return new DataResponse<>(SUCCESS, "Voice notes retrieved successfully", HttpStatus.OK.value(), responses);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting voice notes for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    // 19. Smart Vocabulary Builder
-//    @Override
-//    public DataResponse<VocabularyResponse> extractVocabulary(String slug, VocabularyRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Extract vocabulary from specified pages
-//            String bookContent = getPageRangeContent(book.getFileUrl(), request.getStartPage(), request.getEndPage());
-//            List<VocabularyResponse.VocabularyWord> words = extractVocabularyWords(bookContent, request);
-//
-//            VocabularyResponse response = new VocabularyResponse();
-//            response.setTotalWords(words.size());
-//            response.setDifficultyLevel(request.getDifficultyLevel());
-//            response.setWords(words);
-//
-//            return new DataResponse<>(SUCCESS, "Vocabulary extracted successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error extracting vocabulary for book: {}", slug, e);
-//            throw new RuntimeException("Vocabulary extraction failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 20. AI Smart Summary per Chapter
-//    @Override
-//    public DataResponse<SummaryResponse> generateChapterSummary(String slug, SummaryRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Get chapter content
-//            String chapterContent = getChapterContent(book.getFileUrl(), request.getChapter());
-//
-//            // Generate summary using OpenAI
-//            String summary = openAIUtil.generateSummary(chapterContent, request.getSummaryType(), request.getMaxLength());
-//            List<String> keyPoints = openAIUtil.extractKeyPoints(chapterContent);
-//
-//            SummaryResponse response = new SummaryResponse();
-//            response.setChapter(request.getChapter());
-//            response.setChapterTitle(getChapterTitle(book.getFileUrl(), request.getChapter()));
-//            response.setSummary(summary);
-//            response.setSummaryType(request.getSummaryType());
-//            response.setKeyPoints(keyPoints);
-//            response.setWordCount(summary.split("\\s+").length);
-//            response.setGeneratedAt(LocalDateTime.now());
-//
-//            return new DataResponse<>(SUCCESS, "Chapter summary generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating summary for book: {} chapter: {}", slug, request.getChapter(), e);
-//            throw new RuntimeException("Summary generation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 21. AI Q&A on Book Content
-//    @Override
-//    public DataResponse<QAResponse> askQuestionAboutBook(String slug, QARequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Get relevant context
-//            String context = getRelevantContext(book.getFileUrl(), request.getQuestion(), request.getContextPage());
-//
-//            // Generate answer using OpenAI
-//            String answer = openAIUtil.answerQuestion(request.getQuestion(), context);
-//            List<QAResponse.Reference> references = findReferences(book.getFileUrl(), request.getQuestion());
-//
-//            QAResponse response = new QAResponse();
-//            response.setQuestion(request.getQuestion());
-//            response.setAnswer(answer);
-//            response.setReferences(references);
-//            response.setConfidenceScore(0.85); // Estimated confidence
-//            response.setAnsweredAt(LocalDateTime.now());
-//
-//            return new DataResponse<>(SUCCESS, "Question answered successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error answering question for book: {}", slug, e);
-//            throw new RuntimeException("Q&A failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 22. Comment & Reply Notes
-//    @Override
-//    @Transactional
-//    public DataResponse<CommentResponse> addCommentToNote(String slug, Long noteId, CommentRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Note note = noteMapper.findNoteById(noteId);
-//
-//            if (user == null || note == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            NoteComment comment = new NoteComment();
-//            comment.setNoteId(noteId);
-//            comment.setUserId(user.getId());
-//            comment.setContent(request.getContent());
-//            comment.setParentCommentId(request.getParentCommentId());
-//            comment.setCreatedAt(LocalDateTime.now());
-//
-//            noteMapper.insertNoteComment(comment);
-//
-//            CommentResponse response = mapToCommentResponse(comment, user.getUsername());
-//            return new DataResponse<>(SUCCESS, "Comment added successfully", HttpStatus.CREATED.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error adding comment to note: {}", noteId, e);
-//            throw e;
-//        }
-//    }
-//
-//    // 23. Quote Share Generator
-//    @Override
-//    public DataResponse<ShareQuoteResponse> generateShareableQuote(String slug, ShareQuoteRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Generate quote image
-//            String imageUrl = generateQuoteImage(request, book);
-//            String shareUrl = generateShareUrl(book.getSlug(), request.getPage());
-//
-//            ShareQuoteResponse response = new ShareQuoteResponse();
-//            response.setImageUrl(imageUrl);
-//            response.setText(request.getText());
-//            response.setAuthorName(request.getAuthorName());
-//            response.setBookTitle(book.getTitle());
-//            response.setPage(request.getPage());
-//            response.setTemplate(request.getTemplate());
-//            response.setGeneratedAt(LocalDateTime.now());
-//            response.setShareUrl(shareUrl);
-//
-//            return new DataResponse<>(SUCCESS, "Shareable quote generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating shareable quote for book: {}", slug, e);
-//            throw new RuntimeException("Quote generation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 24. Highlight Trends
-//    @Override
-//    public DataResponse<HighlightTrendsResponse> getHighlightTrends(String slug) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Get highlight statistics
-//            List<HighlightTrendsResponse.TrendingHighlight> trendingHighlights =
-//                    highlightMapper.getTrendingHighlights(book.getId());
-//            List<HighlightTrendsResponse.PopularPage> popularPages =
-//                    highlightMapper.getPopularPages(book.getId());
-//
-//            HighlightTrendsResponse response = new HighlightTrendsResponse();
-//            response.setBookTitle(book.getTitle());
-//            response.setTotalHighlights(highlightMapper.countHighlightsByBook(book.getId()));
-//            response.setTrendingHighlights(trendingHighlights);
-//            response.setPopularPages(popularPages);
-//
-//            return new DataResponse<>(SUCCESS, "Highlight trends retrieved successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting highlight trends for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    // 25. Smart Bookmark Suggestions
-//    @Override
-//    public DataResponse<List<BookmarkSuggestionResponse>> getBookmarkSuggestions(String slug) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Use AI to suggest important bookmark points
-//            String bookContent = readBookContent(book.getFileUrl());
-//            List<BookmarkSuggestionResponse> suggestions =
-//                    openAIUtil.generateBookmarkSuggestions(bookContent, book.getTotalPages());
-//
-//            return new DataResponse<>(SUCCESS, "Bookmark suggestions generated successfully", HttpStatus.OK.value(), suggestions);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating bookmark suggestions for book: {}", slug, e);
-//            throw new RuntimeException("Bookmark suggestions failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 26. Interactive Quizzes per Chapter
-//    @Override
-//    public DataResponse<QuizResponse> generateChapterQuiz(String slug, QuizRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            String chapterContent = getChapterContent(book.getFileUrl(), request.getChapter());
-//            List<QuizResponse.QuizQuestion> questions =
-//                    openAIUtil.generateQuizQuestions(chapterContent, request);
-//
-//            QuizResponse response = new QuizResponse();
-//            response.setChapter(request.getChapter());
-//            response.setChapterTitle(getChapterTitle(book.getFileUrl(), request.getChapter()));
-//            response.setDifficulty(request.getDifficulty());
-//            response.setQuestions(questions);
-//            response.setTotalQuestions(questions.size());
-//
-//            return new DataResponse<>(SUCCESS, "Quiz generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating quiz for book: {}", slug, e);
-//            throw new RuntimeException("Quiz generation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 27. AI-powered Content Highlighting
-//    @Override
-//    public DataResponse<AIHighlightResponse> generateAIHighlights(String slug, AIHighlightRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            String content = getPageRangeContent(book.getFileUrl(), request.getStartPage(), request.getEndPage());
-//            List<AIHighlightResponse.AIHighlight> highlights =
-//                    openAIUtil.generateAIHighlights(content, request);
-//
-//            AIHighlightResponse response = new AIHighlightResponse();
-//            response.setHighlightType(request.getHighlightType());
-//            response.setTotalHighlights(highlights.size());
-//            response.setHighlights(highlights);
-//
-//            return new DataResponse<>(SUCCESS, "AI highlights generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            throw e;
-//        }
-//    }
-//
-//    // 27. AI-powered Content Highlighting
-//    @Override
-//    public DataResponse<AIHighlightResponse> generateAIHighlights(String slug, AIHighlightRequest request) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            String content = getPageRangeContent(book.getFileUrl(), request.getStartPage(), request.getEndPage());
-//            List<AIHighlightResponse.AIHighlight> highlights =
-//                    openAIUtil.generateAIHighlights(content, request);
-//
-//            AIHighlightResponse response = new AIHighlightResponse();
-//            response.setHighlightType(request.getHighlightType());
-//            response.setTotalHighlights(highlights.size());
-//            response.setHighlights(highlights);
-//
-//            return new DataResponse<>(SUCCESS, "AI highlights generated successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error generating AI highlights for book: {}", slug, e);
-//            throw new RuntimeException("AI highlights generation failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 28. Smart Notes Tagging
-//    @Override
-//    @Transactional
-//    public DataResponse<TaggingResponse> autoTagNotes(String slug, TaggingRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            List<Note> notes = getNotesByIds(request.getNoteIds(), user.getId(), book.getId());
-//
-//            // Generate tags using AI
-//            Map<Long, List<String>> noteTagMapping = new HashMap<>();
-//            Set<String> allGeneratedTags = new HashSet<>();
-//
-//            for (Note note : notes) {
-//                List<String> tags = openAIUtil.generateTagsForNote(note.getContent(), note.getTitle());
-//                noteTagMapping.put(note.getId(), tags);
-//                allGeneratedTags.addAll(tags);
-//
-//                // Save tags to database
-//                saveNoteTags(note.getId(), tags);
-//            }
-//
-//            List<TaggingResponse.TagSuggestion> suggestions = generateTagSuggestions(allGeneratedTags);
-//
-//            TaggingResponse response = new TaggingResponse();
-//            response.setProcessedNotes(notes.size());
-//            response.setGeneratedTags(new ArrayList<>(allGeneratedTags));
-//            response.setNoteTagMapping(noteTagMapping);
-//            response.setSuggestions(suggestions);
-//
-//            return new DataResponse<>(SUCCESS, "Notes tagged successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error auto-tagging notes for book: {}", slug, e);
-//            throw new RuntimeException("Auto-tagging failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 29. Voice-based Navigation
-//    @Override
-//    public DataResponse<VoiceControlResponse> processVoiceCommand(String slug, MultipartFile audioFile) {
-//        try {
-//            Book book = bookMapper.findBookBySlug(slug);
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            // Convert speech to text
-//            String recognizedCommand = convertSpeechToText(audioFile);
-//
-//            // Process command using NLP
-//            VoiceCommandProcessor.VoiceCommand command = parseVoiceCommand(recognizedCommand);
-//            String result = executeVoiceCommand(command, book);
-//
-//            VoiceControlResponse response = new VoiceControlResponse();
-//            response.setRecognizedCommand(recognizedCommand);
-//            response.setAction(command.getAction());
-//            response.setResult(result);
-//            response.setSuccess(command.isValid());
-//            response.setError(command.isValid() ? null : "Command not recognized");
-//            response.setProcessedAt(LocalDateTime.now());
-//            response.setTargetPage(command.getTargetPage());
-//            response.setSearchQuery(command.getSearchQuery());
-//            response.setBookmarkTitle(command.getBookmarkTitle());
-//
-//            return new DataResponse<>(SUCCESS, "Voice command processed successfully", HttpStatus.OK.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error processing voice command for book: {}", slug, e);
-//            throw new RuntimeException("Voice command processing failed: " + e.getMessage());
-//        }
-//    }
-//
-//    // 30. Realtime Collaborative Notes
-//    @Override
-//    @Transactional
-//    public DataResponse<CollaborativeNoteResponse> createCollaborativeNote(String slug, CollaborativeNoteRequest request) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            if (username == null || username.isEmpty()) {
-//                throw new UnauthorizedException();
-//            }
-//
-//            User user = userMapper.findUserByUsername(username);
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (user == null || book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            CollaborativeNote collabNote = new CollaborativeNote();
-//            collabNote.setBookId(book.getId());
-//            collabNote.setAuthorId(user.getId());
-//            collabNote.setPage(request.getPage());
-//            collabNote.setPosition(request.getPosition());
-//            collabNote.setTitle(request.getTitle());
-//            collabNote.setContent(request.getContent());
-//            collabNote.setVisibility(request.getVisibility());
-//            collabNote.setCreatedAt(LocalDateTime.now());
-//            collabNote.setLastEditedAt(LocalDateTime.now());
-//            collabNote.setLastEditedBy(user.getId());
-//
-//            collaborativeNoteMapper.insertCollaborativeNote(collabNote);
-//
-//            // Add collaborators
-//            if (request.getCollaborators() != null && !request.getCollaborators().isEmpty()) {
-//                addCollaborators(collabNote.getId(), request.getCollaborators());
-//            }
-//
-//            // Create edit history entry
-//            createEditHistoryEntry(collabNote.getId(), user.getId(), "CREATE", "Note created");
-//
-//            CollaborativeNoteResponse response = mapToCollaborativeNoteResponse(collabNote, user.getUsername());
-//            return new DataResponse<>(SUCCESS, "Collaborative note created successfully", HttpStatus.CREATED.value(), response);
-//
-//        } catch (Exception e) {
-//            log.error("Error creating collaborative note for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    @Override
-//    public DataResponse<List<CollaborativeNoteResponse>> getCollaborativeNotes(String slug) {
-//        try {
-//            String username = headerHolder.getUsername();
-//            Book book = bookMapper.findBookBySlug(slug);
-//
-//            if (book == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            List<CollaborativeNote> notes;
-//            if (username != null && !username.isEmpty()) {
-//                // Get notes user can access (authored by user or shared with user)
-//                User user = userMapper.findUserByUsername(username);
-//                notes = collaborativeNoteMapper.findAccessibleNotesByBook(book.getId(), user.getId());
-//            } else {
-//                // Get only public notes for guests
-//                notes = collaborativeNoteMapper.findPublicNotesByBook(book.getId());
-//            }
-//
-//            List<CollaborativeNoteResponse> responses = notes.stream()
-//                    .map(note -> mapToCollaborativeNoteResponse(note, getAuthorName(note.getAuthorId())))
-//                    .collect(Collectors.toList());
-//
-//            return new DataResponse<>(SUCCESS, "Collaborative notes retrieved successfully", HttpStatus.OK.value(), responses);
-//
-//        } catch (Exception e) {
-//            log.error("Error getting collaborative notes for book: {}", slug, e);
-//            throw e;
-//        }
-//    }
-//
-//    // ============ HELPER METHODS ============
-//
-//    private ReadingProgressResponse mapToReadingProgressResponse(ReadingProgress progress, Book book) {
-//        ReadingProgressResponse response = new ReadingProgressResponse();
-//        response.setId(progress.getId());
-//        response.setBookId(progress.getBookId());
-//        response.setBookTitle(book.getTitle());
-//        response.setCurrentPage(progress.getCurrentPage());
-//        response.setTotalPages(progress.getTotalPages());
-//        response.setCurrentPosition(progress.getCurrentPosition());
-//        response.setPercentageCompleted(progress.getPercentageCompleted());
-//        response.setReadingTimeMinutes(progress.getReadingTimeMinutes());
-//        response.setStatus(progress.getStatus());
-//        response.setLastReadAt(progress.getLastReadAt());
-//        response.setStartedAt(progress.getStartedAt());
-//        return response;
-//    }
-//
-//    private BookmarkResponse mapToBookmarkResponse(Bookmark bookmark) {
-//        BookmarkResponse response = new BookmarkResponse();
-//        response.setId(bookmark.getId());
-//        response.setBookId(bookmark.getBookId());
-//        response.setPage(bookmark.getPage());
-//        response.setPosition(bookmark.getPosition());
-//        response.setTitle(bookmark.getTitle());
-//        response.setDescription(bookmark.getDescription());
-//        response.setColor(bookmark.getColor());
-//        response.setCreatedAt(bookmark.getCreatedAt());
-//        return response;
-//    }
-//
-//    private HighlightResponse mapToHighlightResponse(Highlight highlight) {
-//        HighlightResponse response = new HighlightResponse();
-//        response.setId(highlight.getId());
-//        response.setBookId(highlight.getBookId());
-//        response.setPage(highlight.getPage());
-//        response.setStartPosition(highlight.getStartPosition());
-//        response.setEndPosition(highlight.getEndPosition());
-//        response.setHighlightedText(highlight.getHighlightedText());
-//        response.setColor(highlight.getColor());
-//        response.setNote(highlight.getNote());
-//        response.setCreatedAt(highlight.getCreatedAt());
-//        response.setUpdatedAt(highlight.getUpdatedAt());
-//        return response;
-//    }
-//
-//    private NoteResponse mapToNoteResponse(Note note) {
-//        NoteResponse response = new NoteResponse();
-//        response.setId(note.getId());
-//        response.setBookId(note.getBookId());
-//        response.setPage(note.getPage());
-//        response.setPosition(note.getPosition());
-//        response.setTitle(note.getTitle());
-//        response.setContent(note.getContent());
-//        response.setColor(note.getColor());
-//        response.setIsPrivate(note.getIsPrivate());
-//        response.setTags(getNoteTags(note.getId()));
-//        response.setCommentCount(getNoteCommentCount(note.getId()));
-//        response.setCreatedAt(note.getCreatedAt());
-//        response.setUpdatedAt(note.getUpdatedAt());
-//        return response;
-//    }
-//
-//    private ReactionResponse mapToReactionResponse(Reaction reaction, String userName) {
-//        ReactionResponse response = new ReactionResponse();
-//        response.setId(reaction.getId());
-//        response.setReactionType(reaction.getReactionType());
-//        response.setPage(reaction.getPage());
-//        response.setPosition(reaction.getPosition());
-//        response.setUserName(userName);
-//        response.setCreatedAt(reaction.getCreatedAt());
-//
-//        // Add reaction statistics
-//        ReactionResponse.ReactionStats stats = getReactionStats(reaction.getBookId(), reaction.getPage(), reaction.getPosition());
-//        response.setStats(stats);
-//
-//        return response;
-//    }
-//
-//    private DiscussionResponse mapToDiscussionResponse(Discussion discussion) {
-//        DiscussionResponse response = new DiscussionResponse();
-//        response.setId(discussion.getId());
-//        response.setTitle(discussion.getTitle());
-//        response.setContent(discussion.getContent());
-//        response.setAuthorName(getUserName(discussion.getUserId()));
-//        response.setPage(discussion.getPage());
-//        response.setPosition(discussion.getPosition());
-//        response.setReplyCount(getDiscussionReplyCount(discussion.getId()));
-//        response.setLikeCount(getDiscussionLikeCount(discussion.getId()));
-//        response.setIsLikedByUser(isDiscussionLikedByCurrentUser(discussion.getId()));
-//        response.setCreatedAt(discussion.getCreatedAt());
-//        response.setReplies(getDiscussionReplies(discussion.getId()));
-//        return response;
-//    }
-//
-//    private VoiceNoteResponse mapToVoiceNoteResponse(VoiceNote voiceNote) {
-//        VoiceNoteResponse response = new VoiceNoteResponse();
-//        response.setId(voiceNote.getId());
-//        response.setBookId(voiceNote.getBookId());
-//        response.setPage(voiceNote.getPage());
-//        response.setPosition(voiceNote.getPosition());
-//        response.setAudioUrl(voiceNote.getAudioUrl());
-//        response.setDuration(voiceNote.getDuration());
-//        response.setTranscription(voiceNote.getTranscription());
-//        response.setCreatedAt(voiceNote.getCreatedAt());
-//        return response;
-//    }
-//
-//    private CommentResponse mapToCommentResponse(NoteComment comment, String authorName) {
-//        CommentResponse response = new CommentResponse();
-//        response.setId(comment.getId());
-//        response.setNoteId(comment.getNoteId());
-//        response.setContent(comment.getContent());
-//        response.setAuthorName(authorName);
-//        response.setParentCommentId(comment.getParentCommentId());
-//        response.setLikeCount(getCommentLikeCount(comment.getId()));
-//        response.setIsLikedByUser(isCommentLikedByCurrentUser(comment.getId()));
-//        response.setCreatedAt(comment.getCreatedAt());
-//        response.setReplies(getCommentReplies(comment.getId()));
-//        return response;
-//    }
-//
-//    private CollaborativeNoteResponse mapToCollaborativeNoteResponse(CollaborativeNote note, String authorName) {
-//        CollaborativeNoteResponse response = new CollaborativeNoteResponse();
-//        response.setId(note.getId());
-//        response.setBookId(note.getBookId());
-//        response.setPage(note.getPage());
-//        response.setPosition(note.getPosition());
-//        response.setTitle(note.getTitle());
-//        response.setContent(note.getContent());
-//        response.setAuthorName(authorName);
-//        response.setCollaborators(getCollaboratorNames(note.getId()));
-//        response.setVisibility(note.getVisibility());
-//        response.setEditCount(getEditCount(note.getId()));
-//        response.setLastEditedAt(note.getLastEditedAt());
-//        response.setLastEditedBy(getUserName(note.getLastEditedBy()));
-//        response.setCreatedAt(note.getCreatedAt());
-//        response.setEditHistory(getEditHistory(note.getId()));
-//        return response;
-//    }
-//
-//    // Additional helper methods for file operations, AI integration, etc.
-//    private String readBookContent(String fileUrl) throws IOException {
-//        // Implementation to read book content from file
-//        // This would depend on your file format (EPUB, PDF, etc.)
-//        return "Book content..."; // Placeholder
-//    }
-//
-//    private List<SearchResultResponse.SearchResult> performTextSearch(String content, String query, int page,
-//                                                                      int limit) {
-//        // Implementation for full-text search
-//        return new ArrayList<>(); // Placeholder
-//    }
-//
-//    private String generateExportContent(List<Highlight> highlights, List<Note> notes, Book book, String
-//            format) {
-//        // Implementation to generate export content in specified format
-//        return "Export content..."; // Placeholder
-//    }
-//
-//    private String saveExportFile(String fileName, String content, String format) throws IOException {
-//        // Implementation to save export file and return download URL
-//        return "/downloads/" + fileName; // Placeholder
-//    }
-//
-//    private Double estimateAudioDuration(String text) {
-//        // Estimate audio duration based on text length (average reading speed)
-//        return (double) text.length() / 10; // Rough estimate
-//    }
-//
-//    private String generateTranscription(MultipartFile audioFile) {
-//        // Implementation using speech-to-text service
-//        return "Generated transcription..."; // Placeholder
-//    }
-//
-//    private Double getAudioDuration(MultipartFile audioFile) {
-//        // Get audio file duration
-//        return 30.0; // Placeholder
-//    }
+    // 13. Translate Highlight
+    @Override
+    @Transactional
+    public DataResponse<TranslatedHighlightResponse> translateHighlight(String slug, TranslateHighlightRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
 
-// Add these missing methods to your BookServiceImpl class
+            User user = userMapper.findUserByUsername(username);
+            Highlight highlight = highlightMapper.findHighlightById(request.getHighlightId());
+
+            if (user == null || highlight == null || !highlight.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            String translatedText = translatorUtil.translate(
+                    highlight.getHighlightedText(),
+                    null,
+                    request.getTargetLanguage()
+            );
+
+            // Save translation for future use
+            saveHighlightTranslation(highlight.getId(), request.getTargetLanguage(), translatedText);
+
+            TranslatedHighlightResponse response = new TranslatedHighlightResponse();
+            response.setHighlightId(highlight.getId());
+            response.setOriginalText(highlight.getHighlightedText());
+            response.setTranslatedText(translatedText);
+            response.setTargetLanguage(request.getTargetLanguage());
+            response.setTranslatedAt(LocalDateTime.now());
+            response.setIsSaved(true);
+
+            return new DataResponse<>(SUCCESS, "Highlight translated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error translating highlight: {}", request.getHighlightId(), e);
+            throw new RuntimeException("Highlight translation failed: " + e.getMessage());
+        }
+    }
+
+    // 14. Add Reaction
+    @Override
+    @Transactional
+    public DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            if (request.getType() == null || request.getType().isEmpty()) {
+                throw new IllegalArgumentException("Reaction type is required");
+            }
+
+            Reaction existingReaction = reactionMapper.findReactionByUserAndBook(
+                    user.getId(), book.getId(), request.getPage(), request.getPosition()
+            );
+
+            if (existingReaction != null) {
+                existingReaction.setReactionType(request.getType());
+                existingReaction.setRating(request.getRating());
+                existingReaction.setComment(request.getComment());
+                existingReaction.setUpdatedAt(LocalDateTime.now());
+                reactionMapper.updateReaction(existingReaction);
+            } else {
+                Reaction reaction = new Reaction();
+                reaction.setUserId(user.getId());
+                reaction.setBookId(book.getId());
+                reaction.setReactionType(request.getType());
+                reaction.setRating(request.getRating());
+                reaction.setComment(request.getComment());
+                reaction.setPage(request.getPage());
+                reaction.setPosition(request.getPosition());
+                reaction.setCreatedAt(LocalDateTime.now());
+
+                reactionMapper.insertReaction(reaction);
+                existingReaction = reaction;
+            }
+
+            ReactionResponse response = mapToReactionResponse(existingReaction, user.getUsername(), book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reaction added successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error adding reaction for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            String currentUsername = null;
+            Long currentUserId = null;
+            try {
+                currentUsername = headerHolder.getUsername();
+                if (currentUsername != null) {
+                    User currentUser = userMapper.findUserByUsername(currentUsername);
+                    if (currentUser != null) {
+                        currentUserId = currentUser.getId();
+                    }
+                }
+            } catch (Exception e) {
+                // Continue without user info
+            }
+
+            int offset = (page - 1) * limit;
+            List<Reaction> reactions = reactionMapper.findReactionsByBookIdWithPaging(book.getId(), offset, limit);
+
+            final Long finalCurrentUserId = currentUserId;
+            List<ReactionResponse> responses = reactions.stream()
+                    .map(reaction -> {
+                        String username = getUsernameById(reaction.getUserId());
+                        return mapToReactionResponse(reaction, username, book.getId(), finalCurrentUserId);
+                    })
+                    .collect(Collectors.toList());
+
+            return new DataResponse<>(SUCCESS, "Reactions retrieved successfully", HttpStatus.OK.value(), responses);
+
+        } catch (Exception e) {
+            log.error("Error getting reactions for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DataResponse<ReactionStatsResponse> getReactionStats(String slug) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            String currentUsername = headerHolder.getUsername();
+            Long currentUserId = null;
+            if (currentUsername != null) {
+                User currentUser = userMapper.findUserByUsername(currentUsername);
+                if (currentUser != null) {
+                    currentUserId = currentUser.getId();
+                }
+            }
+
+            ReactionStatsResponse stats = reactionMapper.getReactionStats(book.getId());
+            if (stats == null) {
+                stats = new ReactionStatsResponse();
+                stats.setTotalRatings(0L);
+                stats.setTotalDislikes(0L);
+                stats.setTotalSad(0L);
+                stats.setTotalAngry(0L);
+                stats.setTotalLikes(0L);
+                stats.setTotalLoves(0L);
+                stats.setTotalComments(0L);
+                stats.setAverageRating(0.0);
+            }
+
+            if (currentUserId != null) {
+                String userReactionType = reactionMapper.getUserReactionType(currentUserId, book.getId());
+                stats.setUserHasReacted(userReactionType != null);
+                stats.setUserReactionType(userReactionType);
+            } else {
+                stats.setUserHasReacted(false);
+                stats.setUserReactionType(null);
+            }
+
+            return new DataResponse<>(SUCCESS, "Reaction stats retrieved successfully", HttpStatus.OK.value(), stats);
+
+        } catch (Exception e) {
+            log.error("Error getting reaction stats for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> removeReaction(String slug, Long reactionId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Reaction reaction = reactionMapper.findReactionById(reactionId);
+            if (reaction == null || !reaction.getUserId().equals(user.getId()) || !reaction.getBookId().equals(book.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            reactionMapper.deleteReaction(reactionId);
+
+            return new DataResponse<>(SUCCESS, "Reaction removed successfully", HttpStatus.OK.value(), null);
+
+        } catch (Exception e) {
+            log.error("Error removing reaction: {}", reactionId, e);
+            throw e;
+        }
+    }
+
+    // Helper methods
+    private ReactionResponse mapToReactionResponse(Reaction reaction, String username, Long bookId, Long currentUserId) {
+        ReactionResponse response = new ReactionResponse();
+        response.setId(reaction.getId());
+        response.setUserId(reaction.getUserId());
+        response.setUserName(username);
+        response.setBookId(reaction.getBookId());
+        response.setReactionType(reaction.getReactionType());
+        response.setRating(reaction.getRating());
+        response.setComment(reaction.getComment());
+        response.setPage(reaction.getPage());
+        response.setPosition(reaction.getPosition());
+        response.setCreatedAt(reaction.getCreatedAt());
+        response.setUpdatedAt(reaction.getUpdatedAt());
+
+        // Add stats to response - flat structure
+        try {
+            ReactionStatsResponse stats = reactionMapper.getReactionStats(bookId);
+            if (stats != null) {
+                response.setTotalRatings(stats.getTotalRatings() != null ? stats.getTotalRatings() : 0L);
+                response.setTotalAngry(stats.getTotalAngry() != null ? stats.getTotalAngry() : 0L);
+                response.setTotalLikes(stats.getTotalLikes() != null ? stats.getTotalLikes() : 0L);
+                response.setTotalLoves(stats.getTotalLoves() != null ? stats.getTotalLoves() : 0L);
+                response.setAverageRating(stats.getAverageRating() != null ? stats.getAverageRating() : 0.0);
+            } else {
+                response.setTotalRatings(0L);
+                response.setTotalAngry(0L);
+                response.setTotalLikes(0L);
+                response.setTotalLoves(0L);
+                response.setAverageRating(0.0);
+            }
+
+            if (currentUserId != null) {
+                String userReactionType = reactionMapper.getUserReactionType(currentUserId, bookId);
+                response.setUserHasReacted(userReactionType != null);
+                response.setUserReactionType(userReactionType);
+            } else {
+                response.setUserHasReacted(false);
+                response.setUserReactionType(null);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get reaction stats: {}", e.getMessage());
+            // Set default values
+            response.setTotalRatings(0L);
+            response.setTotalAngry(0L);
+            response.setTotalLikes(0L);
+            response.setTotalLoves(0L);
+            response.setAverageRating(0.0);
+            response.setUserHasReacted(false);
+            response.setUserReactionType(null);
+        }
+
+        return response;
+    }
+
+    private String getUsernameById(Long userId) {
+        try {
+            User user = userMapper.findUserById(userId);
+            return user != null ? user.getUsername() : "Unknown";
+        } catch (Exception e) {
+            log.warn("Failed to get username for user ID: {}", userId);
+            return "Unknown";
+        }
+    }
+
+    // 15. Get Discussions & Add Discussion
+    @Override
+    public DataResponse<List<DiscussionResponse>> getDiscussions(String slug, int page, int limit) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            int offset = (page - 1) * limit;
+            List<Discussion> discussions = discussionMapper.findDiscussionsByBook(book.getId(), offset, limit);
+            List<DiscussionResponse> responses = discussions.stream()
+                    .map(this::mapToDiscussionResponse)
+                    .collect(Collectors.toList());
+
+            return new DataResponse<>(SUCCESS, "Discussions retrieved successfully", HttpStatus.OK.value(), responses);
+
+        } catch (Exception e) {
+            log.error("Error getting discussions for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<DiscussionResponse> addDiscussion(String slug, DiscussionRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Discussion discussion = new Discussion();
+            discussion.setBookId(book.getId());
+            discussion.setUserId(user.getId());
+            discussion.setTitle(request.getTitle());
+            discussion.setContent(request.getContent());
+            discussion.setPage(request.getPage());
+            discussion.setPosition(request.getPosition());
+            discussion.setParentId(request.getParentId());
+            discussion.setCreatedAt(LocalDateTime.now());
+
+            discussionMapper.insertDiscussion(discussion);
+
+            DiscussionResponse response = mapToDiscussionResponse(discussion);
+            return new DataResponse<>(SUCCESS, "Discussion added successfully", HttpStatus.CREATED.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error adding discussion for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    // 16. Generate Text-to-Speech
+    @Override
+    public DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Use Microsoft Edge TTS (free)
+            byte[] audioData = ttsUtil.generateSpeech(
+                    request.getText(),
+                    request.getVoice(),
+                    request.getSpeed(),
+                    request.getPitch()
+            );
+
+            // Save audio file
+            String fileName = "tts_" + System.currentTimeMillis() + ".mp3";
+            String audioPath = saveTTSFile(fileName, audioData);
+
+            TTSResponse response = new TTSResponse();
+            response.setAudioUrl(audioPath);
+            response.setText(request.getText());
+            response.setVoice(request.getVoice());
+            response.setDuration(estimateAudioDuration(request.getText()));
+            response.setFormat("mp3");
+            response.setFileSize((long) audioData.length);
+            response.setGeneratedAt(LocalDateTime.now());
+            response.setExpiresAt(LocalDateTime.now().plusDays(1).toString());
+
+            return new DataResponse<>(SUCCESS, "Text-to-speech generated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error generating TTS for book: {}", slug, e);
+            throw new RuntimeException("TTS generation failed: " + e.getMessage());
+        }
+    }
+
+    // 17. Sync Audio with Text
+    @Override
+    @Transactional
+    public DataResponse<AudioSyncResponse> syncAudioWithText(String slug, AudioSyncRequest request) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Create or update sync point
+            AudioSync sync = new AudioSync();
+            sync.setBookId(book.getId());
+            sync.setPage(request.getPage());
+            sync.setTextPosition(request.getTextPosition());
+            sync.setAudioTimestamp(request.getAudioTimestamp());
+            sync.setCreatedAt(LocalDateTime.now());
+
+            // Save sync point (implementation depends on your audio sync strategy)
+            Long syncId = saveAudioSync(sync);
+
+            // Get all sync points for this page
+            List<AudioSyncResponse.SyncPoint> syncPoints = getSyncPointsForPage(book.getId(), request.getPage());
+
+            AudioSyncResponse response = new AudioSyncResponse();
+            response.setSyncId(syncId);
+            response.setPage(request.getPage());
+            response.setSyncPoints(syncPoints);
+            response.setStatus("SYNCED");
+
+            return new DataResponse<>(SUCCESS, "Audio sync updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error syncing audio for book: {}", slug, e);
+            throw new RuntimeException("Audio sync failed: " + e.getMessage());
+        }
+    }
+
+    // Tambahkan method-method ini ke dalam class BookServiceImpl
+
+    // 1. Save Highlight Translation
+    private void saveHighlightTranslation(Long highlightId, String targetLanguage, String translatedText) {
+        try {
+            // Check if translation already exists
+            HighlightTranslation existingTranslation = highlightTranslationMapper
+                    .findByHighlightIdAndLanguage(highlightId, targetLanguage);
+
+            if (existingTranslation != null) {
+                // Update existing translation
+                existingTranslation.setTranslatedText(translatedText);
+                existingTranslation.setUpdatedAt(LocalDateTime.now());
+                highlightTranslationMapper.updateTranslation(existingTranslation);
+            } else {
+                // Create new translation
+                HighlightTranslation translation = new HighlightTranslation();
+                translation.setHighlightId(highlightId);
+                translation.setTargetLanguage(targetLanguage);
+                translation.setTranslatedText(translatedText);
+                translation.setCreatedAt(LocalDateTime.now());
+                highlightTranslationMapper.insertTranslation(translation);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to save highlight translation: {}", e.getMessage());
+            // Don't throw exception as this is optional functionality
+        }
+    }
+
+    // 2. Map to Reaction Response
+    private ReactionResponse mapToReactionResponse(Reaction reaction, String username) {
+        ReactionResponse response = new ReactionResponse();
+        response.setId(reaction.getId());
+        response.setReactionType(reaction.getReactionType());
+        response.setPage(reaction.getPage());
+        response.setPosition(reaction.getPosition());
+        response.setCreatedAt(reaction.getCreatedAt());
+        return response;
+    }
+
+    // 3. Map to Discussion Response (with user info)
+    private DiscussionResponse mapToDiscussionResponse(Discussion discussion) {
+        DiscussionResponse response = new DiscussionResponse();
+        response.setId(discussion.getId());
+        response.setTitle(discussion.getTitle());
+        response.setContent(discussion.getContent());
+        response.setPage(discussion.getPage());
+        response.setPosition(discussion.getPosition());
+        response.setCreatedAt(discussion.getCreatedAt());
+
+        // Get user info
+        try {
+            User user = userMapper.findUserById(discussion.getUserId());
+            if (user != null) {
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get user info for discussion: {}", e.getMessage());
+        }
+
+        // Get reply count if it's a parent discussion
+        if (discussion.getParentId() == null) {
+            try {
+            } catch (Exception e) {
+                log.warn("Failed to get reply count: {}", e.getMessage());
+                response.setReplyCount(0);
+            }
+        }
+
+        return response;
+    }
+
+    // 4. Save TTS File
+    private String saveTTSFile(String fileName, byte[] audioData) {
+        try {
+            // Create uploads directory if it doesn't exist
+            String uploadDir = "uploads/tts/";
+            File directory = new File(uploadDir);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // Save file
+            String filePath = uploadDir + fileName;
+            File file = new File(filePath);
+
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                fos.write(audioData);
+            }
+
+            // Return relative URL path
+            return "/api/files/tts/" + fileName;
+
+        } catch (IOException e) {
+            log.error("Failed to save TTS file: {}", e.getMessage());
+            throw new RuntimeException("Failed to save audio file: " + e.getMessage());
+        }
+    }
+
+    // 5. Estimate Audio Duration
+    private Double estimateAudioDuration(String text) {
+        // Simple estimation: average reading speed is about 150-200 words per minute
+        // For TTS, it's usually slower, around 150 words per minute
+        if (text == null || text.trim().isEmpty()) {
+            return (double) 0L;
+        }
+
+        // Count words (simple split by spaces)
+        String[] words = text.trim().split("\\s+");
+        int wordCount = words.length;
+
+        // Calculate duration in seconds (150 words per minute)
+        long durationSeconds = (wordCount * 60L) / 150;
+
+        // Minimum 1 second
+        return (double) Math.max(durationSeconds, 1L);
+    }
+
+    // 6. Save Audio Sync
+    private Long saveAudioSync(AudioSync sync) {
+        try {
+            // Check if sync point already exists for this position
+            AudioSync existingSync = audioSyncMapper.findByBookPageAndPosition(
+                    sync.getBookId(), sync.getPage(), Integer.valueOf(sync.getTextPosition()));
+
+            if (existingSync != null) {
+                // Update existing sync point
+                existingSync.setAudioTimestamp(sync.getAudioTimestamp());
+                audioSyncMapper.updateAudioSync(existingSync);
+                return existingSync.getId();
+            } else {
+                // Create new sync point
+                audioSyncMapper.insertAudioSync(sync);
+                return sync.getId();
+            }
+        } catch (Exception e) {
+            log.error("Failed to save audio sync: {}", e.getMessage());
+            throw new RuntimeException("Failed to save audio sync: " + e.getMessage());
+        }
+    }
+
+    // 7. Get Sync Points for Page
+    private List<AudioSyncResponse.SyncPoint> getSyncPointsForPage(Long bookId, Integer page) {
+        try {
+            List<AudioSync> syncs = audioSyncMapper.findByBookIdAndPage(bookId, page);
+
+            return syncs.stream().map(sync -> {
+                AudioSyncResponse.SyncPoint syncPoint = new AudioSyncResponse.SyncPoint();
+                syncPoint.setTextPosition(sync.getTextPosition());
+                syncPoint.setAudioTimestamp(sync.getAudioTimestamp());
+                return syncPoint;
+            }).collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Failed to get sync points: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // Tambahan: Method untuk cleanup TTS files (optional)
+    @Scheduled(cron = "0 0 2 * * ?") // Run daily at 2 AM
+    public void cleanupExpiredTTSFiles() {
+        try {
+            String uploadDir = "uploads/tts/";
+            File directory = new File(uploadDir);
+
+            if (directory.exists() && directory.isDirectory()) {
+                File[] files = directory.listFiles();
+                if (files != null) {
+                    long currentTime = System.currentTimeMillis();
+                    long oneDayMs = 24 * 60 * 60 * 1000L;
+
+                    for (File file : files) {
+                        if (file.isFile() && (currentTime - file.lastModified()) > oneDayMs) {
+                            boolean deleted = file.delete();
+                            if (deleted) {
+                                log.info("Deleted expired TTS file: {}", file.getName());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error cleaning up TTS files: {}", e.getMessage());
+        }
+    }
 
     // Helper method to map ReadingProgress to Response
     private ReadingProgressResponse mapToReadingProgressResponse(ReadingProgress progress, Book book) {
@@ -2135,150 +1718,6 @@ public class BookServiceImpl implements BookService {
                 "<mark>$0</mark>");
     }
 
-    // Method to generate export content
-    private String generateExportContent(List<Highlight> highlights, List<Note> notes, Book book, String format) {
-        switch (format.toLowerCase()) {
-            case "pdf":
-                return generatePDFContent(highlights, notes, book);
-            case "txt":
-                return generateTextContent(highlights, notes, book);
-            case "json":
-                return generateJSONContent(highlights, notes, book);
-            case "csv":
-                return generateCSVContent(highlights, notes, book);
-            default:
-                return generateTextContent(highlights, notes, book);
-        }
-    }
-
-    // Generate text format export
-    private String generateTextContent(List<Highlight> highlights, List<Note> notes, Book book) {
-        StringBuilder content = new StringBuilder();
-        content.append("Book: ").append(book.getTitle()).append("\n");
-        content.append("Export Date: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).append("\n\n");
-
-        content.append("=== HIGHLIGHTS ===\n");
-        highlights.forEach(highlight -> {
-            content.append("Page ").append(highlight.getPage()).append(": ");
-            content.append(highlight.getHighlightedText()).append("\n");
-            if (highlight.getNote() != null && !highlight.getNote().isEmpty()) {
-                content.append("Note: ").append(highlight.getNote()).append("\n");
-            }
-            content.append("\n");
-        });
-
-        content.append("=== NOTES ===\n");
-        notes.forEach(note -> {
-            content.append("Page ").append(note.getPage()).append(" - ");
-            content.append(note.getTitle()).append("\n");
-            content.append(note.getContent()).append("\n\n");
-        });
-
-        return content.toString();
-    }
-
-    // Generate JSON format export
-    private String generateJSONContent(List<Highlight> highlights, List<Note> notes, Book book) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
-
-            Map<String, Object> exportData = new HashMap<>();
-            exportData.put("book", book);
-            exportData.put("highlights", highlights);
-            exportData.put("notes", notes);
-            exportData.put("exportDate", LocalDateTime.now());
-
-            return mapper.writeValueAsString(exportData);
-        } catch (Exception e) {
-            log.error("Error generating JSON export", e);
-            return generateTextContent(highlights, notes, book);
-        }
-    }
-
-    // Generate CSV format export
-    private String generateCSVContent(List<Highlight> highlights, List<Note> notes, Book book) {
-        StringBuilder csv = new StringBuilder();
-        csv.append("Type,Page,Title,Content,Color,Created At\n");
-
-        highlights.forEach(highlight -> {
-            csv.append("Highlight,")
-                    .append(highlight.getPage()).append(",")
-                    .append("\"").append(highlight.getHighlightedText().replace("\"", "\"\"")).append("\",")
-                    .append("\"").append(highlight.getNote() != null ? highlight.getNote().replace("\"", "\"\"") : "").append("\",")
-                    .append(highlight.getColor()).append(",")
-                    .append(highlight.getCreatedAt()).append("\n");
-        });
-
-        notes.forEach(note -> {
-            csv.append("Note,")
-                    .append(note.getPage()).append(",")
-                    .append("\"").append(note.getTitle().replace("\"", "\"\"")).append("\",")
-                    .append("\"").append(note.getContent().replace("\"", "\"\"")).append("\",")
-                    .append(note.getColor()).append(",")
-                    .append(note.getCreatedAt()).append("\n");
-        });
-
-        return csv.toString();
-    }
-
-    // Generate PDF content (basic implementation)
-    private String generatePDFContent(List<Highlight> highlights, List<Note> notes, Book book) {
-        // For actual PDF generation, you would use libraries like iText or Apache PDFBox
-        // This is a placeholder that returns HTML that could be converted to PDF
-        StringBuilder html = new StringBuilder();
-        html.append("<html><head><title>").append(book.getTitle()).append(" - Export</title></head><body>");
-        html.append("<h1>").append(book.getTitle()).append("</h1>");
-
-        html.append("<h2>Highlights</h2>");
-        highlights.forEach(highlight -> {
-            html.append("<div style='margin: 10px 0; padding: 10px; border-left: 3px solid ").append(highlight.getColor()).append(";'>");
-            html.append("<strong>Page ").append(highlight.getPage()).append(":</strong> ");
-            html.append(highlight.getHighlightedText());
-            if (highlight.getNote() != null && !highlight.getNote().isEmpty()) {
-                html.append("<br><em>").append(highlight.getNote()).append("</em>");
-            }
-            html.append("</div>");
-        });
-
-        html.append("<h2>Notes</h2>");
-        notes.forEach(note -> {
-            html.append("<div style='margin: 10px 0; padding: 10px; background-color: ").append(note.getColor()).append(";'>");
-            html.append("<h3>").append(note.getTitle()).append("</h3>");
-            html.append("<p>").append(note.getContent()).append("</p>");
-            html.append("<small>Page ").append(note.getPage()).append("</small>");
-            html.append("</div>");
-        });
-
-        html.append("</body></html>");
-        return html.toString();
-    }
-
-    // Method to save export file
-    private String saveExportFile(String fileName, String content, String format) throws IOException {
-        try {
-            // Create exports directory if it doesn't exist
-            String exportDir = "exports/";
-            Path exportPath = Paths.get(exportDir);
-            if (!Files.exists(exportPath)) {
-                Files.createDirectories(exportPath);
-            }
-
-            // Full file path
-            String filePath = exportDir + fileName;
-            Path file = Paths.get(filePath);
-
-            // Write content to file
-            Files.writeString(file, content);
-
-            // Return the download URL (adjust according to your application's URL structure)
-            return "/api/downloads/" + fileName;
-
-        } catch (Exception e) {
-            log.error("Error saving export file: {}", fileName, e);
-            throw new IOException("Failed to save export file", e);
-        }
-    }
 
     // Utility method to sanitize filename
     private String sanitizeFilename(String filename) {
