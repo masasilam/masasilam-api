@@ -4,9 +4,11 @@ import lombok.Data;
 
 @Data
 public class ReactionRequest {
-    private String type; // Frontend mengirim "type"
-    private Integer rating; // Frontend mengirim rating untuk type "rating"
-    private String comment; // Frontend mengirim comment
-    private Integer page;
-    private String position;
+    private String type; // "rating", "angry", "like", "love", "comment"
+    private Integer rating; // Untuk type "rating"
+    private String comment; // Ini yang menggantikan diskusi
+    private String title; // Optional title untuk comment yang panjang
+    private Integer page; // Halaman di mana reaction diberikan
+    private String position; // Posisi spesifik di halaman
+    private Long parentId; // Untuk reply ke reaction lain (threading)
 }

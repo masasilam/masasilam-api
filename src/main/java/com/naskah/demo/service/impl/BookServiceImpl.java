@@ -10,7 +10,6 @@ import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.*;
 import com.naskah.demo.service.BookService;
-import com.naskah.demo.util.ai.OpenAIUtil;
 import com.naskah.demo.util.file.BookMetadata;
 import com.naskah.demo.util.file.FileStorageResult;
 import com.naskah.demo.util.file.FileUtil;
@@ -23,10 +22,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -65,11 +64,10 @@ public class BookServiceImpl implements BookService {
     // Utility services
     private final MicrosoftTranslatorUtil translatorUtil;
     private final MicrosoftTTSUtil ttsUtil;
-    private final OpenAIUtil openAIUtil;
 
     private static final String SUCCESS = "Success";
-    private static final String UNAUTHORIZED_MESSAGE = "User not authenticated";
 
+    // ============ BOOK CRUD OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<BookResponse> createBook(BookRequest request) {
@@ -194,6 +192,95 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    @Override
+    public DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,
+                                                             String searchTitle, Long seriesId, Long genreId, Long subGenreId) {
+        try {
+            Map<String, String> allowedSortFields = new HashMap<>();
+            allowedSortFields.put("updateAt", "UPDATE_AT");
+            allowedSortFields.put("title", "TITLE");
+            allowedSortFields.put("publishedAt", "PUBLISHED_AT");
+            allowedSortFields.put("author", "AUTHOR_NAME");
+            allowedSortFields.put("estimatedReadTime", "ESTIMATED_READ_TIME");
+            allowedSortFields.put("totalWord", "TOTAL_WORD");
+            allowedSortFields.put("averageRating", "AVERAGE_RATING");
+            allowedSortFields.put("viewCount", "VIEW_COUNT");
+            allowedSortFields.put("readCount", "READ_COUNT");
+
+            String sortColumn = allowedSortFields.getOrDefault(sortField, "UPDATE_AT");
+            String sortType = Objects.equals(sortOrder, "DESC") ? "DESC" : "ASC";
+            int offset = (page - 1) * limit;
+
+            List<BookResponse> pageResult = bookMapper.getBookListWithFilters(
+                    searchTitle, seriesId, genreId, subGenreId, offset, limit, sortColumn, sortType);
+
+            PageDataResponse<BookResponse> data = new PageDataResponse<>(page, limit, pageResult.size(), pageResult);
+            return new DatatableResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
+
+        } catch (Exception e) {
+            log.error("Error fetching paginated books with filters", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException {
+        try {
+            Book existingEbook = bookMapper.getDetailEbook(id);
+            if (existingEbook == null) {
+                throw new DataNotFoundException();
+            }
+
+            book.setId(id);
+
+            if (file != null && !file.isEmpty()) {
+                Path oldFilePath = Paths.get(existingEbook.getFilePath());
+                if (Files.exists(oldFilePath)) {
+                    Files.delete(oldFilePath);
+                }
+
+                // Use FileUtil.saveFile method properly
+                Path savedFilePath = FileUtil.saveFile(file, "uploads", id);
+                book.setFilePath(savedFilePath.toString());
+            } else {
+                book.setFilePath(existingEbook.getFilePath());
+            }
+
+            bookMapper.updateEbook(book);
+            Book data = bookMapper.getDetailEbook(id);
+            if (data != null) {
+                return new DataResponse<>(SUCCESS, ResponseMessage.DATA_UPDATED, HttpStatus.OK.value(), data);
+            } else {
+                throw new DataNotFoundException();
+            }
+
+        } catch (Exception e) {
+            log.error("Error when update ebook", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DefaultResponse delete(Long id) throws IOException {
+        try {
+            Book ebook = bookMapper.getDetailEbook(id);
+            if (ebook != null) {
+                Path filePath = Paths.get(ebook.getFilePath());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+                bookMapper.deleteEbook(id);
+                return new DefaultResponse(SUCCESS, ResponseMessage.DATA_DELETED, HttpStatus.OK.value());
+            } else {
+                throw new DataNotFoundException();
+            }
+        } catch (Exception e) {
+            log.error("Error when delete ebook", e);
+            throw e;
+        }
+    }
+
+    // ============ READING & DOWNLOAD OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<ReadingResponse> startReading(String slug) {
@@ -320,43 +407,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    private ReadingResponse getGuestReadingResponse(Book book) {
-        ReadingResponse response = new ReadingResponse();
-
-        // Basic book information
-        response.setBookId(book.getId());
-        response.setTitle(book.getTitle());
-        response.setSlug(book.getSlug());
-        response.setFileUrl(book.getFileUrl());
-        response.setTotalPages(book.getTotalPages());
-        response.setCurrentPage(1);
-        response.setCurrentPosition("0");
-        response.setPercentageCompleted(BigDecimal.ZERO);
-        response.setReadingTimeMinutes(0);
-        response.setStatus("GUEST_READING");
-        response.setIsFavorite(false);
-        response.setSessionId(null);
-
-        return response;
-    }
-
-    private ReadingResponse getReadingResponse(Book book, ReadingProgress existingProgress, ReadingSession session) {
-        ReadingResponse readingResponse = new ReadingResponse();
-        readingResponse.setBookId(book.getId());
-        readingResponse.setTitle(book.getTitle());
-        readingResponse.setSlug(book.getSlug());
-        readingResponse.setFileUrl(book.getFileUrl());
-        readingResponse.setCurrentPage(existingProgress.getCurrentPage());
-        readingResponse.setTotalPages(existingProgress.getTotalPages());
-        readingResponse.setCurrentPosition(existingProgress.getCurrentPosition());
-        readingResponse.setPercentageCompleted(existingProgress.getPercentageCompleted());
-        readingResponse.setReadingTimeMinutes(existingProgress.getReadingTimeMinutes());
-        readingResponse.setStatus(existingProgress.getStatus());
-        readingResponse.setIsFavorite(existingProgress.getIsFavorite());
-        readingResponse.setSessionId(session.getId());
-        return readingResponse;
-    }
-
     @Override
     @Transactional
     public ResponseEntity<byte[]> downloadBookAsBytes(String slug) {
@@ -465,98 +515,7 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-
-    @Override
-    public DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,
-                                                             String searchTitle, Long seriesId, Long genreId, Long subGenreId) {
-        try {
-            Map<String, String> allowedSortFields = new HashMap<>();
-            allowedSortFields.put("updateAt", "UPDATE_AT");
-            allowedSortFields.put("title", "TITLE");
-            allowedSortFields.put("publishedAt", "PUBLISHED_AT");
-            allowedSortFields.put("author", "AUTHOR_NAME");
-            allowedSortFields.put("estimatedReadTime", "ESTIMATED_READ_TIME");
-            allowedSortFields.put("totalWord", "TOTAL_WORD");
-            allowedSortFields.put("averageRating", "AVERAGE_RATING");
-            allowedSortFields.put("viewCount", "VIEW_COUNT");
-            allowedSortFields.put("readCount", "READ_COUNT");
-
-            String sortColumn = allowedSortFields.getOrDefault(sortField, "UPDATE_AT");
-            String sortType = Objects.equals(sortOrder, "DESC") ? "DESC" : "ASC";
-            int offset = (page - 1) * limit;
-
-            List<BookResponse> pageResult = bookMapper.getBookListWithFilters(
-                    searchTitle, seriesId, genreId, subGenreId, offset, limit, sortColumn, sortType);
-
-            PageDataResponse<BookResponse> data = new PageDataResponse<>(page, limit, pageResult.size(), pageResult);
-            return new DatatableResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
-
-        } catch (Exception e) {
-            log.error("Error fetching paginated books with filters", e);
-            throw e;
-        }
-    }
-
-//    @Override
-//    public DataResponse<Book> update(String id, Book book, MultipartFile file) throws IOException {
-//        try {
-//            Book existingEbook = bookMapper.getDetailEbook(id);
-//            if (existingEbook == null) {
-//                throw new NotFoundException();
-//            }
-//
-//            book.setId(id);
-//
-//            if (file != null && !file.isEmpty()) {
-//                Path oldFilePath = Paths.get(existingEbook.getFilePath());
-//                if (Files.exists(oldFilePath)) {
-//                    Files.delete(oldFilePath);
-//                }
-//
-//                String filePath = fileUtil.saveFile(file, id);
-//                book.setFilePath(filePath);
-//            } else {
-//                book.setFilePath(existingEbook.getFilePath());
-//            }
-//
-//            bookMapper.updateEbook(book);
-//            Book data = bookMapper.getDetailEbook(id);
-//            if (data != null) {
-//                return new DataResponse<>(SUCCESS, ResponseMessage.DATA_UPDATED, HttpStatus.OK.value(), data);
-//            } else {
-//                throw new NotFoundException();
-//            }
-//
-//        } catch (Exception e) {
-//            log.error("Error when update ebook", e);
-//            throw e;
-//        }
-//    }
-//
-//    @Override
-//    public DefaultResponse delete(String id) throws IOException {
-//        try {
-//            Book ebook = bookMapper.getDetailEbook(id);
-//            if (ebook != null) {
-//                Path filePath = Paths.get(ebook.getFilePath());
-//                if (Files.exists(filePath)) {
-//                    Files.delete(filePath);
-//                }
-//                bookMapper.deleteEbook(id);
-//                return new DefaultResponse(SUCCESS, ResponseMessage.DATA_DELETED, HttpStatus.OK.value());
-//            } else {
-//                throw new NotFoundException();
-//            }
-//        } catch (Exception e) {
-//            log.error("Error when delete ebook", e);
-//            throw e;
-//        }
-//    }
-
-
- //    ============ NEW FEATURE IMPLEMENTATIONS ============
-
-    // 1. Save Reading Progress
+    // ============ READING PROGRESS OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<ReadingProgressResponse> saveReadingProgress(String slug, ProgressRequest request) {
@@ -612,7 +571,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 2. Get Reading Progress
     @Override
     public DataResponse<ReadingProgressResponse> getReadingProgress(String slug) {
         try {
@@ -656,7 +614,7 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 3. Add Bookmark
+    // ============ BOOKMARK OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<BookmarkResponse> addBookmark(String slug, BookmarkRequest request) {
@@ -700,7 +658,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 4. Get Bookmarks
     @Override
     public DataResponse<List<BookmarkResponse>> getBookmarks(String slug) {
         try {
@@ -729,35 +686,77 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 5. Search in Book
     @Override
-    public DataResponse<SearchResultResponse> searchInBook(String slug, String query, int page, int limit) {
+    @Transactional
+    public DataResponse<BookmarkResponse> updateBookmark(String slug, Long bookmarkId, BookmarkRequest request) {
         try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
             Book book = bookMapper.findBookBySlug(slug);
-            if (book == null) {
+
+            if (user == null || book == null) {
                 throw new DataNotFoundException();
             }
 
-            // Read book content and perform search
-            String bookContent = readBookContent(book.getFileUrl());
-            List<SearchResultResponse.SearchResult> results = performTextSearch(bookContent, query, page, limit);
+            Bookmark existingBookmark = bookmarkMapper.findBookmarkById(bookmarkId);
+            if (existingBookmark == null || !existingBookmark.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
 
-            SearchResultResponse response = new SearchResultResponse();
-            response.setQuery(query);
-            response.setTotalResults(results.size());
-            response.setCurrentPage(page);
-            response.setTotalPages((int) Math.ceil((double) results.size() / limit));
-            response.setResults(results);
+            // Update bookmark fields
+            existingBookmark.setPage(request.getPage());
+            existingBookmark.setPosition(request.getPosition());
+            existingBookmark.setTitle(request.getTitle());
+            existingBookmark.setDescription(request.getDescription());
+            existingBookmark.setColor(request.getColor() != null ? request.getColor() : existingBookmark.getColor());
 
-            return new DataResponse<>(SUCCESS, "Search completed successfully", HttpStatus.OK.value(), response);
+            bookmarkMapper.updateBookmark(existingBookmark);
+
+            BookmarkResponse response = mapToBookmarkResponse(existingBookmark);
+            return new DataResponse<>(SUCCESS, "Bookmark updated successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
-            log.error("Error searching in book: {} query: {}", slug, query, e);
-            throw new RuntimeException("Search failed: " + e.getMessage());
+            log.error("Error updating bookmark: {} for book: {} user: {}", bookmarkId, slug, headerHolder.getUsername(), e);
+            throw e;
         }
     }
 
-    // 6. Add Highlight
+    @Override
+    @Transactional
+    public DefaultResponse deleteBookmark(String slug, Long bookmarkId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Bookmark existingBookmark = bookmarkMapper.findBookmarkById(bookmarkId);
+            if (existingBookmark == null || !existingBookmark.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            bookmarkMapper.deleteBookmark(bookmarkId);
+
+            return new DefaultResponse(SUCCESS, "Bookmark deleted successfully", HttpStatus.OK.value());
+
+        } catch (Exception e) {
+            log.error("Error deleting bookmark: {} for book: {} user: {}", bookmarkId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    // ============ HIGHLIGHT OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<HighlightResponse> addHighlight(String slug, HighlightRequest request) {
@@ -797,7 +796,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 7. Get Highlights
     @Override
     public DataResponse<List<HighlightResponse>> getHighlights(String slug) {
         try {
@@ -826,7 +824,83 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 8. Add Note
+    @Override
+    @Transactional
+    public DataResponse<HighlightResponse> updateHighlight(String slug, Long highlightId, HighlightRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Highlight existingHighlight = highlightMapper.findHighlightById(highlightId);
+            if (existingHighlight == null || !existingHighlight.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            // Update highlight fields
+            existingHighlight.setPage(request.getPage());
+            existingHighlight.setStartPosition(request.getStartPosition());
+            existingHighlight.setEndPosition(request.getEndPosition());
+            existingHighlight.setHighlightedText(request.getHighlightedText());
+            existingHighlight.setColor(request.getColor());
+            existingHighlight.setNote(request.getNote());
+            existingHighlight.setUpdatedAt(LocalDateTime.now());
+
+            highlightMapper.updateHighlight(existingHighlight);
+
+            HighlightResponse response = mapToHighlightResponse(existingHighlight);
+            return new DataResponse<>(SUCCESS, "Highlight updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error updating highlight: {} for book: {} user: {}", highlightId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DefaultResponse deleteHighlight(String slug, Long highlightId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Highlight existingHighlight = highlightMapper.findHighlightById(highlightId);
+            if (existingHighlight == null || !existingHighlight.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            // Delete related translations first
+            highlightTranslationMapper.deleteByHighlightId(highlightId);
+
+            // Delete the highlight
+            highlightMapper.deleteHighlight(highlightId);
+
+            return new DefaultResponse(SUCCESS, "Highlight deleted successfully", HttpStatus.OK.value());
+
+        } catch (Exception e) {
+            log.error("Error deleting highlight: {} for book: {} user: {}", highlightId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    // ============ NOTE OPERATIONS ============
     @Override
     @Transactional
     public DataResponse<NoteResponse> addNote(String slug, NoteRequest request) {
@@ -866,7 +940,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 9. Get Notes
     @Override
     public DataResponse<List<NoteResponse>> getNotes(String slug) {
         try {
@@ -895,7 +968,385 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 11. Translate Text
+    @Override
+    @Transactional
+    public DataResponse<NoteResponse> updateNote(String slug, Long noteId, NoteRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Note existingNote = noteMapper.findNoteById(noteId);
+            if (existingNote == null || !existingNote.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            // Update note fields
+            existingNote.setPage(request.getPage());
+            existingNote.setPosition(request.getPosition());
+            existingNote.setTitle(request.getTitle());
+            existingNote.setContent(request.getContent());
+            existingNote.setColor(request.getColor() != null ? request.getColor() : existingNote.getColor());
+            existingNote.setIsPrivate(request.getIsPrivate());
+            existingNote.setUpdatedAt(LocalDateTime.now());
+
+            noteMapper.updateNote(existingNote);
+
+            NoteResponse response = mapToNoteResponse(existingNote);
+            return new DataResponse<>(SUCCESS, "Note updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error updating note: {} for book: {} user: {}", noteId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DefaultResponse deleteNote(String slug, Long noteId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Note existingNote = noteMapper.findNoteById(noteId);
+            if (existingNote == null || !existingNote.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            noteMapper.deleteNote(noteId);
+
+            return new DefaultResponse(SUCCESS, "Note deleted successfully", HttpStatus.OK.value());
+
+        } catch (Exception e) {
+            log.error("Error deleting note: {} for book: {} user: {}", noteId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    // ============ REACTION OPERATIONS ============
+    @Override
+    public DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Get current user for reaction status
+            String currentUsername = null;
+            Long currentUserId = null;
+            try {
+                currentUsername = headerHolder.getUsername();
+                if (currentUsername != null) {
+                    User currentUser = userMapper.findUserByUsername(currentUsername);
+                    if (currentUser != null) {
+                        currentUserId = currentUser.getId();
+                    }
+                }
+            } catch (Exception e) {
+                // User might not be logged in, continue without user info
+            }
+
+            // Get reactions with pagination directly from database
+            int offset = (page - 1) * limit;
+            List<Reaction> reactions = reactionMapper.findReactionsByBookIdWithPagination(book.getId(), offset, limit);
+
+            final Long finalCurrentUserId = currentUserId;
+            List<ReactionResponse> responses = reactions.stream()
+                    .map(reaction -> {
+                        User reactionUser = userMapper.findUserById(reaction.getUserId());
+                        return mapToReactionResponse(reaction, reactionUser, book.getId(), finalCurrentUserId);
+                    })
+                    .collect(Collectors.toList());
+
+            return new DataResponse<>(SUCCESS, "Reactions retrieved successfully", HttpStatus.OK.value(), responses);
+
+        } catch (Exception e) {
+            log.error("Error getting reactions for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            if (request.getType() == null || request.getType().isEmpty()) {
+                throw new IllegalArgumentException("Reaction type is required");
+            }
+
+            // For replies, don't check existing reaction by position
+            Reaction existingReaction = null;
+            if (request.getParentId() == null) {
+                existingReaction = reactionMapper.findReactionByUserAndBook(
+                        user.getId(), book.getId(), request.getPage(), request.getPosition()
+                );
+            }
+
+            if (existingReaction != null) {
+                // Update existing reaction
+                existingReaction.setReactionType(request.getType());
+                existingReaction.setRating(request.getRating());
+                existingReaction.setComment(request.getComment());
+                existingReaction.setTitle(request.getTitle());
+                existingReaction.setUpdatedAt(LocalDateTime.now());
+                reactionMapper.updateReaction(existingReaction);
+            } else {
+                // Create new reaction/comment
+                Reaction reaction = new Reaction();
+                reaction.setUserId(user.getId());
+                reaction.setBookId(book.getId());
+                reaction.setReactionType(request.getType());
+                reaction.setRating(request.getRating());
+                reaction.setComment(request.getComment());
+                reaction.setTitle(request.getTitle());
+                reaction.setPage(request.getPage());
+                reaction.setPosition(request.getPosition());
+                reaction.setParentId(request.getParentId());
+                reaction.setCreatedAt(LocalDateTime.now());
+
+                reactionMapper.insertReaction(reaction);
+                existingReaction = reaction;
+            }
+
+            ReactionResponse response = mapToReactionResponse(existingReaction, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reaction added successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error adding reaction for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DataResponse<List<ReactionResponse>> getReactionReplies(String slug, Long reactionId) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            List<Reaction> replies = reactionMapper.findRepliesByParentId(reactionId);
+
+            String currentUsername;
+            Long currentUserId = null;
+            try {
+                currentUsername = headerHolder.getUsername();
+                if (currentUsername != null) {
+                    User currentUser = userMapper.findUserByUsername(currentUsername);
+                    if (currentUser != null) {
+                        currentUserId = currentUser.getId();
+                    }
+                }
+            } catch (Exception e) {
+                // Continue without user info
+            }
+
+            final Long finalCurrentUserId = currentUserId;
+            List<ReactionResponse> responses = replies.stream()
+                    .map(reaction -> {
+                        User reactionUser = userMapper.findUserById(reaction.getUserId());
+                        return mapToReactionResponse(reaction, reactionUser, book.getId(), finalCurrentUserId);
+                    })
+                    .collect(Collectors.toList());
+
+            return new DataResponse<>(SUCCESS, "Replies retrieved successfully", HttpStatus.OK.value(), responses);
+
+        } catch (Exception e) {
+            log.error("Error getting replies for reaction: {}", reactionId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public DataResponse<ReactionStatsResponse> getReactionStats(String slug) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Get current user for user-specific stats
+            String currentUsername = null;
+            Long currentUserId = null;
+            try {
+                currentUsername = headerHolder.getUsername();
+                if (currentUsername != null) {
+                    User currentUser = userMapper.findUserByUsername(currentUsername);
+                    if (currentUser != null) {
+                        currentUserId = currentUser.getId();
+                    }
+                }
+            } catch (Exception e) {
+                // Continue without user info
+            }
+
+            ReactionStatsResponse stats = reactionMapper.getReactionStats(book.getId());
+            if (stats == null) {
+                stats = new ReactionStatsResponse();
+                // Set default values
+                stats.setTotalRatings(0L);
+                stats.setTotalAngry(0L);
+                stats.setTotalLikes(0L);
+                stats.setTotalLoves(0L);
+                stats.setTotalDislikes(0L);
+                stats.setTotalSad(0L);
+                stats.setTotalComments(0L);
+                stats.setAverageRating(0.0);
+            }
+
+            // Set user-specific data
+            if (currentUserId != null) {
+                String userReactionType = reactionMapper.getUserReactionType(currentUserId, book.getId());
+                stats.setUserHasReacted(userReactionType != null);
+                stats.setUserReactionType(userReactionType);
+            } else {
+                stats.setUserHasReacted(false);
+                stats.setUserReactionType(null);
+            }
+
+            return new DataResponse<>(SUCCESS, "Reaction stats retrieved successfully", HttpStatus.OK.value(), stats);
+
+        } catch (Exception e) {
+            log.error("Error getting reaction stats for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<ReactionResponse> updateReaction(String slug, Long reactionId, ReactionRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            Reaction existingReaction = reactionMapper.findReactionById(reactionId);
+            if (existingReaction == null || !existingReaction.getUserId().equals(user.getId())) {
+                throw new DataNotFoundException();
+            }
+
+            // Update reaction fields
+            existingReaction.setReactionType(request.getType());
+            existingReaction.setRating(request.getRating());
+            existingReaction.setComment(request.getComment());
+            existingReaction.setTitle(request.getTitle());
+            existingReaction.setUpdatedAt(LocalDateTime.now());
+
+            reactionMapper.updateReaction(existingReaction);
+
+            ReactionResponse response = mapToReactionResponse(existingReaction, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reaction updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error updating reaction: {} for book: {} user: {}", reactionId, slug, headerHolder.getUsername(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> removeReaction(String slug, Long reactionId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Get the reaction to verify ownership
+            Reaction reaction = reactionMapper.findReactionById(reactionId);
+            if (reaction == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Check if user owns the reaction or has admin privileges
+            if (!reaction.getUserId().equals(user.getId())) {
+                throw new UnauthorizedException();
+            }
+
+            // Remove the reaction and its replies
+            reactionMapper.deleteReactionAndReplies(reactionId);
+
+            return new DataResponse<>(SUCCESS, "Reaction removed successfully", HttpStatus.OK.value(), null);
+
+        } catch (Exception e) {
+            log.error("Error removing reaction: {}", reactionId, e);
+            throw e;
+        }
+    }
+
+    // ============ SEARCH & TRANSLATION OPERATIONS ============
+    @Override
+    public DataResponse<SearchResultResponse> searchInBook(String slug, String query, int page, int limit) {
+        try {
+            Book book = bookMapper.findBookBySlug(slug);
+            if (book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Read book content and perform search
+            String bookContent = readBookContent(book.getFileUrl());
+            List<SearchResultResponse.SearchResult> results = performTextSearch(bookContent, query, page, limit);
+
+            SearchResultResponse response = new SearchResultResponse();
+            response.setQuery(query);
+            response.setTotalResults(results.size());
+            response.setCurrentPage(page);
+            response.setTotalPages((int) Math.ceil((double) results.size() / limit));
+            response.setResults(results);
+
+            return new DataResponse<>(SUCCESS, "Search completed successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error searching in book: {} query: {}", slug, query, e);
+            throw new RuntimeException("Search failed: " + e.getMessage());
+        }
+    }
+
     @Override
     public DataResponse<TranslationResponse> translateText(String slug, TranslationRequest request) {
         try {
@@ -927,7 +1378,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 13. Translate Highlight
     @Override
     @Transactional
     public DataResponse<TranslatedHighlightResponse> translateHighlight(String slug, TranslateHighlightRequest request) {
@@ -969,306 +1419,7 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 14. Add Reaction
-    @Override
-    @Transactional
-    public DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request) {
-        try {
-            String username = headerHolder.getUsername();
-            if (username == null || username.isEmpty()) {
-                throw new UnauthorizedException();
-            }
-
-            User user = userMapper.findUserByUsername(username);
-            Book book = bookMapper.findBookBySlug(slug);
-
-            if (user == null || book == null) {
-                throw new DataNotFoundException();
-            }
-
-            if (request.getType() == null || request.getType().isEmpty()) {
-                throw new IllegalArgumentException("Reaction type is required");
-            }
-
-            Reaction existingReaction = reactionMapper.findReactionByUserAndBook(
-                    user.getId(), book.getId(), request.getPage(), request.getPosition()
-            );
-
-            if (existingReaction != null) {
-                existingReaction.setReactionType(request.getType());
-                existingReaction.setRating(request.getRating());
-                existingReaction.setComment(request.getComment());
-                existingReaction.setUpdatedAt(LocalDateTime.now());
-                reactionMapper.updateReaction(existingReaction);
-            } else {
-                Reaction reaction = new Reaction();
-                reaction.setUserId(user.getId());
-                reaction.setBookId(book.getId());
-                reaction.setReactionType(request.getType());
-                reaction.setRating(request.getRating());
-                reaction.setComment(request.getComment());
-                reaction.setPage(request.getPage());
-                reaction.setPosition(request.getPosition());
-                reaction.setCreatedAt(LocalDateTime.now());
-
-                reactionMapper.insertReaction(reaction);
-                existingReaction = reaction;
-            }
-
-            ReactionResponse response = mapToReactionResponse(existingReaction, user.getUsername(), book.getId(), user.getId());
-            return new DataResponse<>(SUCCESS, "Reaction added successfully", HttpStatus.OK.value(), response);
-
-        } catch (Exception e) {
-            log.error("Error adding reaction for book: {}", slug, e);
-            throw e;
-        }
-    }
-
-    @Override
-    public DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit) {
-        try {
-            Book book = bookMapper.findBookBySlug(slug);
-            if (book == null) {
-                throw new DataNotFoundException();
-            }
-
-            String currentUsername = null;
-            Long currentUserId = null;
-            try {
-                currentUsername = headerHolder.getUsername();
-                if (currentUsername != null) {
-                    User currentUser = userMapper.findUserByUsername(currentUsername);
-                    if (currentUser != null) {
-                        currentUserId = currentUser.getId();
-                    }
-                }
-            } catch (Exception e) {
-                // Continue without user info
-            }
-
-            int offset = (page - 1) * limit;
-            List<Reaction> reactions = reactionMapper.findReactionsByBookIdWithPaging(book.getId(), offset, limit);
-
-            final Long finalCurrentUserId = currentUserId;
-            List<ReactionResponse> responses = reactions.stream()
-                    .map(reaction -> {
-                        String username = getUsernameById(reaction.getUserId());
-                        return mapToReactionResponse(reaction, username, book.getId(), finalCurrentUserId);
-                    })
-                    .collect(Collectors.toList());
-
-            return new DataResponse<>(SUCCESS, "Reactions retrieved successfully", HttpStatus.OK.value(), responses);
-
-        } catch (Exception e) {
-            log.error("Error getting reactions for book: {}", slug, e);
-            throw e;
-        }
-    }
-
-    @Override
-    public DataResponse<ReactionStatsResponse> getReactionStats(String slug) {
-        try {
-            Book book = bookMapper.findBookBySlug(slug);
-            if (book == null) {
-                throw new DataNotFoundException();
-            }
-
-            String currentUsername = headerHolder.getUsername();
-            Long currentUserId = null;
-            if (currentUsername != null) {
-                User currentUser = userMapper.findUserByUsername(currentUsername);
-                if (currentUser != null) {
-                    currentUserId = currentUser.getId();
-                }
-            }
-
-            ReactionStatsResponse stats = reactionMapper.getReactionStats(book.getId());
-            if (stats == null) {
-                stats = new ReactionStatsResponse();
-                stats.setTotalRatings(0L);
-                stats.setTotalDislikes(0L);
-                stats.setTotalSad(0L);
-                stats.setTotalAngry(0L);
-                stats.setTotalLikes(0L);
-                stats.setTotalLoves(0L);
-                stats.setTotalComments(0L);
-                stats.setAverageRating(0.0);
-            }
-
-            if (currentUserId != null) {
-                String userReactionType = reactionMapper.getUserReactionType(currentUserId, book.getId());
-                stats.setUserHasReacted(userReactionType != null);
-                stats.setUserReactionType(userReactionType);
-            } else {
-                stats.setUserHasReacted(false);
-                stats.setUserReactionType(null);
-            }
-
-            return new DataResponse<>(SUCCESS, "Reaction stats retrieved successfully", HttpStatus.OK.value(), stats);
-
-        } catch (Exception e) {
-            log.error("Error getting reaction stats for book: {}", slug, e);
-            throw e;
-        }
-    }
-
-    @Override
-    @Transactional
-    public DataResponse<Void> removeReaction(String slug, Long reactionId) {
-        try {
-            String username = headerHolder.getUsername();
-            if (username == null || username.isEmpty()) {
-                throw new UnauthorizedException();
-            }
-
-            User user = userMapper.findUserByUsername(username);
-            Book book = bookMapper.findBookBySlug(slug);
-
-            if (user == null || book == null) {
-                throw new DataNotFoundException();
-            }
-
-            Reaction reaction = reactionMapper.findReactionById(reactionId);
-            if (reaction == null || !reaction.getUserId().equals(user.getId()) || !reaction.getBookId().equals(book.getId())) {
-                throw new DataNotFoundException();
-            }
-
-            reactionMapper.deleteReaction(reactionId);
-
-            return new DataResponse<>(SUCCESS, "Reaction removed successfully", HttpStatus.OK.value(), null);
-
-        } catch (Exception e) {
-            log.error("Error removing reaction: {}", reactionId, e);
-            throw e;
-        }
-    }
-
-    // Helper methods
-    private ReactionResponse mapToReactionResponse(Reaction reaction, String username, Long bookId, Long currentUserId) {
-        ReactionResponse response = new ReactionResponse();
-        response.setId(reaction.getId());
-        response.setUserId(reaction.getUserId());
-        response.setUserName(username);
-        response.setBookId(reaction.getBookId());
-        response.setReactionType(reaction.getReactionType());
-        response.setRating(reaction.getRating());
-        response.setComment(reaction.getComment());
-        response.setPage(reaction.getPage());
-        response.setPosition(reaction.getPosition());
-        response.setCreatedAt(reaction.getCreatedAt());
-        response.setUpdatedAt(reaction.getUpdatedAt());
-
-        // Add stats to response - flat structure
-        try {
-            ReactionStatsResponse stats = reactionMapper.getReactionStats(bookId);
-            if (stats != null) {
-                response.setTotalRatings(stats.getTotalRatings() != null ? stats.getTotalRatings() : 0L);
-                response.setTotalAngry(stats.getTotalAngry() != null ? stats.getTotalAngry() : 0L);
-                response.setTotalLikes(stats.getTotalLikes() != null ? stats.getTotalLikes() : 0L);
-                response.setTotalLoves(stats.getTotalLoves() != null ? stats.getTotalLoves() : 0L);
-                response.setAverageRating(stats.getAverageRating() != null ? stats.getAverageRating() : 0.0);
-            } else {
-                response.setTotalRatings(0L);
-                response.setTotalAngry(0L);
-                response.setTotalLikes(0L);
-                response.setTotalLoves(0L);
-                response.setAverageRating(0.0);
-            }
-
-            if (currentUserId != null) {
-                String userReactionType = reactionMapper.getUserReactionType(currentUserId, bookId);
-                response.setUserHasReacted(userReactionType != null);
-                response.setUserReactionType(userReactionType);
-            } else {
-                response.setUserHasReacted(false);
-                response.setUserReactionType(null);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to get reaction stats: {}", e.getMessage());
-            // Set default values
-            response.setTotalRatings(0L);
-            response.setTotalAngry(0L);
-            response.setTotalLikes(0L);
-            response.setTotalLoves(0L);
-            response.setAverageRating(0.0);
-            response.setUserHasReacted(false);
-            response.setUserReactionType(null);
-        }
-
-        return response;
-    }
-
-    private String getUsernameById(Long userId) {
-        try {
-            User user = userMapper.findUserById(userId);
-            return user != null ? user.getUsername() : "Unknown";
-        } catch (Exception e) {
-            log.warn("Failed to get username for user ID: {}", userId);
-            return "Unknown";
-        }
-    }
-
-    // 15. Get Discussions & Add Discussion
-    @Override
-    public DataResponse<List<DiscussionResponse>> getDiscussions(String slug, int page, int limit) {
-        try {
-            Book book = bookMapper.findBookBySlug(slug);
-            if (book == null) {
-                throw new DataNotFoundException();
-            }
-
-            int offset = (page - 1) * limit;
-            List<Discussion> discussions = discussionMapper.findDiscussionsByBook(book.getId(), offset, limit);
-            List<DiscussionResponse> responses = discussions.stream()
-                    .map(this::mapToDiscussionResponse)
-                    .collect(Collectors.toList());
-
-            return new DataResponse<>(SUCCESS, "Discussions retrieved successfully", HttpStatus.OK.value(), responses);
-
-        } catch (Exception e) {
-            log.error("Error getting discussions for book: {}", slug, e);
-            throw e;
-        }
-    }
-
-    @Override
-    @Transactional
-    public DataResponse<DiscussionResponse> addDiscussion(String slug, DiscussionRequest request) {
-        try {
-            String username = headerHolder.getUsername();
-            if (username == null || username.isEmpty()) {
-                throw new UnauthorizedException();
-            }
-
-            User user = userMapper.findUserByUsername(username);
-            Book book = bookMapper.findBookBySlug(slug);
-
-            if (user == null || book == null) {
-                throw new DataNotFoundException();
-            }
-
-            Discussion discussion = new Discussion();
-            discussion.setBookId(book.getId());
-            discussion.setUserId(user.getId());
-            discussion.setTitle(request.getTitle());
-            discussion.setContent(request.getContent());
-            discussion.setPage(request.getPage());
-            discussion.setPosition(request.getPosition());
-            discussion.setParentId(request.getParentId());
-            discussion.setCreatedAt(LocalDateTime.now());
-
-            discussionMapper.insertDiscussion(discussion);
-
-            DiscussionResponse response = mapToDiscussionResponse(discussion);
-            return new DataResponse<>(SUCCESS, "Discussion added successfully", HttpStatus.CREATED.value(), response);
-
-        } catch (Exception e) {
-            log.error("Error adding discussion for book: {}", slug, e);
-            throw e;
-        }
-    }
-
-    // 16. Generate Text-to-Speech
+    // ============ TTS & AUDIO OPERATIONS ============
     @Override
     public DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request) {
         try {
@@ -1307,7 +1458,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 17. Sync Audio with Text
     @Override
     @Transactional
     public DataResponse<AudioSyncResponse> syncAudioWithText(String slug, AudioSyncRequest request) {
@@ -1345,9 +1495,177 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // Tambahkan method-method ini ke dalam class BookServiceImpl
+    // ============ HELPER METHODS ============
+    private ReadingResponse getGuestReadingResponse(Book book) {
+        ReadingResponse response = new ReadingResponse();
 
-    // 1. Save Highlight Translation
+        // Basic book information
+        response.setBookId(book.getId());
+        response.setTitle(book.getTitle());
+        response.setSlug(book.getSlug());
+        response.setFileUrl(book.getFileUrl());
+        response.setTotalPages(book.getTotalPages());
+        response.setCurrentPage(1);
+        response.setCurrentPosition("0");
+        response.setPercentageCompleted(BigDecimal.ZERO);
+        response.setReadingTimeMinutes(0);
+        response.setStatus("GUEST_READING");
+        response.setIsFavorite(false);
+        response.setSessionId(null);
+
+        return response;
+    }
+
+    private ReadingResponse getReadingResponse(Book book, ReadingProgress existingProgress, ReadingSession session) {
+        ReadingResponse readingResponse = new ReadingResponse();
+        readingResponse.setBookId(book.getId());
+        readingResponse.setTitle(book.getTitle());
+        readingResponse.setSlug(book.getSlug());
+        readingResponse.setFileUrl(book.getFileUrl());
+        readingResponse.setCurrentPage(existingProgress.getCurrentPage());
+        readingResponse.setTotalPages(existingProgress.getTotalPages());
+        readingResponse.setCurrentPosition(existingProgress.getCurrentPosition());
+        readingResponse.setPercentageCompleted(existingProgress.getPercentageCompleted());
+        readingResponse.setReadingTimeMinutes(existingProgress.getReadingTimeMinutes());
+        readingResponse.setStatus(existingProgress.getStatus());
+        readingResponse.setIsFavorite(existingProgress.getIsFavorite());
+        readingResponse.setSessionId(session.getId());
+        return readingResponse;
+    }
+
+    private ReadingProgressResponse mapToReadingProgressResponse(ReadingProgress progress, Book book) {
+        ReadingProgressResponse response = new ReadingProgressResponse();
+        response.setId(progress.getId());
+        response.setBookId(progress.getBookId());
+        response.setBookTitle(book.getTitle());
+        response.setCurrentPage(progress.getCurrentPage());
+        response.setTotalPages(progress.getTotalPages());
+        response.setCurrentPosition(progress.getCurrentPosition());
+        response.setPercentageCompleted(progress.getPercentageCompleted());
+        response.setReadingTimeMinutes(progress.getReadingTimeMinutes());
+        response.setStatus(progress.getStatus());
+        response.setStartedAt(progress.getStartedAt());
+        response.setLastReadAt(progress.getLastReadAt());
+        return response;
+    }
+
+    private BookmarkResponse mapToBookmarkResponse(Bookmark bookmark) {
+        BookmarkResponse response = new BookmarkResponse();
+        response.setId(bookmark.getId());
+        response.setBookId(bookmark.getBookId());
+        response.setPage(bookmark.getPage());
+        response.setPosition(bookmark.getPosition());
+        response.setTitle(bookmark.getTitle());
+        response.setDescription(bookmark.getDescription());
+        response.setColor(bookmark.getColor());
+        response.setCreatedAt(bookmark.getCreatedAt());
+        return response;
+    }
+
+    private HighlightResponse mapToHighlightResponse(Highlight highlight) {
+        HighlightResponse response = new HighlightResponse();
+        response.setId(highlight.getId());
+        response.setBookId(highlight.getBookId());
+        response.setPage(highlight.getPage());
+        response.setStartPosition(highlight.getStartPosition());
+        response.setEndPosition(highlight.getEndPosition());
+        response.setHighlightedText(highlight.getHighlightedText());
+        response.setColor(highlight.getColor());
+        response.setNote(highlight.getNote());
+        response.setCreatedAt(highlight.getCreatedAt());
+        response.setUpdatedAt(highlight.getUpdatedAt());
+        return response;
+    }
+
+    private NoteResponse mapToNoteResponse(Note note) {
+        NoteResponse response = new NoteResponse();
+        response.setId(note.getId());
+        response.setBookId(note.getBookId());
+        response.setPage(note.getPage());
+        response.setPosition(note.getPosition());
+        response.setTitle(note.getTitle());
+        response.setContent(note.getContent());
+        response.setColor(note.getColor());
+        response.setIsPrivate(note.getIsPrivate());
+        response.setCreatedAt(note.getCreatedAt());
+        response.setUpdatedAt(note.getUpdatedAt());
+        return response;
+    }
+
+    private ReactionResponse mapToReactionResponse(Reaction reaction, User reactionUser, Long bookId, Long currentUserId) {
+        ReactionResponse response = new ReactionResponse();
+        response.setId(reaction.getId());
+        response.setUserId(reaction.getUserId());
+        response.setUserName(reactionUser != null ? reactionUser.getUsername() : "Unknown");
+        response.setUserDisplayName(reactionUser != null ? reactionUser.getUsername() : "Unknown");
+        response.setBookId(reaction.getBookId());
+        response.setReactionType(reaction.getReactionType());
+        response.setRating(reaction.getRating());
+        response.setComment(reaction.getComment());
+        response.setTitle(reaction.getTitle());
+        response.setPage(reaction.getPage());
+        response.setPosition(reaction.getPosition());
+        response.setParentId(reaction.getParentId());
+        response.setCreatedAt(reaction.getCreatedAt());
+        response.setUpdatedAt(reaction.getUpdatedAt());
+
+        // Get reply count if this is a parent reaction
+        if (reaction.getParentId() == null) {
+            try {
+                int replyCount = reactionMapper.countRepliesByParentId(reaction.getId());
+                response.setReplyCount(replyCount);
+            } catch (Exception e) {
+                response.setReplyCount(0);
+            }
+        } else {
+            response.setReplyCount(0);
+        }
+
+        // Add stats to response - get once per reaction to avoid performance issues
+        try {
+            ReactionStatsResponse stats = reactionMapper.getReactionStats(bookId);
+            if (stats != null) {
+                response.setTotalRatings(stats.getTotalRatings() != null ? stats.getTotalRatings() : 0L);
+                response.setTotalAngry(stats.getTotalAngry() != null ? stats.getTotalAngry() : 0L);
+                response.setTotalLikes(stats.getTotalLikes() != null ? stats.getTotalLikes() : 0L);
+                response.setTotalLoves(stats.getTotalLoves() != null ? stats.getTotalLoves() : 0L);
+                response.setTotalDislikes(stats.getTotalDislikes() != null ? stats.getTotalDislikes() : 0L);
+                response.setTotalSad(stats.getTotalSad() != null ? stats.getTotalSad() : 0L);
+                response.setTotalComments(stats.getTotalComments() != null ? stats.getTotalComments() : 0L);
+                response.setAverageRating(stats.getAverageRating() != null ? stats.getAverageRating() : 0.0);
+            } else {
+                setDefaultStats(response);
+            }
+
+            if (currentUserId != null) {
+                String userReactionType = reactionMapper.getUserReactionType(currentUserId, bookId);
+                response.setUserHasReacted(userReactionType != null);
+                response.setUserReactionType(userReactionType);
+            } else {
+                response.setUserHasReacted(false);
+                response.setUserReactionType(null);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get reaction stats: {}", e.getMessage());
+            setDefaultStats(response);
+            response.setUserHasReacted(false);
+            response.setUserReactionType(null);
+        }
+
+        return response;
+    }
+
+    private void setDefaultStats(ReactionResponse response) {
+        response.setTotalRatings(0L);
+        response.setTotalAngry(0L);
+        response.setTotalLikes(0L);
+        response.setTotalLoves(0L);
+        response.setTotalDislikes(0L);
+        response.setTotalSad(0L);
+        response.setTotalComments(0L);
+        response.setAverageRating(0.0);
+    }
+
     private void saveHighlightTranslation(Long highlightId, String targetLanguage, String translatedText) {
         try {
             // Check if translation already exists
@@ -1374,49 +1692,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 2. Map to Reaction Response
-    private ReactionResponse mapToReactionResponse(Reaction reaction, String username) {
-        ReactionResponse response = new ReactionResponse();
-        response.setId(reaction.getId());
-        response.setReactionType(reaction.getReactionType());
-        response.setPage(reaction.getPage());
-        response.setPosition(reaction.getPosition());
-        response.setCreatedAt(reaction.getCreatedAt());
-        return response;
-    }
-
-    // 3. Map to Discussion Response (with user info)
-    private DiscussionResponse mapToDiscussionResponse(Discussion discussion) {
-        DiscussionResponse response = new DiscussionResponse();
-        response.setId(discussion.getId());
-        response.setTitle(discussion.getTitle());
-        response.setContent(discussion.getContent());
-        response.setPage(discussion.getPage());
-        response.setPosition(discussion.getPosition());
-        response.setCreatedAt(discussion.getCreatedAt());
-
-        // Get user info
-        try {
-            User user = userMapper.findUserById(discussion.getUserId());
-            if (user != null) {
-            }
-        } catch (Exception e) {
-            log.warn("Failed to get user info for discussion: {}", e.getMessage());
-        }
-
-        // Get reply count if it's a parent discussion
-        if (discussion.getParentId() == null) {
-            try {
-            } catch (Exception e) {
-                log.warn("Failed to get reply count: {}", e.getMessage());
-                response.setReplyCount(0);
-            }
-        }
-
-        return response;
-    }
-
-    // 4. Save TTS File
     private String saveTTSFile(String fileName, byte[] audioData) {
         try {
             // Create uploads directory if it doesn't exist
@@ -1443,7 +1718,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 5. Estimate Audio Duration
     private Double estimateAudioDuration(String text) {
         // Simple estimation: average reading speed is about 150-200 words per minute
         // For TTS, it's usually slower, around 150 words per minute
@@ -1462,7 +1736,6 @@ public class BookServiceImpl implements BookService {
         return (double) Math.max(durationSeconds, 1L);
     }
 
-    // 6. Save Audio Sync
     private Long saveAudioSync(AudioSync sync) {
         try {
             // Check if sync point already exists for this position
@@ -1485,7 +1758,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // 7. Get Sync Points for Page
     private List<AudioSyncResponse.SyncPoint> getSyncPointsForPage(Long bookId, Integer page) {
         try {
             List<AudioSync> syncs = audioSyncMapper.findByBookIdAndPage(bookId, page);
@@ -1503,98 +1775,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // Tambahan: Method untuk cleanup TTS files (optional)
-    @Scheduled(cron = "0 0 2 * * ?") // Run daily at 2 AM
-    public void cleanupExpiredTTSFiles() {
-        try {
-            String uploadDir = "uploads/tts/";
-            File directory = new File(uploadDir);
-
-            if (directory.exists() && directory.isDirectory()) {
-                File[] files = directory.listFiles();
-                if (files != null) {
-                    long currentTime = System.currentTimeMillis();
-                    long oneDayMs = 24 * 60 * 60 * 1000L;
-
-                    for (File file : files) {
-                        if (file.isFile() && (currentTime - file.lastModified()) > oneDayMs) {
-                            boolean deleted = file.delete();
-                            if (deleted) {
-                                log.info("Deleted expired TTS file: {}", file.getName());
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error cleaning up TTS files: {}", e.getMessage());
-        }
-    }
-
-    // Helper method to map ReadingProgress to Response
-    private ReadingProgressResponse mapToReadingProgressResponse(ReadingProgress progress, Book book) {
-        ReadingProgressResponse response = new ReadingProgressResponse();
-        response.setId(progress.getId());
-        response.setBookId(progress.getBookId());
-        response.setBookTitle(book.getTitle());
-        response.setCurrentPage(progress.getCurrentPage());
-        response.setTotalPages(progress.getTotalPages());
-        response.setCurrentPosition(progress.getCurrentPosition());
-        response.setPercentageCompleted(progress.getPercentageCompleted());
-        response.setReadingTimeMinutes(progress.getReadingTimeMinutes());
-        response.setStatus(progress.getStatus());
-        response.setStartedAt(progress.getStartedAt());
-        response.setLastReadAt(progress.getLastReadAt());
-        return response;
-    }
-
-    // Helper method to map Bookmark to Response
-    private BookmarkResponse mapToBookmarkResponse(Bookmark bookmark) {
-        BookmarkResponse response = new BookmarkResponse();
-        response.setId(bookmark.getId());
-        response.setBookId(bookmark.getBookId());
-        response.setPage(bookmark.getPage());
-        response.setPosition(bookmark.getPosition());
-        response.setTitle(bookmark.getTitle());
-        response.setDescription(bookmark.getDescription());
-        response.setColor(bookmark.getColor());
-        response.setCreatedAt(bookmark.getCreatedAt());
-        return response;
-    }
-
-    // Helper method to map Highlight to Response
-    private HighlightResponse mapToHighlightResponse(Highlight highlight) {
-        HighlightResponse response = new HighlightResponse();
-        response.setId(highlight.getId());
-        response.setBookId(highlight.getBookId());
-        response.setPage(highlight.getPage());
-        response.setStartPosition(highlight.getStartPosition());
-        response.setEndPosition(highlight.getEndPosition());
-        response.setHighlightedText(highlight.getHighlightedText());
-        response.setColor(highlight.getColor());
-        response.setNote(highlight.getNote());
-        response.setCreatedAt(highlight.getCreatedAt());
-        response.setUpdatedAt(highlight.getUpdatedAt());
-        return response;
-    }
-
-    // Helper method to map Note to Response
-    private NoteResponse mapToNoteResponse(Note note) {
-        NoteResponse response = new NoteResponse();
-        response.setId(note.getId());
-        response.setBookId(note.getBookId());
-        response.setPage(note.getPage());
-        response.setPosition(note.getPosition());
-        response.setTitle(note.getTitle());
-        response.setContent(note.getContent());
-        response.setColor(note.getColor());
-        response.setIsPrivate(note.getIsPrivate());
-        response.setCreatedAt(note.getCreatedAt());
-        response.setUpdatedAt(note.getUpdatedAt());
-        return response;
-    }
-
-    // Method to read book content from file
     private String readBookContent(String fileUrl) throws IOException {
         try {
             // If it's a local file path
@@ -1617,7 +1797,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // Method to perform text search in book content
     private List<SearchResultResponse.SearchResult> performTextSearch(String content, String query, int page, int limit) {
         List<SearchResultResponse.SearchResult> results = new ArrayList<>();
 
@@ -1635,7 +1814,7 @@ public class BookServiceImpl implements BookService {
             if (lowerLine.contains(lowerQuery)) {
                 SearchResultResponse.SearchResult result = new SearchResultResponse.SearchResult();
                 result.setPage((i / 30) + 1); // Assuming 30 lines per page
-                result.setContext(getSearchContext(lines, i, 2)); // 2 lines context
+                result.setContext(getSearchContext(lines, i)); // 2 lines context
                 result.setHighlightedText(highlightSearchTerm(line, query));
                 result.setPosition(String.valueOf(i + 1)); // Line number as position
                 result.setRelevanceScore(calculateRelevanceScore(line, query)); // Calculate relevance
@@ -1654,10 +1833,9 @@ public class BookServiceImpl implements BookService {
         return new ArrayList<>();
     }
 
-    // Helper method to get context around search result
-    private String getSearchContext(String[] lines, int currentLine, int contextLines) {
-        int start = Math.max(0, currentLine - contextLines);
-        int end = Math.min(lines.length - 1, currentLine + contextLines);
+    private String getSearchContext(String[] lines, int currentLine) {
+        int start = Math.max(0, currentLine - 2);
+        int end = Math.min(lines.length - 1, currentLine + 2);
 
         StringBuilder context = new StringBuilder();
         for (int i = start; i <= end; i++) {
@@ -1673,7 +1851,6 @@ public class BookServiceImpl implements BookService {
         return context.toString();
     }
 
-    // Helper method to calculate relevance score
     private Double calculateRelevanceScore(String text, String searchTerm) {
         if (text == null || searchTerm == null || searchTerm.trim().isEmpty()) {
             return 0.0;
@@ -1709,7 +1886,6 @@ public class BookServiceImpl implements BookService {
         return Math.max(0.0, Math.min(1.0, score)); // Clamp between 0.0 and 1.0
     }
 
-    // Helper method to highlight search term in text
     private String highlightSearchTerm(String text, String searchTerm) {
         if (text == null || searchTerm == null) {
             return text;
@@ -1718,8 +1894,6 @@ public class BookServiceImpl implements BookService {
                 "<mark>$0</mark>");
     }
 
-
-    // Utility method to sanitize filename
     private String sanitizeFilename(String filename) {
         if (filename == null) {
             return "untitled";

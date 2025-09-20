@@ -10,7 +10,7 @@ public class ReactionStatsResponse {
     private Long totalLoves;
     private Long totalDislikes;
     private Long totalSad;
-    private Long totalComments;
+    private Long totalComments; // Total comment/diskusi
     private Double averageRating;
     private Boolean userHasReacted;
     private String userReactionType;

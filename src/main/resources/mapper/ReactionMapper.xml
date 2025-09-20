@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ReactionMapper">
+
+    <!-- Result Map -->
+    <resultMap id="ReactionResultMap" type="com.naskah.demo.model.entity.Reaction">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="reactionType" column="reaction_type"/>
+        <result property="rating" column="rating"/>
+        <result property="comment" column="comment"/>
+        <result property="title" column="title"/>
+        <result property="page" column="page"/>
+        <result property="position" column="position"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Insert new reaction -->
+    <insert id="insertReaction" parameterType="com.naskah.demo.model.entity.Reaction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reactions (
+        user_id, book_id, reaction_type, rating, comment, title,
+        page, position, parent_id, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{reactionType}, #{rating}, #{comment}, #{title},
+        #{page}, #{position}, #{parentId}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- Update existing reaction -->
+    <update id="updateReaction" parameterType="com.naskah.demo.model.entity.Reaction">
+        UPDATE reactions SET
+        reaction_type = #{reactionType},
+        rating = #{rating},
+        comment = #{comment},
+        title = #{title},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Delete reaction by ID -->
+    <delete id="deleteReaction">
+        DELETE FROM reactions WHERE id = #{reactionId}
+    </delete>
+
+    <!-- Find reaction by ID -->
+    <select id="findReactionById" resultMap="ReactionResultMap">
+        SELECT * FROM reactions WHERE id = #{reactionId}
+    </select>
+
+    <!-- Find all reactions by book ID -->
+    <select id="findReactionsByBookId" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE book_id = #{bookId}
+        AND parent_id IS NULL
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Find reactions with pagination -->
+    <select id="findReactionsByBookIdWithPagination" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE book_id = #{bookId}
+        AND parent_id IS NULL
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Find existing reaction by user and book (for checking duplicates) -->
+    <select id="findReactionByUserAndBook" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND parent_id IS NULL
+        <if test="page != null">
+            AND page = #{page}
+        </if>
+        <if test="position != null">
+            AND position = #{position}
+        </if>
+        LIMIT 1
+    </select>
+
+    <!-- Find replies by parent ID -->
+    <select id="findRepliesByParentId" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE parent_id = #{parentId}
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- Count replies by parent ID -->
+    <select id="countRepliesByParentId" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE parent_id = #{parentId}
+    </select>
+
+    <!-- Get reaction statistics -->
+    <select id="getReactionStats" resultType="com.naskah.demo.model.dto.response.ReactionStatsResponse">
+        SELECT
+        COUNT(CASE WHEN rating IS NOT NULL THEN 1 END) as totalRatings,
+        COUNT(CASE WHEN reaction_type = 'angry' THEN 1 END) as totalAngry,
+        COUNT(CASE WHEN reaction_type = 'like' THEN 1 END) as totalLikes,
+        COUNT(CASE WHEN reaction_type = 'love' THEN 1 END) as totalLoves,
+        COUNT(CASE WHEN reaction_type = 'dislike' THEN 1 END) as totalDislikes,
+        COUNT(CASE WHEN reaction_type = 'sad' THEN 1 END) as totalSad,
+        COUNT(CASE WHEN reaction_type = 'comment' THEN 1 END) as totalComments,
+        COALESCE(AVG(CASE WHEN rating IS NOT NULL THEN rating END), 0.0) as averageRating
+        FROM reactions
+        WHERE book_id = #{bookId}
+        AND parent_id IS NULL
+    </select>
+
+    <!-- Get user's reaction type for a specific book -->
+    <select id="getUserReactionType" resultType="String">
+        SELECT reaction_type FROM reactions
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND parent_id IS NULL
+        LIMIT 1
+    </select>
+
+    <!-- Delete reaction and all its replies (cascading delete) -->
+    <delete id="deleteReactionAndReplies">
+        DELETE FROM reactions
+        WHERE id = #{reactionId} OR parent_id = #{reactionId}
+    </delete>
+
+</mapper>

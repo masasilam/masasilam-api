@@ -24,4 +24,6 @@ public interface BookmarkMapper {
 
     @Update("UPDATE bookmarks SET title = #{title}, description = #{description}, color = #{color} WHERE id = #{id}")
     void updateBookmark(Bookmark bookmark);
+
+    Bookmark findBookmarkById(@Param("id") Long id);
 }

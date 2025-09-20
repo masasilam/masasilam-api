@@ -1,16 +1,12 @@
 package com.naskah.demo.controller;
 
-import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.service.BookService;
-import com.naskah.demo.util.FileTypeUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +24,7 @@ public class BookController {
 
     private final BookService bookService;
 
-    // Existing endpoints
+    // ============ BOOK CRUD ENDPOINTS ============
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<BookResponse>> createBook(@Valid @ModelAttribute BookRequest request) {
         DataResponse<BookResponse> response = bookService.createBook(request);
@@ -38,12 +34,6 @@ public class BookController {
     @GetMapping("/{slug}")
     public ResponseEntity<DataResponse<BookResponse>> getBookDetail(@PathVariable String slug) {
         DataResponse<BookResponse> response = bookService.getBookDetailBySlug(slug);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{slug}/read")
-    public ResponseEntity<DataResponse<ReadingResponse>> startReading(@PathVariable String slug) {
-        DataResponse<ReadingResponse> response = bookService.startReading(slug);
         return ResponseEntity.ok(response);
     }
 
@@ -63,29 +53,28 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{slug}/download")
-    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug) {
-        return bookService.downloadBookAsBytes(slug);
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DataResponse<Book>> update(
+            @RequestParam Long id,
+            @RequestPart("ebook") @Valid Book book,
+            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+        DataResponse<Book> response = bookService.update(id, book, file);
+        return ResponseEntity.ok(response);
     }
 
-//    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<DataResponse<Book>> update(
-//            @RequestParam String id,
-//            @RequestPart("ebook") @Valid Book book,
-//            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
-//        DataResponse<Book> response = bookService.update(id, book, file);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    @DeleteMapping
-//    public ResponseEntity<DefaultResponse> delete(@RequestParam String id) throws IOException {
-//        DefaultResponse response = bookService.delete(id);
-//        return ResponseEntity.ok(response);
-//    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<DefaultResponse> delete(@PathVariable Long id) throws IOException {
+        DefaultResponse response = bookService.delete(id);
+        return ResponseEntity.ok(response);
+    }
 
-//     ============ NEW FEATURES ============
+    // ============ READING & PROGRESS ENDPOINTS ============
+    @GetMapping("/{slug}/read")
+    public ResponseEntity<DataResponse<ReadingResponse>> startReading(@PathVariable String slug) {
+        DataResponse<ReadingResponse> response = bookService.startReading(slug);
+        return ResponseEntity.ok(response);
+    }
 
-    // 1. Simpan halaman terakhir (sync)
     @PostMapping("/{slug}/progress")
     public ResponseEntity<DataResponse<ReadingProgressResponse>> saveProgress(
             @PathVariable String slug,
@@ -94,14 +83,13 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // 2. Ambil progress terakhir
     @GetMapping("/{slug}/progress")
     public ResponseEntity<DataResponse<ReadingProgressResponse>> getProgress(@PathVariable String slug) {
         DataResponse<ReadingProgressResponse> response = bookService.getReadingProgress(slug);
         return ResponseEntity.ok(response);
     }
 
-    // 3. Bookmark halaman (sync)
+    // ============ BOOKMARKS ENDPOINTS ============
     @PostMapping("/{slug}/bookmarks")
     public ResponseEntity<DataResponse<BookmarkResponse>> addBookmark(
             @PathVariable String slug,
@@ -110,25 +98,30 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 4. Ambil bookmark buku
     @GetMapping("/{slug}/bookmarks")
     public ResponseEntity<DataResponse<List<BookmarkResponse>>> getBookmarks(@PathVariable String slug) {
         DataResponse<List<BookmarkResponse>> response = bookService.getBookmarks(slug);
         return ResponseEntity.ok(response);
     }
 
-    // 5. Pencarian kata/kalimat di buku
-    @GetMapping("/{slug}/search")
-    public ResponseEntity<DataResponse<SearchResultResponse>> searchInBook(
+    @PutMapping("/{slug}/bookmarks/{bookmarkId}")
+    public ResponseEntity<DataResponse<BookmarkResponse>> updateBookmark(
             @PathVariable String slug,
-            @RequestParam String query,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int limit) {
-        DataResponse<SearchResultResponse> response = bookService.searchInBook(slug, query, page, limit);
+            @PathVariable Long bookmarkId,
+            @Valid @RequestBody BookmarkRequest request) {
+        DataResponse<BookmarkResponse> response = bookService.updateBookmark(slug, bookmarkId, request);
         return ResponseEntity.ok(response);
     }
 
-    // 6. Highlight teks (sync)
+    @DeleteMapping("/{slug}/bookmarks/{bookmarkId}")
+    public ResponseEntity<DefaultResponse> deleteBookmark(
+            @PathVariable String slug,
+            @PathVariable Long bookmarkId) {
+        DefaultResponse response = bookService.deleteBookmark(slug, bookmarkId);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============ HIGHLIGHTS ENDPOINTS ============
     @PostMapping("/{slug}/highlights")
     public ResponseEntity<DataResponse<HighlightResponse>> addHighlight(
             @PathVariable String slug,
@@ -137,14 +130,30 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 7. Ambil highlights buku
     @GetMapping("/{slug}/highlights")
     public ResponseEntity<DataResponse<List<HighlightResponse>>> getHighlights(@PathVariable String slug) {
         DataResponse<List<HighlightResponse>> response = bookService.getHighlights(slug);
         return ResponseEntity.ok(response);
     }
 
-    // 8. Catatan pribadi (sync)
+    @PutMapping("/{slug}/highlights/{highlightId}")
+    public ResponseEntity<DataResponse<HighlightResponse>> updateHighlight(
+            @PathVariable String slug,
+            @PathVariable Long highlightId,
+            @Valid @RequestBody HighlightRequest request) {
+        DataResponse<HighlightResponse> response = bookService.updateHighlight(slug, highlightId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{slug}/highlights/{highlightId}")
+    public ResponseEntity<DefaultResponse> deleteHighlight(
+            @PathVariable String slug,
+            @PathVariable Long highlightId) {
+        DefaultResponse response = bookService.deleteHighlight(slug, highlightId);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============ NOTES ENDPOINTS ============
     @PostMapping("/{slug}/notes")
     public ResponseEntity<DataResponse<NoteResponse>> addNote(
             @PathVariable String slug,
@@ -153,32 +162,30 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // 9. Ambil catatan buku
     @GetMapping("/{slug}/notes")
     public ResponseEntity<DataResponse<List<NoteResponse>>> getNotes(@PathVariable String slug) {
         DataResponse<List<NoteResponse>> response = bookService.getNotes(slug);
         return ResponseEntity.ok(response);
     }
 
-    // 11. Terjemahan otomatis (GRATIS)
-    @PostMapping("/{slug}/translate")
-    public ResponseEntity<DataResponse<TranslationResponse>> translateText(
+    @PutMapping("/{slug}/notes/{noteId}")
+    public ResponseEntity<DataResponse<NoteResponse>> updateNote(
             @PathVariable String slug,
-            @Valid @RequestBody TranslationRequest request) {
-        DataResponse<TranslationResponse> response = bookService.translateText(slug, request);
+            @PathVariable Long noteId,
+            @Valid @RequestBody NoteRequest request) {
+        DataResponse<NoteResponse> response = bookService.updateNote(slug, noteId, request);
         return ResponseEntity.ok(response);
     }
 
-    // 13. Highlight Auto-Translate
-    @PostMapping("/{slug}/translate-highlight")
-    public ResponseEntity<DataResponse<TranslatedHighlightResponse>> translateHighlight(
+    @DeleteMapping("/{slug}/notes/{noteId}")
+    public ResponseEntity<DefaultResponse> deleteNote(
             @PathVariable String slug,
-            @Valid @RequestBody TranslateHighlightRequest request) {
-        DataResponse<TranslatedHighlightResponse> response = bookService.translateHighlight(slug, request);
+            @PathVariable Long noteId) {
+        DefaultResponse response = bookService.deleteNote(slug, noteId);
         return ResponseEntity.ok(response);
     }
 
-    // 14. Reaksi / Rating / Emoji di Buku
+    // ============ REACTIONS ENDPOINTS ============
     @GetMapping("/{slug}/reactions")
     public ResponseEntity<DataResponse<List<ReactionResponse>>> getReactions(
             @PathVariable String slug,
@@ -198,9 +205,28 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/{slug}/reactions/{reactionId}/replies")
+    public ResponseEntity<DataResponse<List<ReactionResponse>>> getReactionReplies(
+            @PathVariable String slug,
+            @PathVariable Long reactionId) {
+
+        DataResponse<List<ReactionResponse>> response = bookService.getReactionReplies(slug, reactionId);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{slug}/reactions/stats")
     public ResponseEntity<DataResponse<ReactionStatsResponse>> getReactionStats(@PathVariable String slug) {
         DataResponse<ReactionStatsResponse> response = bookService.getReactionStats(slug);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{slug}/reactions/{reactionId}")
+    public ResponseEntity<DataResponse<ReactionResponse>> updateReaction(
+            @PathVariable String slug,
+            @PathVariable Long reactionId,
+            @RequestBody @Valid ReactionRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.updateReaction(slug, reactionId, request);
         return ResponseEntity.ok(response);
     }
 
@@ -213,25 +239,38 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // 15. Discussion Forum / Comments
-    @GetMapping("/{slug}/discussions")
-    public ResponseEntity<DataResponse<List<DiscussionResponse>>> getDiscussions(
+    // ============ UTILITY ENDPOINTS ============
+    @GetMapping("/{slug}/download")
+    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug) {
+        return bookService.downloadBookAsBytes(slug);
+    }
+
+    @GetMapping("/{slug}/search")
+    public ResponseEntity<DataResponse<SearchResultResponse>> searchInBook(
             @PathVariable String slug,
+            @RequestParam String query,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
-        DataResponse<List<DiscussionResponse>> response = bookService.getDiscussions(slug, page, limit);
+            @RequestParam(defaultValue = "10") int limit) {
+        DataResponse<SearchResultResponse> response = bookService.searchInBook(slug, query, page, limit);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{slug}/discussions")
-    public ResponseEntity<DataResponse<DiscussionResponse>> addDiscussion(
+    @PostMapping("/{slug}/translate")
+    public ResponseEntity<DataResponse<TranslationResponse>> translateText(
             @PathVariable String slug,
-            @Valid @RequestBody DiscussionRequest request) {
-        DataResponse<DiscussionResponse> response = bookService.addDiscussion(slug, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            @Valid @RequestBody TranslationRequest request) {
+        DataResponse<TranslationResponse> response = bookService.translateText(slug, request);
+        return ResponseEntity.ok(response);
     }
 
-    // 16. Text-to-Speech server-side
+    @PostMapping("/{slug}/translate-highlight")
+    public ResponseEntity<DataResponse<TranslatedHighlightResponse>> translateHighlight(
+            @PathVariable String slug,
+            @Valid @RequestBody TranslateHighlightRequest request) {
+        DataResponse<TranslatedHighlightResponse> response = bookService.translateHighlight(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{slug}/tts")
     public ResponseEntity<DataResponse<TTSResponse>> generateTextToSpeech(
             @PathVariable String slug,
@@ -240,7 +279,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // 17. Audiobook Hybrid Mode
     @PostMapping("/{slug}/sync-audio")
     public ResponseEntity<DataResponse<AudioSyncResponse>> syncAudioWithText(
             @PathVariable String slug,
@@ -248,134 +286,4 @@ public class BookController {
         DataResponse<AudioSyncResponse> response = bookService.syncAudioWithText(slug, request);
         return ResponseEntity.ok(response);
     }
-//
-//    // 18. Voice Notes
-//    @PostMapping("/{slug}/voice-notes")
-//    public ResponseEntity<DataResponse<VoiceNoteResponse>> addVoiceNote(
-//            @PathVariable String slug,
-//            @RequestParam("audio") MultipartFile audioFile,
-//            @RequestParam int page,
-//            @RequestParam(required = false) String position) {
-//        DataResponse<VoiceNoteResponse> response = bookService.addVoiceNote(slug, audioFile, page, position);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//    }
-//
-//    @GetMapping("/{slug}/voice-notes")
-//    public ResponseEntity<DataResponse<List<VoiceNoteResponse>>> getVoiceNotes(@PathVariable String slug) {
-//        DataResponse<List<VoiceNoteResponse>> response = bookService.getVoiceNotes(slug);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 19. Smart Vocabulary Builder
-//    @PostMapping("/{slug}/vocab-builder")
-//    public ResponseEntity<DataResponse<VocabularyResponse>> extractVocabulary(
-//            @PathVariable String slug,
-//            @Valid @RequestBody VocabularyRequest request) {
-//        DataResponse<VocabularyResponse> response = bookService.extractVocabulary(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 20. AI Smart Summary per Chapter
-//    @PostMapping("/{slug}/summary")
-//    public ResponseEntity<DataResponse<SummaryResponse>> generateChapterSummary(
-//            @PathVariable String slug,
-//            @Valid @RequestBody SummaryRequest request) {
-//        DataResponse<SummaryResponse> response = bookService.generateChapterSummary(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 21. AI Q&A on Book Content
-//    @PostMapping("/{slug}/qa")
-//    public ResponseEntity<DataResponse<QAResponse>> askQuestionAboutBook(
-//            @PathVariable String slug,
-//            @Valid @RequestBody QARequest request) {
-//        DataResponse<QAResponse> response = bookService.askQuestionAboutBook(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 22. Comment & Reply Notes
-//    @PostMapping("/{slug}/notes/{noteId}/comments")
-//    public ResponseEntity<DataResponse<CommentResponse>> addCommentToNote(
-//            @PathVariable String slug,
-//            @PathVariable Long noteId,
-//            @Valid @RequestBody CommentRequest request) {
-//        DataResponse<CommentResponse> response = bookService.addCommentToNote(slug, noteId, request);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//    }
-//
-//    // 23. Quote Share Generator
-//    @PostMapping("/{slug}/share-quote")
-//    public ResponseEntity<DataResponse<ShareQuoteResponse>> generateShareableQuote(
-//            @PathVariable String slug,
-//            @Valid @RequestBody ShareQuoteRequest request) {
-//        DataResponse<ShareQuoteResponse> response = bookService.generateShareableQuote(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 24. Highlight Trends
-//    @GetMapping("/{slug}/highlights/trends")
-//    public ResponseEntity<DataResponse<HighlightTrendsResponse>> getHighlightTrends(@PathVariable String slug) {
-//        DataResponse<HighlightTrendsResponse> response = bookService.getHighlightTrends(slug);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 25. Smart Bookmark Suggestions
-//    @GetMapping("/{slug}/bookmark-suggest")
-//    public ResponseEntity<DataResponse<List<BookmarkSuggestionResponse>>> getBookmarkSuggestions(
-//            @PathVariable String slug) {
-//        DataResponse<List<BookmarkSuggestionResponse>> response = bookService.getBookmarkSuggestions(slug);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 26. Interactive Quizzes per Chapter
-//    @PostMapping("/{slug}/quiz")
-//    public ResponseEntity<DataResponse<QuizResponse>> generateChapterQuiz(
-//            @PathVariable String slug,
-//            @Valid @RequestBody QuizRequest request) {
-//        DataResponse<QuizResponse> response = bookService.generateChapterQuiz(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 27. AI-powered Content Highlighting
-//    @PostMapping("/{slug}/ai-highlight")
-//    public ResponseEntity<DataResponse<AIHighlightResponse>> generateAIHighlights(
-//            @PathVariable String slug,
-//            @Valid @RequestBody AIHighlightRequest request) {
-//        DataResponse<AIHighlightResponse> response = bookService.generateAIHighlights(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 28. Smart Notes Tagging
-//    @PostMapping("/{slug}/notes/tags")
-//    public ResponseEntity<DataResponse<TaggingResponse>> autoTagNotes(
-//            @PathVariable String slug,
-//            @Valid @RequestBody TaggingRequest request) {
-//        DataResponse<TaggingResponse> response = bookService.autoTagNotes(slug, request);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 29. Voice-based Navigation
-//    @PostMapping("/{slug}/voice-control")
-//    public ResponseEntity<DataResponse<VoiceControlResponse>> processVoiceCommand(
-//            @PathVariable String slug,
-//            @RequestParam("audio") MultipartFile audioFile) {
-//        DataResponse<VoiceControlResponse> response = bookService.processVoiceCommand(slug, audioFile);
-//        return ResponseEntity.ok(response);
-//    }
-//
-//    // 30. Realtime Collaborative Notes
-//    @PostMapping("/{slug}/collab-notes")
-//    public ResponseEntity<DataResponse<CollaborativeNoteResponse>> createCollaborativeNote(
-//            @PathVariable String slug,
-//            @Valid @RequestBody CollaborativeNoteRequest request) {
-//        DataResponse<CollaborativeNoteResponse> response = bookService.createCollaborativeNote(slug, request);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-//    }
-//
-//    @GetMapping("/{slug}/collab-notes")
-//    public ResponseEntity<DataResponse<List<CollaborativeNoteResponse>>> getCollaborativeNotes(
-//            @PathVariable String slug) {
-//        DataResponse<List<CollaborativeNoteResponse>> response = bookService.getCollaborativeNotes(slug);
-//        return ResponseEntity.ok(response);
-//    }
 }

@@ -215,12 +215,6 @@
         WHERE slug = #{slug}
     </select>
 
-    <update id="incrementReadCount" parameterType="com.naskah.demo.model.entity.Book">
-        UPDATE books
-        SET read_count = read_count + 1
-        WHERE id = #{bookId}
-    </update>
-
     <select id="getBookListWithFilters" resultMap="BookResponseMap">
         SELECT DISTINCT ON (b.id)
         b.id as book_id,
@@ -331,47 +325,118 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- Fixed increment read count method -->
+    <update id="incrementReadCount">
+        UPDATE books
+        SET read_count = read_count + 1
+        WHERE id = #{bookId}
+    </update>
 
-
-
-
-
-
+    <!-- Fixed getDetailEbook method with Long parameter -->
     <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
-        SELECT id, title, author, year, file_path
-        FROM ebooks
+        SELECT
+        id, title, slug, subtitle, series_id, series_order, isbn,
+        publication_year, publisher, language_id, description, summary,
+        cover_image_url, cover_image_path, file_url, file_path,
+        file_format, file_size, total_word, total_pages, estimated_read_time,
+        difficulty_level, copyright_status_id, view_count, read_count,
+        download_count, average_rating, total_reviews, is_featured,
+        is_active, published_at, category, created_at, updated_at
+        FROM books
         WHERE id = #{id}
     </select>
 
-    <select id="getListEbook" resultType="com.naskah.demo.model.entity.Book">
-        SELECT id, title, author, year, file_path
-        FROM ebooks
-        <if test="sortField != null and sortOrder != null">
-            ORDER BY ${sortField} ${sortOrder}
-        </if>
-        <if test="offset >= 0">
-            OFFSET #{offset}
-        </if>
-        <if test="limit >= 0">
-            LIMIT #{limit}
-        </if>
-    </select>
-
+    <!-- Fixed updateEbook method -->
     <update id="updateEbook" parameterType="com.naskah.demo.model.entity.Book">
-        UPDATE ebooks
+        UPDATE books
         SET
         <trim suffixOverrides=",">
-            <if test="id != null">id = #{id},</if>
             <if test="title != null">title = #{title},</if>
-            <if test="author != null">author = #{author},</if>
-            <if test="year != null">year = #{year},</if>
+            <if test="slug != null">slug = #{slug},</if>
+            <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="seriesId != null">series_id = #{seriesId},</if>
+            <if test="seriesOrder != null">series_order = #{seriesOrder},</if>
+            <if test="isbn != null">isbn = #{isbn},</if>
+            <if test="publicationYear != null">publication_year = #{publicationYear},</if>
+            <if test="publisher != null">publisher = #{publisher},</if>
+            <if test="languageId != null">language_id = #{languageId},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
+            <if test="coverImagePath != null">cover_image_path = #{coverImagePath},</if>
+            <if test="fileUrl != null">file_url = #{fileUrl},</if>
             <if test="filePath != null">file_path = #{filePath},</if>
+            <if test="fileFormat != null">file_format = #{fileFormat},</if>
+            <if test="fileSize != null">file_size = #{fileSize},</if>
+            <if test="totalWord != null">total_word = #{totalWord},</if>
+            <if test="totalPages != null">total_pages = #{totalPages},</if>
+            <if test="estimatedReadTime != null">estimated_read_time = #{estimatedReadTime},</if>
+            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+            <if test="copyrightStatusId != null">copyright_status_id = #{copyrightStatusId},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="readCount != null">read_count = #{readCount},</if>
+            <if test="downloadCount != null">download_count = #{downloadCount},</if>
+            <if test="averageRating != null">average_rating = #{averageRating},</if>
+            <if test="totalReviews != null">total_reviews = #{totalReviews},</if>
+            <if test="isFeatured != null">is_featured = #{isFeatured},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="publishedAt != null">published_at = #{publishedAt},</if>
+            <if test="category != null">category = #{category},</if>
+            updated_at = CURRENT_TIMESTAMP,
         </trim>
         WHERE id = #{id}
     </update>
 
+    <!-- Fixed deleteEbook method -->
     <delete id="deleteEbook">
-        DELETE FROM ebooks
+        DELETE FROM books
+        WHERE id = #{id}
+    </delete>
+
+    <!-- Additional updateBook method (more comprehensive) -->
+    <update id="updateBook" parameterType="com.naskah.demo.model.entity.Book">
+        UPDATE books
+        SET
+        <trim suffixOverrides=",">
+            <if test="title != null">title = #{title},</if>
+            <if test="slug != null">slug = #{slug},</if>
+            <if test="subtitle != null">subtitle = #{subtitle},</if>
+            <if test="seriesId != null">series_id = #{seriesId},</if>
+            <if test="seriesOrder != null">series_order = #{seriesOrder},</if>
+            <if test="isbn != null">isbn = #{isbn},</if>
+            <if test="publicationYear != null">publication_year = #{publicationYear},</if>
+            <if test="publisher != null">publisher = #{publisher},</if>
+            <if test="languageId != null">language_id = #{languageId},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
+            <if test="coverImagePath != null">cover_image_path = #{coverImagePath},</if>
+            <if test="fileUrl != null">file_url = #{fileUrl},</if>
+            <if test="filePath != null">file_path = #{filePath},</if>
+            <if test="fileFormat != null">file_format = #{fileFormat},</if>
+            <if test="fileSize != null">file_size = #{fileSize},</if>
+            <if test="totalWord != null">total_word = #{totalWord},</if>
+            <if test="totalPages != null">total_pages = #{totalPages},</if>
+            <if test="estimatedReadTime != null">estimated_read_time = #{estimatedReadTime},</if>
+            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
+            <if test="copyrightStatusId != null">copyright_status_id = #{copyrightStatusId},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="readCount != null">read_count = #{readCount},</if>
+            <if test="downloadCount != null">download_count = #{downloadCount},</if>
+            <if test="averageRating != null">average_rating = #{averageRating},</if>
+            <if test="totalReviews != null">total_reviews = #{totalReviews},</if>
+            <if test="isFeatured != null">is_featured = #{isFeatured},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="publishedAt != null">published_at = #{publishedAt},</if>
+            <if test="category != null">category = #{category},</if>
+            updated_at = CURRENT_TIMESTAMP,
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <!-- Additional deleteBook method -->
+    <delete id="deleteBook">
+        DELETE FROM books
         WHERE id = #{id}
     </delete>
 

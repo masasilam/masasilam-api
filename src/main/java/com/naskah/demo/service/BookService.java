@@ -11,50 +11,54 @@ import java.util.List;
 
 public interface BookService {
 
-    // Existing methods
+    // Basic book operations
     DataResponse<BookResponse> createBook(BookRequest request);
     DataResponse<BookResponse> getBookDetailBySlug(String slug);
     DataResponse<ReadingResponse> startReading(String slug);
+    ResponseEntity<byte[]> downloadBookAsBytes(String slug);
     DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,
                                                       String searchTitle, Long seriesId, Long genreId, Long subGenreId);
-    ResponseEntity<byte[]> downloadBookAsBytes(String slug);
-//    DataResponse<Book> update(String id, Book book, MultipartFile file) throws IOException;
-//    DefaultResponse delete(String id) throws IOException;
+    DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException;
+    DefaultResponse delete(Long id) throws IOException;
 
-
-    // 1-2. Reading Progress Management
+    // Reading Progress
     DataResponse<ReadingProgressResponse> saveReadingProgress(String slug, ProgressRequest request);
     DataResponse<ReadingProgressResponse> getReadingProgress(String slug);
 
-    // 3-4. Bookmark Management
+    // Bookmarks CRUD
     DataResponse<BookmarkResponse> addBookmark(String slug, BookmarkRequest request);
     DataResponse<List<BookmarkResponse>> getBookmarks(String slug);
+    DataResponse<BookmarkResponse> updateBookmark(String slug, Long bookmarkId, BookmarkRequest request);
+    DefaultResponse deleteBookmark(String slug, Long bookmarkId);
 
-    // 5. Search in Book
-    DataResponse<SearchResultResponse> searchInBook(String slug, String query, int page, int limit);
-
-    // 6-7. Highlight Management
+    // Highlights CRUD
     DataResponse<HighlightResponse> addHighlight(String slug, HighlightRequest request);
     DataResponse<List<HighlightResponse>> getHighlights(String slug);
+    DataResponse<HighlightResponse> updateHighlight(String slug, Long highlightId, HighlightRequest request);
+    DefaultResponse deleteHighlight(String slug, Long highlightId);
 
-    // 8-9. Notes Management
+    // Notes CRUD
     DataResponse<NoteResponse> addNote(String slug, NoteRequest request);
     DataResponse<List<NoteResponse>> getNotes(String slug);
+    DataResponse<NoteResponse> updateNote(String slug, Long noteId, NoteRequest request);
+    DefaultResponse deleteNote(String slug, Long noteId);
 
-    // 11-13. Translation Features
+    // Search
+    DataResponse<SearchResultResponse> searchInBook(String slug, String query, int page, int limit);
+
+    // Translation
     DataResponse<TranslationResponse> translateText(String slug, TranslationRequest request);
     DataResponse<TranslatedHighlightResponse> translateHighlight(String slug, TranslateHighlightRequest request);
 
-    // 14-15. Social Features
-    DataResponse<List<DiscussionResponse>> getDiscussions(String slug, int page, int limit);
-    DataResponse<DiscussionResponse> addDiscussion(String slug, DiscussionRequest request);
-//
-    // 16-17. Audio Features
-    DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request);
-    DataResponse<AudioSyncResponse> syncAudioWithText(String slug, AudioSyncRequest request);
-
+    // Reactions CRUD
     DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit);
     DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request);
+    DataResponse<List<ReactionResponse>> getReactionReplies(String slug, Long reactionId);
     DataResponse<ReactionStatsResponse> getReactionStats(String slug);
+    DataResponse<ReactionResponse> updateReaction(String slug, Long reactionId, ReactionRequest request);
     DataResponse<Void> removeReaction(String slug, Long reactionId);
+
+    // TTS and Audio Sync
+    DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request);
+    DataResponse<AudioSyncResponse> syncAudioWithText(String slug, AudioSyncRequest request);
 }
