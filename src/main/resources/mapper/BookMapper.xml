@@ -312,12 +312,12 @@
         WHERE slug = #{slug}
     </select>
 
-    <select id="getBookListWithFilters" resultMap="BookResponseMap">
-        SELECT DISTINCT ON (b.id)
-        b.id as book_id,
+    <select id="getBookListWithFilters" resultMap="bookDetailResultMap">
+        SELECT
+        b.id,
         b.title,
         b.slug,
-        b.isbn,
+        b.edition,
         b.cover_image_url,
         b.publisher,
         b.publication_year,
@@ -328,43 +328,67 @@
         b.description,
         b.summary,
         b.estimated_read_time,
-        b.language_id,
+        l.name as language,
         b.total_word,
         b.difficulty_level,
         b.view_count,
         b.read_count,
         b.download_count,
-        b.average_rating,
-        b.total_reviews,
         b.subtitle,
         b.series_id,
         b.series_order,
-        b.copyright_status_id,
+        cs.name as copyright_status,
         b.published_at,
         b.category,
         a.id as author_id,
         a.name as author_name,
         a.slug as author_slug,
-        a.birth_date,
-        a.death_date,
-        a.birth_place,
-        a.nationality,
-        a.photo_url,
+        a.birth_date as author_birth_date,
+        a.death_date as author_death_date,
+        a.birth_place as author_birth_place,
+        a.nationality as author_nationality,
+        a.photo_url as author_photo_url,
+        c.id as contributor_id,
+        c.name as contributor_name,
+        c.slug as contributor_slug,
+        bc.role as contributor_role,
+        c.website_url as contributor_website_url,
         g.id as genre_id,
         g.name as genre_name,
         g.slug as genre_slug,
-        g.color_hex,
-        g.is_fiction,
-        t.id as tag_id,
-        t.name as tag_name,
-        t.slug as tag_slug
+        g.color_hex as genre_color_hex,
+        g.is_fiction as genre_is_fiction,
+        COALESCE(rs.total_ratings, 0) as total_ratings,
+        COALESCE(rs.total_angry, 0) as total_angry,
+        COALESCE(rs.total_likes, 0) as total_likes,
+        COALESCE(rs.total_loves, 0) as total_loves,
+        COALESCE(rs.total_dislikes, 0) as total_dislikes,
+        COALESCE(rs.total_sad, 0) as total_sad,
+        COALESCE(rs.total_comments, 0) as total_comments,
+        COALESCE(rs.average_rating, 0.0) as average_rating
         FROM books b
+        JOIN languages l ON b.language_id = l.id
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
         LEFT JOIN book_authors ba ON b.id = ba.book_id
         LEFT JOIN authors a ON ba.author_id = a.id
+        LEFT JOIN book_contributors bc ON b.id = bc.book_id
+        LEFT JOIN contributors c ON bc.contributor_id = c.id
         LEFT JOIN book_genres bg ON b.id = bg.book_id
         LEFT JOIN genres g ON bg.genre_id = g.id
-        LEFT JOIN book_tags bt ON b.id = bt.book_id
-        LEFT JOIN tags t ON bt.tag_id = t.id
+        LEFT JOIN (
+        SELECT
+        book_id,
+        COUNT(CASE WHEN reaction_type = 'RATING' THEN 1 END) as total_ratings,
+        COUNT(CASE WHEN reaction_type = 'ANGRY' THEN 1 END) as total_angry,
+        COUNT(CASE WHEN reaction_type = 'LIKE' THEN 1 END) as total_likes,
+        COUNT(CASE WHEN reaction_type = 'LOVE' THEN 1 END) as total_loves,
+        COUNT(CASE WHEN reaction_type = 'DISLIKE' THEN 1 END) as total_dislikes,
+        COUNT(CASE WHEN reaction_type = 'SAD' THEN 1 END) as total_sad,
+        COUNT(CASE WHEN reaction_type = 'COMMENT' THEN 1 END) as total_comments,
+        AVG(CASE WHEN reaction_type = 'RATING' THEN rating END) as average_rating
+        FROM reactions
+        GROUP BY book_id
+        ) rs ON b.id = rs.book_id
         <where>
             <if test="searchTitle != null and searchTitle != ''">
                 AND LOWER(b.title) LIKE CONCAT('%', LOWER(#{searchTitle}), '%')
@@ -385,15 +409,6 @@
                 WHERE bg3.book_id = b.id AND g3.parent_genre_id = #{subGenreId}
                 )
             </if>
-<!--            <if test="tagIds != null and tagIds.size() > 0">-->
-<!--                AND EXISTS (-->
-<!--                SELECT 1 FROM book_tags bt2-->
-<!--                WHERE bt2.book_id = b.id AND bt2.tag_id IN-->
-<!--                <foreach collection="tagIds" item="tagId" open="(" separator="," close=")">-->
-<!--                    #{tagId}-->
-<!--                </foreach>-->
-<!--                )-->
-<!--            </if>-->
         </where>
         ORDER BY b.id,
         <choose>
@@ -410,7 +425,7 @@
                 b.total_word ${sortType}
             </when>
             <when test="sortColumn == 'AVERAGE_RATING'">
-                b.average_rating ${sortType}
+                rs.average_rating ${sortType}  <!-- Fix: pake alias rs.average_rating -->
             </when>
             <when test="sortColumn == 'VIEW_COUNT'">
                 b.view_count ${sortType}
