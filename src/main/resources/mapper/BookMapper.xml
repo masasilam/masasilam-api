@@ -291,14 +291,14 @@
         -- Subquery untuk reaction stats (sesuaikan dengan struktur tabel reactions lu)
         SELECT
         book_id,
-        COUNT(CASE WHEN reaction_type = 'RATING' THEN 1 END) as total_ratings,
-        COUNT(CASE WHEN reaction_type = 'ANGRY' THEN 1 END) as total_angry,
-        COUNT(CASE WHEN reaction_type = 'LIKE' THEN 1 END) as total_likes,
-        COUNT(CASE WHEN reaction_type = 'LOVE' THEN 1 END) as total_loves,
-        COUNT(CASE WHEN reaction_type = 'DISLIKE' THEN 1 END) as total_dislikes,
-        COUNT(CASE WHEN reaction_type = 'SAD' THEN 1 END) as total_sad,
-        COUNT(CASE WHEN reaction_type = 'COMMENT' THEN 1 END) as total_comments,
-        AVG(CASE WHEN reaction_type = 'RATING' THEN rating END) as average_rating
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) as total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) as total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) as total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) as total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) as total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) as total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'COMMENT' THEN 1 END) as total_comments,
+        AVG(CASE WHEN UPPER(reaction_type) = 'RATING' THEN rating END) as average_rating
         FROM reactions
         GROUP BY book_id
         ) rs ON b.id = rs.book_id
@@ -378,14 +378,14 @@
         LEFT JOIN (
         SELECT
         book_id,
-        COUNT(CASE WHEN reaction_type = 'RATING' THEN 1 END) as total_ratings,
-        COUNT(CASE WHEN reaction_type = 'ANGRY' THEN 1 END) as total_angry,
-        COUNT(CASE WHEN reaction_type = 'LIKE' THEN 1 END) as total_likes,
-        COUNT(CASE WHEN reaction_type = 'LOVE' THEN 1 END) as total_loves,
-        COUNT(CASE WHEN reaction_type = 'DISLIKE' THEN 1 END) as total_dislikes,
-        COUNT(CASE WHEN reaction_type = 'SAD' THEN 1 END) as total_sad,
-        COUNT(CASE WHEN reaction_type = 'COMMENT' THEN 1 END) as total_comments,
-        AVG(CASE WHEN reaction_type = 'RATING' THEN rating END) as average_rating
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) as total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) as total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) as total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) as total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) as total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) as total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'COMMENT' THEN 1 END) as total_comments,
+        AVG(CASE WHEN UPPER(reaction_type) = 'RATING' THEN rating END) as average_rating
         FROM reactions
         GROUP BY book_id
         ) rs ON b.id = rs.book_id
