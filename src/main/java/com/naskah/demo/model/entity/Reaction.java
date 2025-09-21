@@ -13,8 +13,6 @@ public class Reaction {
     private Integer rating;
     private String comment;
     private String title;
-    private Integer page;
-    private String position;
     private Long parentId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -1126,45 +1126,157 @@ public class BookServiceImpl implements BookService {
                 throw new IllegalArgumentException("Reaction type is required");
             }
 
-            // For replies, don't check existing reaction by position
-            Reaction existingReaction = null;
-            if (request.getParentId() == null) {
-                existingReaction = reactionMapper.findReactionByUserAndBook(
-                        user.getId(), book.getId(), request.getPage(), request.getPosition()
-                );
+            // Convert request type to uppercase for consistency
+            String requestType = request.getType().toUpperCase();
+
+            Reaction savedReaction;
+
+            // Handle reply to existing comment (always create new record)
+            if (request.getParentId() != null) {
+                // Verify parent comment exists
+                Reaction parentReaction = reactionMapper.findReactionById(request.getParentId());
+                if (parentReaction == null) {
+                    throw new DataNotFoundException();
+                }
+
+                // Replies must be COMMENT type and have comment content
+                if (!"COMMENT".equals(requestType) || request.getComment() == null || request.getComment().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Replies must be of type COMMENT with comment content");
+                }
+
+                // Always create new record for replies
+                Reaction reply = new Reaction();
+                reply.setUserId(user.getId());
+                reply.setBookId(book.getId());
+                reply.setReactionType("COMMENT");
+                reply.setComment(request.getComment());
+                reply.setTitle(request.getTitle());
+                reply.setParentId(request.getParentId());
+                reply.setCreatedAt(LocalDateTime.now());
+                reply.setUpdatedAt(LocalDateTime.now());
+
+                reactionMapper.insertReaction(reply);
+                savedReaction = reply;
+            }
+            // Handle main reaction/comment (check for existing, update or create)
+            else {
+                // Check if user already has a main reaction for this book
+                Reaction existingReaction = reactionMapper.findReactionByUserAndBook(user.getId(), book.getId());
+
+                if (existingReaction != null) {
+                    // Update existing reaction
+                    String newType = requestType;
+                    String currentType = existingReaction.getReactionType();
+
+                    // Update based on new reaction type
+                    switch (newType) {
+                        case "LIKE":
+                        case "DISLIKE":
+                        case "LOVE":
+                        case "ANGRY":
+                        case "SAD":
+                            // Emotion reaction - replace current emotion, keep rating/comment if exists
+                            existingReaction.setReactionType(newType);
+                            // Keep existing rating and comment
+                            break;
+
+                        case "RATING":
+                            // Rating update - keep current type if it's emotion, otherwise set to RATING
+                            boolean isEmotionType = "LIKE".equals(currentType) || "DISLIKE".equals(currentType) ||
+                                    "LOVE".equals(currentType) || "ANGRY".equals(currentType) || "SAD".equals(currentType);
+                            if (isEmotionType) {
+                                // Keep emotion type, just update rating
+                                existingReaction.setRating(request.getRating());
+                            } else {
+                                // Set type to RATING
+                                existingReaction.setReactionType("RATING");
+                                existingReaction.setRating(request.getRating());
+                            }
+                            break;
+
+                        case "COMMENT":
+                            // Comment update
+                            boolean isCurrentEmotion = "LIKE".equals(currentType) || "DISLIKE".equals(currentType) ||
+                                    "LOVE".equals(currentType) || "ANGRY".equals(currentType) || "SAD".equals(currentType);
+                            if (isCurrentEmotion) {
+                                // If current is emotion, keep emotion but add/update comment
+                                existingReaction.setComment(request.getComment());
+                                existingReaction.setTitle(request.getTitle());
+                            } else {
+                                // Set type to COMMENT
+                                existingReaction.setReactionType("COMMENT");
+                                existingReaction.setComment(request.getComment());
+                                existingReaction.setTitle(request.getTitle());
+                                // Keep existing rating if any
+                            }
+                            break;
+
+                        default:
+                            throw new IllegalArgumentException("Invalid reaction type: " + newType);
+                    }
+
+                    existingReaction.setUpdatedAt(LocalDateTime.now());
+                    reactionMapper.updateReaction(existingReaction);
+                    savedReaction = existingReaction;
+                } else {
+                    // Create new main reaction
+                    String type = requestType;
+
+                    // Validate required fields based on type
+                    if ("COMMENT".equals(type) && (request.getComment() == null || request.getComment().trim().isEmpty())) {
+                        throw new IllegalArgumentException("Comment content is required for COMMENT type");
+                    }
+
+                    if ("RATING".equals(type) && request.getRating() == null) {
+                        throw new IllegalArgumentException("Rating value is required for RATING type");
+                    }
+
+                    Reaction reaction = new Reaction();
+                    reaction.setUserId(user.getId());
+                    reaction.setBookId(book.getId());
+                    reaction.setReactionType(type);
+
+                    // Set fields based on type
+                    switch (type) {
+                        case "LIKE":
+                        case "DISLIKE":
+                        case "LOVE":
+                        case "ANGRY":
+                        case "SAD":
+                            // Emotion reactions can optionally include rating and comment
+                            reaction.setRating(request.getRating());
+                            reaction.setComment(request.getComment());
+                            reaction.setTitle(request.getTitle());
+                            break;
+
+                        case "RATING":
+                            reaction.setRating(request.getRating());
+                            // Rating can optionally include comment
+                            reaction.setComment(request.getComment());
+                            reaction.setTitle(request.getTitle());
+                            break;
+
+                        case "COMMENT":
+                            reaction.setComment(request.getComment());
+                            reaction.setTitle(request.getTitle());
+                            // Comment can optionally include rating
+                            reaction.setRating(request.getRating());
+                            break;
+                    }
+
+                    reaction.setCreatedAt(LocalDateTime.now());
+                    reaction.setUpdatedAt(LocalDateTime.now());
+
+                    reactionMapper.insertReaction(reaction);
+                    savedReaction = reaction;
+                }
             }
 
-            if (existingReaction != null) {
-                // Update existing reaction
-                existingReaction.setReactionType(request.getType());
-                existingReaction.setRating(request.getRating());
-                existingReaction.setComment(request.getComment());
-                existingReaction.setTitle(request.getTitle());
-                existingReaction.setUpdatedAt(LocalDateTime.now());
-                reactionMapper.updateReaction(existingReaction);
-            } else {
-                // Create new reaction/comment
-                Reaction reaction = new Reaction();
-                reaction.setUserId(user.getId());
-                reaction.setBookId(book.getId());
-                reaction.setReactionType(request.getType());
-                reaction.setRating(request.getRating());
-                reaction.setComment(request.getComment());
-                reaction.setTitle(request.getTitle());
-                reaction.setPage(request.getPage());
-                reaction.setPosition(request.getPosition());
-                reaction.setParentId(request.getParentId());
-                reaction.setCreatedAt(LocalDateTime.now());
-
-                reactionMapper.insertReaction(reaction);
-                existingReaction = reaction;
-            }
-
-            ReactionResponse response = mapToReactionResponse(existingReaction, user, book.getId(), user.getId());
-            return new DataResponse<>(SUCCESS, "Reaction added successfully", HttpStatus.OK.value(), response);
+            ReactionResponse response = mapToReactionResponse(savedReaction, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reaction processed successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
-            log.error("Error adding reaction for book: {}", slug, e);
+            log.error("Error processing reaction for book: {}", slug, e);
             throw e;
         }
     }

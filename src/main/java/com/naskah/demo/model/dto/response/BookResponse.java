@@ -34,6 +34,7 @@ public class BookResponse {
     private Integer readCount;
     private Integer downloadCount;
     private List<ReactionStatsResponse> reactionStatsResponses;
+    private List<ReactionResponse> reactionResponses;
     private String subtitle;
     private Integer seriesId;
     private Integer seriesOrder;

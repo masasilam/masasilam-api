@@ -11,8 +11,6 @@
         <result property="rating" column="rating"/>
         <result property="comment" column="comment"/>
         <result property="title" column="title"/>
-        <result property="page" column="page"/>
-        <result property="position" column="position"/>
         <result property="parentId" column="parent_id"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -22,10 +20,10 @@
     <insert id="insertReaction" parameterType="com.naskah.demo.model.entity.Reaction" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reactions (
         user_id, book_id, reaction_type, rating, comment, title,
-        page, position, parent_id, created_at, updated_at
+        parent_id, created_at, updated_at
         ) VALUES (
-        #{userId}, #{bookId}, #{reactionType}, #{rating}, #{comment}, #{title},
-        #{page}, #{position}, #{parentId}, #{createdAt}, #{updatedAt}
+        #{userId}, #{bookId}, #{reactionType}, #{rating}, #{comment},
+        #{title}, #{parentId}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -33,9 +31,15 @@
     <update id="updateReaction" parameterType="com.naskah.demo.model.entity.Reaction">
         UPDATE reactions SET
         reaction_type = #{reactionType},
-        rating = #{rating},
-        comment = #{comment},
-        title = #{title},
+        <if test="rating != null">
+            rating = #{rating},
+        </if>
+        <if test="comment != null">
+            comment = #{comment},
+        </if>
+        <if test="title != null">
+            title = #{title},
+        </if>
         updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -50,7 +54,7 @@
         SELECT * FROM reactions WHERE id = #{reactionId}
     </select>
 
-    <!-- Find all reactions by book ID -->
+    <!-- Find all main reactions by book ID (no replies) -->
     <select id="findReactionsByBookId" resultMap="ReactionResultMap">
         SELECT * FROM reactions
         WHERE book_id = #{bookId}
@@ -58,7 +62,7 @@
         ORDER BY created_at DESC
     </select>
 
-    <!-- Find reactions with pagination -->
+    <!-- Find main reactions with pagination -->
     <select id="findReactionsByBookIdWithPagination" resultMap="ReactionResultMap">
         SELECT * FROM reactions
         WHERE book_id = #{bookId}
@@ -67,19 +71,26 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- Find existing reaction by user and book (for checking duplicates) -->
+    <!-- Find main reaction by user and book (exclude replies) -->
     <select id="findReactionByUserAndBook" resultMap="ReactionResultMap">
         SELECT * FROM reactions
         WHERE user_id = #{userId}
         AND book_id = #{bookId}
         AND parent_id IS NULL
-        <if test="page != null">
-            AND page = #{page}
-        </if>
-        <if test="position != null">
-            AND position = #{position}
-        </if>
         LIMIT 1
+    </select>
+
+    <!-- Find all main reactions for a book with reply count -->
+    <select id="findMainReactionsByBookId" resultMap="ReactionResultMap">
+        SELECT r.*,
+        (SELECT COUNT(*) FROM reactions replies WHERE replies.parent_id = r.id) as reply_count
+        FROM reactions r
+        WHERE r.book_id = #{bookId}
+        AND r.parent_id IS NULL
+        ORDER BY r.created_at DESC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
     </select>
 
     <!-- Find replies by parent ID -->
@@ -89,22 +100,30 @@
         ORDER BY created_at ASC
     </select>
 
+    <!-- Find replies with pagination -->
+    <select id="findRepliesByParentIdWithPagination" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE parent_id = #{parentId}
+        ORDER BY created_at ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <!-- Count replies by parent ID -->
     <select id="countRepliesByParentId" resultType="int">
         SELECT COUNT(*) FROM reactions
         WHERE parent_id = #{parentId}
     </select>
 
-    <!-- Get reaction statistics -->
+    <!-- Get reaction statistics for a book -->
     <select id="getReactionStats" resultType="com.naskah.demo.model.dto.response.ReactionStatsResponse">
         SELECT
-        COUNT(CASE WHEN rating IS NOT NULL THEN 1 END) as totalRatings,
-        COUNT(CASE WHEN reaction_type = 'angry' THEN 1 END) as totalAngry,
-        COUNT(CASE WHEN reaction_type = 'like' THEN 1 END) as totalLikes,
-        COUNT(CASE WHEN reaction_type = 'love' THEN 1 END) as totalLoves,
-        COUNT(CASE WHEN reaction_type = 'dislike' THEN 1 END) as totalDislikes,
-        COUNT(CASE WHEN reaction_type = 'sad' THEN 1 END) as totalSad,
-        COUNT(CASE WHEN reaction_type = 'comment' THEN 1 END) as totalComments,
+        COUNT(CASE WHEN reaction_type = 'RATING' OR rating IS NOT NULL THEN 1 END) as totalRatings,
+        COUNT(CASE WHEN reaction_type = 'ANGRY' THEN 1 END) as totalAngry,
+        COUNT(CASE WHEN reaction_type = 'LIKE' THEN 1 END) as totalLikes,
+        COUNT(CASE WHEN reaction_type = 'LOVE' THEN 1 END) as totalLoves,
+        COUNT(CASE WHEN reaction_type = 'DISLIKE' THEN 1 END) as totalDislikes,
+        COUNT(CASE WHEN reaction_type = 'SAD' THEN 1 END) as totalSad,
+        COUNT(CASE WHEN reaction_type = 'COMMENT' THEN 1 END) as totalComments,
         COALESCE(AVG(CASE WHEN rating IS NOT NULL THEN rating END), 0.0) as averageRating
         FROM reactions
         WHERE book_id = #{bookId}
@@ -120,10 +139,46 @@
         LIMIT 1
     </select>
 
+    <!-- Get user's rating for a specific book -->
+    <select id="getUserRating" resultType="Integer">
+        SELECT rating FROM reactions
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND parent_id IS NULL
+        AND rating IS NOT NULL
+        LIMIT 1
+    </select>
+
+    <!-- Count main reactions by book ID -->
+    <select id="countMainReactionsByBookId" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE book_id = #{bookId}
+        AND parent_id IS NULL
+    </select>
+
+    <!-- Count reactions by specific type -->
+    <select id="countReactionsByType" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE book_id = #{bookId}
+        AND reaction_type = #{reactionType}
+        AND parent_id IS NULL
+    </select>
+
     <!-- Delete reaction and all its replies (cascading delete) -->
     <delete id="deleteReactionAndReplies">
         DELETE FROM reactions
         WHERE id = #{reactionId} OR parent_id = #{reactionId}
     </delete>
+
+    <!-- Find reactions by user ID with pagination -->
+    <select id="findReactionsByUserId" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE user_id = #{userId}
+        AND parent_id IS NULL
+        ORDER BY created_at DESC
+        <if test="limit != null and offset != null">
+            LIMIT #{limit} OFFSET #{offset}
+        </if>
+    </select>
 
 </mapper>

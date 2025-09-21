@@ -205,31 +205,6 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/{slug}/reactions/{reactionId}/replies")
-    public ResponseEntity<DataResponse<List<ReactionResponse>>> getReactionReplies(
-            @PathVariable String slug,
-            @PathVariable Long reactionId) {
-
-        DataResponse<List<ReactionResponse>> response = bookService.getReactionReplies(slug, reactionId);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{slug}/reactions/stats")
-    public ResponseEntity<DataResponse<ReactionStatsResponse>> getReactionStats(@PathVariable String slug) {
-        DataResponse<ReactionStatsResponse> response = bookService.getReactionStats(slug);
-        return ResponseEntity.ok(response);
-    }
-
-    @PutMapping("/{slug}/reactions/{reactionId}")
-    public ResponseEntity<DataResponse<ReactionResponse>> updateReaction(
-            @PathVariable String slug,
-            @PathVariable Long reactionId,
-            @RequestBody @Valid ReactionRequest request) {
-
-        DataResponse<ReactionResponse> response = bookService.updateReaction(slug, reactionId, request);
-        return ResponseEntity.ok(response);
-    }
-
     @DeleteMapping("/{slug}/reactions/{reactionId}")
     public ResponseEntity<DataResponse<Void>> removeReaction(
             @PathVariable String slug,
