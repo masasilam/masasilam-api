@@ -13,7 +13,7 @@ public class Book {
     private String subtitle;
     private Integer seriesId;
     private Integer seriesOrder;
-    private String isbn;
+    private Integer edition;
     private Integer publicationYear;
     private String publisher;
     private Integer languageId;
@@ -33,8 +33,6 @@ public class Book {
     private Integer viewCount;
     private Integer readCount;
     private Integer downloadCount;
-    private BigDecimal averageRating;
-    private Integer totalReviews;
     private Boolean isFeatured;
     private Boolean isActive;
     private LocalDateTime publishedAt;

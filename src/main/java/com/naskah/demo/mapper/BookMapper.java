@@ -15,6 +15,7 @@ public interface BookMapper {
     void insertBookGenre(@Param("bookId") Long bookId, @Param("genreId") Long genreId);
     void insertBookTag(@Param("bookId") Long bookId, @Param("tagId") Long tagId);
     void insertBookAuthor(@Param("bookId") Long bookId, @Param("authorId") Long authorId);
+    void insertBookContributor(@Param("bookId") Long bookId, @Param("contributorId") Long contributorId, @Param("role") String role);
 
     // Book retrieval methods
     BookResponse getBookDetailBySlug(@Param("slug") String slug);

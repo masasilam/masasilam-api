@@ -48,10 +48,74 @@
             <result property="colorHex" column="color_hex"/>
             <result property="isFiction" column="is_fiction"/>
         </collection>
-        <collection property="tags" ofType="com.naskah.demo.model.entity.Tag">
-            <id property="id" column="tag_id"/>
-            <result property="name" column="tag_name"/>
-            <result property="slug" column="tag_slug"/>
+    </resultMap>
+
+    <!-- ResultMap untuk BookResponse -->
+    <resultMap id="bookDetailResultMap" type="com.naskah.demo.model.dto.response.BookResponse">
+        <!-- Book basic fields -->
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="description" column="description"/>
+        <result property="summary" column="summary"/>
+        <result property="estimatedReadTime" column="estimated_read_time"/>
+        <result property="language" column="language"/>
+        <result property="totalWord" column="total_word"/>
+        <result property="difficultyLevel" column="difficulty_level"/>
+        <result property="totalPages" column="total_pages"/>
+        <result property="publisher" column="publisher"/>
+        <result property="publicationYear" column="publication_year"/>
+        <result property="copyrightStatus" column="copyright_status"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="edition" column="edition"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="fileFormat" column="file_format"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="readCount" column="read_count"/>
+        <result property="downloadCount" column="download_count"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="seriesId" column="series_id"/>
+        <result property="seriesOrder" column="series_order"/>
+        <result property="category" column="category"/>
+        <!-- Authors collection -->
+        <collection property="authors" ofType="com.naskah.demo.model.dto.response.AuthorResponse">
+            <id property="id" column="author_id"/>
+            <result property="name" column="author_name"/>
+            <result property="slug" column="author_slug"/>
+            <result property="birthDate" column="author_birth_date"/>
+            <result property="deathDate" column="author_death_date"/>
+            <result property="birthPlace" column="author_birth_place"/>
+            <result property="nationality" column="author_nationality"/>
+            <result property="photoUrl" column="author_photo_url"/>
+        </collection>
+        <!-- Contributors collection -->
+        <collection property="contributors" ofType="com.naskah.demo.model.dto.response.ContributorResponse">
+            <id property="id" column="contributor_id"/>
+            <result property="name" column="contributor_name"/>
+            <result property="slug" column="contributor_slug"/>
+            <result property="role" column="contributor_role"/>
+            <result property="websiteUrl" column="contributor_website_url"/>
+        </collection>
+        <!-- Genres collection -->
+        <collection property="genres" ofType="com.naskah.demo.model.dto.response.GenreResponse">
+            <id property="id" column="genre_id"/>
+            <result property="name" column="genre_name"/>
+            <result property="slug" column="genre_slug"/>
+            <result property="colorHex" column="genre_color_hex"/>
+            <result property="isFiction" column="genre_is_fiction"/>
+        </collection>
+        <!-- Reaction Stats collection -->
+        <collection property="reactionStatsResponses" ofType="com.naskah.demo.model.dto.response.ReactionStatsResponse">
+            <result property="totalRatings" column="total_ratings"/>
+            <result property="totalAngry" column="total_angry"/>
+            <result property="totalLikes" column="total_likes"/>
+            <result property="totalLoves" column="total_loves"/>
+            <result property="totalDislikes" column="total_dislikes"/>
+            <result property="totalSad" column="total_sad"/>
+            <result property="totalComments" column="total_comments"/>
+            <result property="averageRating" column="average_rating"/>
         </collection>
     </resultMap>
 
@@ -149,12 +213,18 @@
         VALUES (#{bookId}, #{authorId})
     </insert>
 
-    <select id="getBookDetailBySlug" resultMap="BookResponseMap">
+    <insert id="insertBookContributor">
+        INSERT INTO book_contributors (book_id, author_id, role_id)
+        VALUES (#{bookId}, #{authorId})
+    </insert>
+
+    <!-- Query dengan ResultMap -->
+    <select id="getBookDetailBySlug" resultMap="bookDetailResultMap">
         SELECT
-        b.id as book_id,
+        b.id,
         b.title,
         b.slug,
-        b.isbn,
+        b.edition,
         b.cover_image_url,
         b.publisher,
         b.publication_year,
@@ -171,40 +241,67 @@
         b.view_count,
         b.read_count,
         b.download_count,
-        b.average_rating,
-        b.total_reviews,
         b.subtitle,
         b.series_id,
         b.series_order,
         cs.name as copyright_status,
         b.published_at,
         b.category,
+        -- Author fields (dengan alias yang jelas)
         a.id as author_id,
         a.name as author_name,
         a.slug as author_slug,
-        a.birth_date,
-        a.death_date,
-        a.birth_place,
-        a.nationality,
-        a.photo_url,
+        a.birth_date as author_birth_date,
+        a.death_date as author_death_date,
+        a.birth_place as author_birth_place,
+        a.nationality as author_nationality,
+        a.photo_url as author_photo_url,
+        -- Contributor fields (dengan alias yang jelas)
+        c.id as contributor_id,
+        c.name as contributor_name,
+        c.slug as contributor_slug,
+        bc.role as contributor_role,
+        c.website_url as contributor_website_url,
+        -- Genre fields (dengan alias yang jelas)
         g.id as genre_id,
         g.name as genre_name,
         g.slug as genre_slug,
-        g.color_hex,
-        g.is_fiction,
-        t.id as tag_id,
-        t.name as tag_name,
-        t.slug as tag_slug
+        g.color_hex as genre_color_hex,
+        g.is_fiction as genre_is_fiction,
+        -- Reaction stats (aggregate data - contoh, sesuaikan dengan tabel lu)
+        COALESCE(rs.total_ratings, 0) as total_ratings,
+        COALESCE(rs.total_angry, 0) as total_angry,
+        COALESCE(rs.total_likes, 0) as total_likes,
+        COALESCE(rs.total_loves, 0) as total_loves,
+        COALESCE(rs.total_dislikes, 0) as total_dislikes,
+        COALESCE(rs.total_sad, 0) as total_sad,
+        COALESCE(rs.total_comments, 0) as total_comments,
+        COALESCE(rs.average_rating, 0.0) as average_rating
         FROM
         books b
-        LEFT JOIN languages l ON b.language_id = l.id
-        LEFT JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        JOIN languages l ON b.language_id = l.id
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
         LEFT JOIN book_authors ba ON b.id = ba.book_id
         LEFT JOIN authors a ON ba.author_id = a.id
+        LEFT JOIN book_contributors bc ON b.id = bc.book_id
+        LEFT JOIN contributors c ON bc.contributor_id = c.id
         LEFT JOIN book_genres bg ON b.id = bg.book_id
         LEFT JOIN genres g ON bg.genre_id = g.id
-        LEFT JOIN book_tags bt ON b.id = bt.book_id
-        LEFT JOIN tags t ON bt.tag_id = t.id
+        LEFT JOIN (
+        -- Subquery untuk reaction stats (sesuaikan dengan struktur tabel reactions lu)
+        SELECT
+        book_id,
+        COUNT(CASE WHEN reaction_type = 'RATING' THEN 1 END) as total_ratings,
+        COUNT(CASE WHEN reaction_type = 'ANGRY' THEN 1 END) as total_angry,
+        COUNT(CASE WHEN reaction_type = 'LIKE' THEN 1 END) as total_likes,
+        COUNT(CASE WHEN reaction_type = 'LOVE' THEN 1 END) as total_loves,
+        COUNT(CASE WHEN reaction_type = 'DISLIKE' THEN 1 END) as total_dislikes,
+        COUNT(CASE WHEN reaction_type = 'SAD' THEN 1 END) as total_sad,
+        COUNT(CASE WHEN reaction_type = 'COMMENT' THEN 1 END) as total_comments,
+        AVG(CASE WHEN reaction_type = 'RATING' THEN rating END) as average_rating
+        FROM reactions
+        GROUP BY book_id
+        ) rs ON b.id = rs.book_id
         WHERE
         b.slug = #{slug}
     </select>

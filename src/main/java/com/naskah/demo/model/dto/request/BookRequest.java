@@ -1,6 +1,5 @@
 package com.naskah.demo.model.dto.request;
 
-import com.naskah.demo.model.entity.Tag;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,12 +40,11 @@ public class BookRequest {
     private List<Long> genreIds;
 
     @NotEmpty
-    private List<Tag> tagIds;
-
-    @NotEmpty
     private List<AuthorRequest> authors;
 
-    private String isbn;
+    @NotEmpty
+    private List<ContributorRequest> contributors;
+
     private String subtitle;
     private Integer seriesId;
     private Integer seriesOrder;

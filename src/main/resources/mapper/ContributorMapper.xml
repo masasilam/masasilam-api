@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.ContributorMapper">
+
+    <select id="findByNameAndRole" resultType="com.naskah.demo.model.entity.Contributor">
+        SELECT * FROM contributors
+        WHERE name = #{name}
+        AND role = #{role}
+    </select>
+
+    <insert id="insertContributor" parameterType="com.naskah.demo.model.entity.Contributor" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO authors
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null">name,</if>
+            <if test="slug != null">slug,</if>
+            <if test="role != null">role,</if>
+            <if test="websiteUrl != null">website_url,</if>
+            created_at,
+            updated_at,
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null">#{name},</if>
+            <if test="slug != null">#{slug},</if>
+            <if test="role != null">role,</if>
+            <if test="websiteUrl != null">website_url,</if>
+            #{createdAt},
+            #{updatedAt},
+        </trim>
+    </insert>
+</mapper>

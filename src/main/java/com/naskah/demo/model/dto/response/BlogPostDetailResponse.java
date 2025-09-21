@@ -2,7 +2,6 @@ package com.naskah.demo.model.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.naskah.demo.model.entity.BlogCategory;
-import com.naskah.demo.model.entity.Tag;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -43,7 +42,6 @@ public class BlogPostDetailResponse {
 
     // Parsed structured data
     private List<BlogCategory> categoryList;
-    private List<Tag> tagList;
     private List<BookResponse> bookList;
 
     // Engagement data

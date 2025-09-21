@@ -46,6 +46,7 @@ public class BookServiceImpl implements BookService {
 
     private final BookMapper bookMapper;
     private final AuthorMapper authorMapper;
+    private final ContributorMapper contributorMapper;
     private final LanguageMapper languageMapper;
     private final CopyrightStatusMapper copyrightStatusMapper;
     private final UserMapper userMapper;
@@ -84,18 +85,19 @@ public class BookServiceImpl implements BookService {
             Language language = languageMapper.findLanguageByName(request.getLanguage());
             CopyrightStatus copyrightStatus = copyrightStatusMapper.findByCopyrightStatusCode(request.getCopyrightStatus());
 
-            // Declare variables properly
+            // Extract metadata dan upload files
             BookMetadata metadata = FileUtil.extractBookMetadata(request.getBookFile(), language.getId());
             FileStorageResult coverResult = FileUtil.saveAndUploadBookCover(request.getCoverImage(), request.getTitle());
             FileStorageResult bookResult = FileUtil.saveAndUploadBookFile(request.getBookFile(), request.getTitle());
 
+            // Set book data
             Book book = new Book();
             book.setTitle(request.getTitle());
             book.setSlug(sanitizeFilename(request.getTitle()));
             book.setSubtitle(request.getSubtitle());
             book.setSeriesId(request.getSeriesId());
             book.setSeriesOrder(request.getSeriesOrder());
-            book.setIsbn(request.getIsbn());
+            book.setEdition(1);
             book.setPublicationYear(request.getPublicationYear());
             book.setPublisher(request.getPublisher());
             book.setLanguageId(language.getId());
@@ -115,8 +117,6 @@ public class BookServiceImpl implements BookService {
             book.setViewCount(0);
             book.setReadCount(0);
             book.setDownloadCount(0);
-            book.setAverageRating(BigDecimal.ZERO);
-            book.setTotalReviews(0);
             book.setIsActive(true);
             book.setIsFeatured(false);
             book.setPublishedAt(request.getPublishedAt());
@@ -126,13 +126,12 @@ public class BookServiceImpl implements BookService {
 
             bookMapper.insertBook(book);
 
+            // Insert genres
             for (Long genreId : request.getGenreIds()) {
                 bookMapper.insertBookGenre(book.getId(), genreId);
             }
-            for (Tag tag : request.getTagIds()) {
-                bookMapper.insertBookTag(book.getId(), tag.getId());
-            }
 
+            //insert authors
             for (AuthorRequest authorRequest : request.getAuthors()) {
                 Author author = authorMapper.findAuthorByName(authorRequest.getName());
 
@@ -169,11 +168,34 @@ public class BookServiceImpl implements BookService {
                 }
             }
 
+            // Process contributors
+            if (request.getContributors() != null && !request.getContributors().isEmpty()) {
+                for (ContributorRequest contributorRequest : request.getContributors()) {
+                    Contributor contributor = contributorMapper.findByNameAndRole(
+                            contributorRequest.getName(), contributorRequest.getRole());
+
+                    if (contributor == null) {
+                        // Create new contributor
+                        contributor = new Contributor();
+                        contributor.setName(contributorRequest.getName());
+                        contributor.setSlug(sanitizeFilename(contributorRequest.getName()));
+                        contributor.setRole(contributorRequest.getRole());
+                        contributor.setWebsiteUrl(contributorRequest.getWebsiteUrl());
+                        contributor.setCreatedAt(LocalDateTime.now());
+                        contributor.setUpdatedAt(LocalDateTime.now());
+                        contributorMapper.insertContributor(contributor);
+                    }
+
+                    bookMapper.insertBookContributor(book.getId(), contributor.getId(), contributor.getRole());
+                }
+            }
+
+            // Get complete book data with all relations
             BookResponse data = bookMapper.getBookDetailBySlug(book.getSlug());
             return new DataResponse<>(SUCCESS, ResponseMessage.DATA_CREATED, HttpStatus.CREATED.value(), data);
 
         } catch (IOException e) {
-            throw new RuntimeException("Gagal menyimpan file", e);
+            throw new RuntimeException("Error when save a book", e);
         }
     }
 
@@ -1227,11 +1249,11 @@ public class BookServiceImpl implements BookService {
             // Set user-specific data
             if (currentUserId != null) {
                 String userReactionType = reactionMapper.getUserReactionType(currentUserId, book.getId());
-                stats.setUserHasReacted(userReactionType != null);
-                stats.setUserReactionType(userReactionType);
+//                stats.setUserHasReacted(userReactionType != null);
+//                stats.setUserReactionType(userReactionType);
             } else {
-                stats.setUserHasReacted(false);
-                stats.setUserReactionType(null);
+//                stats.setUserHasReacted(false);
+//                stats.setUserReactionType(null);
             }
 
             return new DataResponse<>(SUCCESS, "Reaction stats retrieved successfully", HttpStatus.OK.value(), stats);
@@ -1597,14 +1619,11 @@ public class BookServiceImpl implements BookService {
         response.setId(reaction.getId());
         response.setUserId(reaction.getUserId());
         response.setUserName(reactionUser != null ? reactionUser.getUsername() : "Unknown");
-        response.setUserDisplayName(reactionUser != null ? reactionUser.getUsername() : "Unknown");
         response.setBookId(reaction.getBookId());
         response.setReactionType(reaction.getReactionType());
         response.setRating(reaction.getRating());
         response.setComment(reaction.getComment());
         response.setTitle(reaction.getTitle());
-        response.setPage(reaction.getPage());
-        response.setPosition(reaction.getPosition());
         response.setParentId(reaction.getParentId());
         response.setCreatedAt(reaction.getCreatedAt());
         response.setUpdatedAt(reaction.getUpdatedAt());
@@ -1625,45 +1644,45 @@ public class BookServiceImpl implements BookService {
         try {
             ReactionStatsResponse stats = reactionMapper.getReactionStats(bookId);
             if (stats != null) {
-                response.setTotalRatings(stats.getTotalRatings() != null ? stats.getTotalRatings() : 0L);
-                response.setTotalAngry(stats.getTotalAngry() != null ? stats.getTotalAngry() : 0L);
-                response.setTotalLikes(stats.getTotalLikes() != null ? stats.getTotalLikes() : 0L);
-                response.setTotalLoves(stats.getTotalLoves() != null ? stats.getTotalLoves() : 0L);
-                response.setTotalDislikes(stats.getTotalDislikes() != null ? stats.getTotalDislikes() : 0L);
-                response.setTotalSad(stats.getTotalSad() != null ? stats.getTotalSad() : 0L);
-                response.setTotalComments(stats.getTotalComments() != null ? stats.getTotalComments() : 0L);
-                response.setAverageRating(stats.getAverageRating() != null ? stats.getAverageRating() : 0.0);
+//                response.setTotalRatings(stats.getTotalRatings() != null ? stats.getTotalRatings() : 0L);
+//                response.setTotalAngry(stats.getTotalAngry() != null ? stats.getTotalAngry() : 0L);
+//                response.setTotalLikes(stats.getTotalLikes() != null ? stats.getTotalLikes() : 0L);
+//                response.setTotalLoves(stats.getTotalLoves() != null ? stats.getTotalLoves() : 0L);
+//                response.setTotalDislikes(stats.getTotalDislikes() != null ? stats.getTotalDislikes() : 0L);
+//                response.setTotalSad(stats.getTotalSad() != null ? stats.getTotalSad() : 0L);
+//                response.setTotalComments(stats.getTotalComments() != null ? stats.getTotalComments() : 0L);
+//                response.setAverageRating(stats.getAverageRating() != null ? stats.getAverageRating() : 0.0);
             } else {
                 setDefaultStats(response);
             }
 
             if (currentUserId != null) {
                 String userReactionType = reactionMapper.getUserReactionType(currentUserId, bookId);
-                response.setUserHasReacted(userReactionType != null);
-                response.setUserReactionType(userReactionType);
+//                response.setUserHasReacted(userReactionType != null);
+//                response.setUserReactionType(userReactionType);
             } else {
-                response.setUserHasReacted(false);
-                response.setUserReactionType(null);
+//                response.setUserHasReacted(false);
+//                response.setUserReactionType(null);
             }
         } catch (Exception e) {
             log.warn("Failed to get reaction stats: {}", e.getMessage());
             setDefaultStats(response);
-            response.setUserHasReacted(false);
-            response.setUserReactionType(null);
+//            response.setUserHasReacted(false);
+//            response.setUserReactionType(null);
         }
 
         return response;
     }
 
     private void setDefaultStats(ReactionResponse response) {
-        response.setTotalRatings(0L);
-        response.setTotalAngry(0L);
-        response.setTotalLikes(0L);
-        response.setTotalLoves(0L);
-        response.setTotalDislikes(0L);
-        response.setTotalSad(0L);
-        response.setTotalComments(0L);
-        response.setAverageRating(0.0);
+//        response.setTotalRatings(0L);
+//        response.setTotalAngry(0L);
+//        response.setTotalLikes(0L);
+//        response.setTotalLoves(0L);
+//        response.setTotalDislikes(0L);
+//        response.setTotalSad(0L);
+//        response.setTotalComments(0L);
+//        response.setAverageRating(0.0);
     }
 
     private void saveHighlightTranslation(Long highlightId, String targetLanguage, String translatedText) {
