@@ -467,6 +467,14 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- Fixed increment read count method -->
+    <update id="incrementReadCount">
+        UPDATE books
+        SET read_count = read_count + 1
+        WHERE id = #{bookId}
+    </update>
+
+
     <!-- Fixed getDetailEbook method with Long parameter -->
     <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
         SELECT
