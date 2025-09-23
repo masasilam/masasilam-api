@@ -8,5 +8,5 @@ import lombok.Data;
 public class DefaultResponse {
     String result;
     String detail;
-    int code ;
+    int code;
 }

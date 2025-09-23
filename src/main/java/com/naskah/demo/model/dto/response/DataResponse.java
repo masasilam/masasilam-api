@@ -7,7 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class DataResponse<T> {
     String result;
-    String detail ;
-    int code ;
+    String detail;
+    int code;
     T data;
 }

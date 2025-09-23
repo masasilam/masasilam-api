@@ -370,7 +370,7 @@ public class FileUtil {
     public static Path saveFile(MultipartFile file, String uploadDir, Long projectId) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String fileExtension = getFileExtension(originalFilename);
-        String uniqueFilename = UUID.randomUUID().toString() + "." + fileExtension;
+        String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
 
         Path projectDir = Paths.get(uploadDir, "projects", projectId.toString());
         Files.createDirectories(projectDir);
@@ -381,7 +381,7 @@ public class FileUtil {
         return filePath;
     }
 
-    public List<ProjectPage> createPDFPages(Long projectId, Path filePath, String originalFilename, List<String> imagePaths) {
+    public List<ProjectPage> createPDFPages(Long projectId, String originalFilename, List<String> imagePaths) {
         List<ProjectPage> pages = new ArrayList<>();
 
         for (int i = 0; i < imagePaths.size(); i++) {

@@ -42,7 +42,6 @@ public class BookRequest {
     @NotEmpty
     private List<AuthorRequest> authors;
 
-    @NotEmpty
     private List<ContributorRequest> contributors;
 
     private String subtitle;
