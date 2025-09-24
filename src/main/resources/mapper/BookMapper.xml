@@ -97,58 +97,10 @@
         VALUES (#{bookId}, #{contributorId}, #{roleId})
     </insert>
 
-    <!-- Fixed MyBatis Mapper -->
-
-    <!-- Result Map untuk Book dengan aggregated data -->
-    <resultMap id="bookDetailResultMap" type="com.naskah.demo.model.dto.response.BookResponse">
-        <id property="id" column="id"/>
-        <result property="title" column="title"/>
-        <result property="slug" column="slug"/>
-        <result property="edition" column="edition"/>
-        <result property="coverImageUrl" column="cover_image_url"/>
-        <result property="publisher" column="publisher"/>
-        <result property="publicationYear" column="publication_year"/>
-        <result property="fileUrl" column="file_url"/>
-        <result property="fileFormat" column="file_format"/>
-        <result property="fileSize" column="file_size"/>
-        <result property="totalPages" column="total_pages"/>
-        <result property="description" column="description"/>
-        <result property="summary" column="summary"/>
-        <result property="estimatedReadTime" column="estimated_read_time"/>
-        <result property="language" column="language"/>
-        <result property="totalWord" column="total_word"/>
-        <result property="difficultyLevel" column="difficulty_level"/>
-        <result property="viewCount" column="view_count"/>
-        <result property="readCount" column="read_count"/>
-        <result property="downloadCount" column="download_count"/>
-        <result property="subtitle" column="subtitle"/>
-        <result property="seriesId" column="series_id"/>
-        <result property="seriesOrder" column="series_order"/>
-        <result property="copyrightStatus" column="copyright_status"/>
-        <result property="publishedAt" column="published_at"/>
-        <result property="category" column="category"/>
-
-        <!-- Aggregated fields as strings -->
-        <result property="authorNames" column="author_names"/>
-        <result property="authorSlugs" column="author_slugs"/>
-        <result property="contributors" column="contributors"/>
-        <result property="genres" column="genres"/>
-
-        <!-- Reaction statistics -->
-        <result property="totalRatings" column="total_ratings"/>
-        <result property="totalAngry" column="total_angry"/>
-        <result property="totalLikes" column="total_likes"/>
-        <result property="totalLoves" column="total_loves"/>
-        <result property="totalDislikes" column="total_dislikes"/>
-        <result property="totalSad" column="total_sad"/>
-        <result property="totalComments" column="total_comments"/>
-        <result property="averageRating" column="average_rating"/>
-    </resultMap>
-
     <!-- Query dengan aggregated data untuk menghindari duplikasi -->
-    <select id="getBookDetailBySlug" resultMap="bookDetailResultMap">
-        SELECT DISTINCT
-        b.id,
+    <select id="getBookDetailBySlug" resultType="com.naskah.demo.model.dto.response.BookResponse">
+        select
+        distinct b.id,
         b.title,
         b.slug,
         b.edition,
@@ -174,61 +126,91 @@
         cs.name as copyright_status,
         b.published_at,
         b.category,
-
-        -- Aggregate authors into single fields
-        (SELECT STRING_AGG(a.name, ', ')
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) as author_names,
-
-        (SELECT STRING_AGG(a.slug, ', ')
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) as author_slugs,
-
-        -- Aggregate contributors into single fields
-        (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
-        FROM book_contributors bc
-        JOIN contributors c ON bc.contributor_id = c.id
-        WHERE bc.book_id = b.id) as contributors,
-
-        -- Aggregate genres into single fields
-        (SELECT STRING_AGG(g.name, ', ')
-        FROM book_genres bg
-        JOIN genres g ON bg.genre_id = g.id
-        WHERE bg.book_id = b.id) as genres,
-
-        -- Reaction statistics
-        COALESCE(rs.total_ratings, 0) as total_ratings,
-        COALESCE(rs.total_angry, 0) as total_angry,
-        COALESCE(rs.total_likes, 0) as total_likes,
-        COALESCE(rs.total_loves, 0) as total_loves,
-        COALESCE(rs.total_dislikes, 0) as total_dislikes,
-        COALESCE(rs.total_sad, 0) as total_sad,
-        COALESCE(rs.total_comments, 0) as total_comments,
-        COALESCE(rs.average_rating, 0.0) as average_rating
-
-        FROM books b
-        JOIN languages l ON b.language_id = l.id
-        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
-        LEFT JOIN (
-        SELECT
+        (
+        select
+        STRING_AGG(a.name,
+        ', ')
+        from
+        book_authors ba
+        join authors a on
+        ba.author_id = a.id
+        where
+        ba.book_id = b.id) as author_names,
+        (
+        select
+        STRING_AGG(a.slug,
+        ', ')
+        from
+        book_authors ba
+        join authors a on
+        ba.author_id = a.id
+        where
+        ba.book_id = b.id) as author_slugs,
+        (
+        select
+        STRING_AGG(c.name || ' (' || bc.role || ')',
+        ', ')
+        from
+        book_contributors bc
+        join contributors c on
+        bc.contributor_id = c.id
+        where
+        bc.book_id = b.id) as contributors,
+        (
+        select
+        STRING_AGG(g.name,
+        ', ')
+        from
+        book_genres bg
+        join genres g on
+        bg.genre_id = g.id
+        where
+        bg.book_id = b.id) as genres,
+        coalesce(rs.total_ratings,
+        0) as total_ratings,
+        coalesce(rs.total_angry,
+        0) as total_angry,
+        coalesce(rs.total_likes,
+        0) as total_likes,
+        coalesce(rs.total_loves,
+        0) as total_loves,
+        coalesce(rs.total_dislikes,
+        0) as total_dislikes,
+        coalesce(rs.total_sad,
+        0) as total_sad,
+        coalesce(rs.total_comments,
+        0) as total_comments,
+        coalesce(rs.average_rating,
+        0.0) as average_rating,
+        coalesce(rs.total_reactions,
+        0.0) as total_reactions
+        from
+        books b
+        join languages l on
+        b.language_id = l.id
+        join copyright_statuses cs on
+        b.copyright_status_id = cs.id
+        left join (
+        select
         book_id,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) as total_ratings,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) as total_angry,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) as total_likes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) as total_loves,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) as total_dislikes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) as total_sad,
-        COUNT(CASE WHEN comment IS NOT NULL THEN 1 END) as total_comments,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) as average_rating
-        FROM reactions
-        GROUP BY book_id
-        ) rs ON b.id = rs.book_id
+        COUNT(case when UPPER(reaction_type) = 'RATING' then 1 end) as total_ratings,
+        COUNT(case when UPPER(reaction_type) = 'ANGRY' then 1 end) as total_angry,
+        COUNT(case when UPPER(reaction_type) = 'LIKE' then 1 end) as total_likes,
+        COUNT(case when UPPER(reaction_type) = 'LOVE' then 1 end) as total_loves,
+        COUNT(case when UPPER(reaction_type) = 'DISLIKE' then 1 end) as total_dislikes,
+        COUNT(case when UPPER(reaction_type) = 'SAD' then 1 end) as total_sad,
+        COUNT(case when UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') then 1 end) as total_reactions,
+        COUNT(case when comment is not null then 1 end) as total_comments,
+        AVG(case when rating is not null then rating end) as average_rating
+        from
+        reactions
+        group by
+        book_id ) rs on
+        b.id = rs.book_id
         WHERE b.slug = #{slug}
     </select>
 
-    <select id="getBookListWithFilters" resultMap="bookDetailResultMap">
+    <select id="getBookListWithFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
         SELECT DISTINCT
         b.id,
         b.title,
@@ -256,31 +238,22 @@
         cs.name as copyright_status,
         b.published_at,
         b.category,
-
-        -- Aggregate authors
         (SELECT STRING_AGG(a.name, ', ')
         FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id) as author_names,
-
         (SELECT STRING_AGG(a.slug, ', ')
         FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id) as author_slugs,
-
-        -- Aggregate contributors
         (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
         FROM book_contributors bc
         JOIN contributors c ON bc.contributor_id = c.id
         WHERE bc.book_id = b.id) as contributors,
-
-        -- Aggregate genres
         (SELECT STRING_AGG(g.name, ', ')
         FROM book_genres bg
         JOIN genres g ON bg.genre_id = g.id
         WHERE bg.book_id = b.id) as genres,
-
-        -- Reaction statistics
         COALESCE(rs.total_ratings, 0) as total_ratings,
         COALESCE(rs.total_angry, 0) as total_angry,
         COALESCE(rs.total_likes, 0) as total_likes,
@@ -289,7 +262,6 @@
         COALESCE(rs.total_sad, 0) as total_sad,
         COALESCE(rs.total_comments, 0) as total_comments,
         COALESCE(rs.average_rating, 0.0) as average_rating
-
         FROM books b
         JOIN languages l ON b.language_id = l.id
         JOIN copyright_statuses cs ON b.copyright_status_id = cs.id

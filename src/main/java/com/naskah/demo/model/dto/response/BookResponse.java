@@ -3,6 +3,7 @@ package com.naskah.demo.model.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -35,10 +36,10 @@ public class BookResponse {
     private String category;
 
     // Aggregated string fields from database
-    private String authorNames;      // "Author1, Author2, Author3"
-    private String authorSlugs;      // "author1-slug, author2-slug"
-    private String contributors;     // "Contributor1 (role1), Contributor2 (role2)"
-    private String genres;          // "Genre1, Genre2, Genre3"
+    private String authorNames;
+    private String authorSlugs;
+    private String contributors;
+    private String genres;
 
     // Reaction statistics
     private Integer totalRatings;
@@ -48,5 +49,6 @@ public class BookResponse {
     private Integer totalDislikes;
     private Integer totalSad;
     private Integer totalComments;
+    private Integer totalReactions;
     private Double averageRating;
 }
