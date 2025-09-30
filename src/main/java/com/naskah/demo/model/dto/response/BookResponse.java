@@ -3,7 +3,6 @@ package com.naskah.demo.model.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)

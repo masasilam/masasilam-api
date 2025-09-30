@@ -527,19 +527,19 @@ public class FileUtil {
     public static FileStorageResult saveAndUploadBookCover(MultipartFile coverImage, String title) throws IOException {
         String localPath = saveBookCover(coverImage, title);
         String cloudUrl = uploadBookCover(coverImage, title);
-        return new FileStorageResult(localPath, cloudUrl);
+        return new FileStorageResult(cloudUrl);
     }
 
     public static FileStorageResult saveAndUploadBookFile(MultipartFile bookFile, String title) throws IOException {
         String localPath = saveBookFile(bookFile, title);
         String cloudUrl = uploadBookFile(bookFile, title);
-        return new FileStorageResult(localPath, cloudUrl);
+        return new FileStorageResult(cloudUrl);
     }
 
     public static FileStorageResult saveAndUploadAuthorPhoto(MultipartFile authorPhoto, String authorName) throws IOException {
         String localPath = saveAuthorPhoto(authorPhoto, authorName);
         String cloudUrl = uploadAuthorPhoto(authorPhoto, authorName);
-        return new FileStorageResult(localPath, cloudUrl);
+        return new FileStorageResult(cloudUrl);
     }
 
     public static int calculateEstimatedReadTime(long totalWord) {
