@@ -53,9 +53,6 @@ public interface BookService {
     // Reactions CRUD
     DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit);
     DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request);
-    DataResponse<List<ReactionResponse>> getReactionReplies(String slug, Long reactionId);
-    DataResponse<ReactionStatsResponse> getReactionStats(String slug);
-    DataResponse<ReactionResponse> updateReaction(String slug, Long reactionId, ReactionRequest request);
     DataResponse<Void> removeReaction(String slug, Long reactionId);
 
     // TTS and Audio Sync
