@@ -1062,9 +1062,106 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    // ============ REACTION OPERATIONS ============
+    // ============ RATING OPERATIONS ============
+
     @Override
-    public DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit) {
+    @Transactional
+    public DataResponse<ReactionResponse> addOrUpdateRating(String slug, RatingRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            if (request.getRating() == null || request.getRating() < 1 || request.getRating() > 5) {
+                throw new IllegalArgumentException("Rating must be between 1 and 5");
+            }
+
+            // Check if user already has rating for this book
+            Reaction existingRating = reactionMapper.findRatingByUserAndBook(user.getId(), book.getId());
+
+            Reaction savedRating;
+            String message;
+
+            if (existingRating != null) {
+                // Update existing rating
+                existingRating.setRating(request.getRating());
+                existingRating.setUpdatedAt(LocalDateTime.now());
+                reactionMapper.updateReaction(existingRating);
+                savedRating = existingRating;
+                message = "Rating updated successfully";
+            } else {
+                // Create new rating
+                Reaction rating = new Reaction();
+                rating.setUserId(user.getId());
+                rating.setBookId(book.getId());
+                rating.setReactionType("RATING");
+                rating.setRating(request.getRating());
+                rating.setComment(null);
+                rating.setTitle(null);
+                rating.setParentId(null);
+                rating.setCreatedAt(LocalDateTime.now());
+                rating.setUpdatedAt(LocalDateTime.now());
+
+                reactionMapper.insertReaction(rating);
+                savedRating = rating;
+                message = "Rating added successfully";
+            }
+
+            ReactionResponse response = mapToReactionResponse(savedRating, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, message, HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error processing rating for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> deleteRating(String slug) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Find user's rating for this book
+            Reaction rating = reactionMapper.findRatingByUserAndBook(user.getId(), book.getId());
+
+            if (rating == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Delete the rating
+            reactionMapper.deleteReaction(rating.getId());
+
+            return new DataResponse<>(SUCCESS, "Rating deleted successfully", HttpStatus.OK.value(), null);
+
+        } catch (Exception e) {
+            log.error("Error deleting rating for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+// ============ REVIEW/COMMENT OPERATIONS ============
+
+    @Override
+    public DataResponse<List<ReactionResponse>> getReviews(String slug, int page, int limit) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
             if (book == null) {
@@ -1086,29 +1183,29 @@ public class BookServiceImpl implements BookService {
                 // User might not be logged in, continue without user info
             }
 
-            // Get reactions with pagination directly from database
+            // Get reviews with pagination
             int offset = (page - 1) * limit;
-            List<Reaction> reactions = reactionMapper.findReactionsByBookIdWithPagination(book.getId(), offset, limit);
+            List<Reaction> reviews = reactionMapper.findReviewsByBookIdWithPagination(book.getId(), offset, limit);
 
             final Long finalCurrentUserId = currentUserId;
-            List<ReactionResponse> responses = reactions.stream()
-                    .map(reaction -> {
-                        User reactionUser = userMapper.findUserById(reaction.getUserId());
-                        return mapToReactionResponse(reaction, reactionUser, book.getId(), finalCurrentUserId);
+            List<ReactionResponse> responses = reviews.stream()
+                    .map(review -> {
+                        User reviewUser = userMapper.findUserById(review.getUserId());
+                        return mapToReactionResponse(review, reviewUser, book.getId(), finalCurrentUserId);
                     })
                     .collect(Collectors.toList());
 
-            return new DataResponse<>(SUCCESS, "Reactions retrieved successfully", HttpStatus.OK.value(), responses);
+            return new DataResponse<>(SUCCESS, "Reviews retrieved successfully", HttpStatus.OK.value(), responses);
 
         } catch (Exception e) {
-            log.error("Error getting reactions for book: {}", slug, e);
+            log.error("Error getting reviews for book: {}", slug, e);
             throw e;
         }
     }
 
     @Override
     @Transactional
-    public DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request) {
+    public DataResponse<ReactionResponse> addReview(String slug, ReviewRequest request) {
         try {
             String username = headerHolder.getUsername();
             if (username == null || username.isEmpty()) {
@@ -1122,170 +1219,43 @@ public class BookServiceImpl implements BookService {
                 throw new DataNotFoundException();
             }
 
-            if (request.getType() == null || request.getType().isEmpty()) {
-                throw new IllegalArgumentException("Reaction type is required");
+            if (request.getComment() == null || request.getComment().trim().isEmpty()) {
+                throw new IllegalArgumentException("Review content is required");
             }
 
-            // Convert request type to uppercase for consistency
-            String requestType = request.getType().toUpperCase();
+            // Check if user already has review for this book
+            Reaction existingReview = reactionMapper.findReviewByUserAndBook(user.getId(), book.getId());
 
-            Reaction savedReaction;
-
-            // Handle reaction to existing review/comment (parentId provided)
-            if (request.getParentId() != null) {
-                // Verify parent review exists
-                Reaction parentReaction = reactionMapper.findReactionById(request.getParentId());
-                if (parentReaction == null) {
-                    throw new DataNotFoundException();
-                }
-
-                // User cannot react to their own review
-                if (parentReaction.getUserId().equals(user.getId())) {
-                    throw new IllegalArgumentException("Cannot react to your own review");
-                }
-
-                // Validate reaction type for reviews
-                switch (requestType) {
-                    case "COMMENT" -> {
-                        // Reply to review
-                        if (request.getComment() == null || request.getComment().trim().isEmpty()) {
-                            throw new IllegalArgumentException("Comment content is required for replies");
-                        }
-
-                        // Replies cannot have rating, title, or feedback
-                        if (request.getRating() != null) {
-                            throw new IllegalArgumentException("Cannot add rating to replies");
-                        }
-                        if (request.getTitle() != null) {
-                            throw new IllegalArgumentException("Cannot add title to replies");
-                        }
-                    }
-                    case "HELPFUL", "NOT_HELPFUL" -> {
-                        // Feedback on review
-
-                        // Check if user already gave feedback on this review
-                        Reaction existingFeedback = reactionMapper.findFeedbackByUserAndReview(user.getId(), request.getParentId());
-
-                        if (existingFeedback != null) {
-                            // Update existing feedback
-                            existingFeedback.setReactionType(requestType);
-                            existingFeedback.setUpdatedAt(LocalDateTime.now());
-                            reactionMapper.updateReaction(existingFeedback);
-                            savedReaction = existingFeedback;
-
-                            ReactionResponse response = mapToReactionResponse(savedReaction, user, book.getId(), user.getId());
-                            return new DataResponse<>(SUCCESS, "Feedback updated successfully", HttpStatus.OK.value(), response);
-                        }
-
-                        // Feedback cannot have comment, title, or rating
-                        if (request.getComment() != null || request.getTitle() != null || request.getRating() != null) {
-                            throw new IllegalArgumentException("Feedback cannot have comment, title, or rating");
-                        }
-                    }
-                    case "RATING" ->
-                        // Rating is NOT allowed on reviews
-                            throw new IllegalArgumentException("Cannot add rating to reviews");
-                    default ->
-                            throw new IllegalArgumentException("Invalid reaction type for review. Use COMMENT, HELPFUL, or NOT_HELPFUL");
-                }
-
-                // Create new record for reply/feedback to review
-                Reaction reply = new Reaction();
-                reply.setUserId(user.getId());
-                reply.setBookId(book.getId());
-                reply.setReactionType(requestType);
-                reply.setComment(request.getComment());
-                reply.setTitle(null);
-                reply.setParentId(request.getParentId());
-                reply.setRating(null);
-                reply.setCreatedAt(LocalDateTime.now());
-                reply.setUpdatedAt(LocalDateTime.now());
-
-                reactionMapper.insertReaction(reply);
-                savedReaction = reply;
-            }
-            // Handle reaction on book (rating or review)
-            else {
-                if ("RATING".equals(requestType)) {
-                    // === RATING BUKU ===
-                    if (request.getRating() == null) {
-                        throw new IllegalArgumentException("Rating value is required");
-                    }
-
-                    // Check if user already has rating for this book
-                    Reaction existingRating = reactionMapper.findRatingByUserAndBook(user.getId(), book.getId());
-
-                    if (existingRating != null) {
-                        // Update existing rating
-                        existingRating.setRating(request.getRating());
-                        existingRating.setUpdatedAt(LocalDateTime.now());
-                        reactionMapper.updateReaction(existingRating);
-                        savedReaction = existingRating;
-                    } else {
-                        // Create new rating
-                        Reaction rating = new Reaction();
-                        rating.setUserId(user.getId());
-                        rating.setBookId(book.getId());
-                        rating.setReactionType("RATING");
-                        rating.setRating(request.getRating());
-                        rating.setComment(null);
-                        rating.setTitle(null);
-                        rating.setParentId(null);
-                        rating.setCreatedAt(LocalDateTime.now());
-                        rating.setUpdatedAt(LocalDateTime.now());
-
-                        reactionMapper.insertReaction(rating);
-                        savedReaction = rating;
-                    }
-                } else if ("COMMENT".equals(requestType)) {
-                    // === REVIEW BUKU ===
-                    if (request.getComment() == null || request.getComment().trim().isEmpty()) {
-                        throw new IllegalArgumentException("Comment content is required");
-                    }
-
-                    // Check if user already has review for this book
-                    Reaction existingReview = reactionMapper.findReviewByUserAndBook(user.getId(), book.getId());
-
-                    if (existingReview != null) {
-                        // Update existing review
-                        existingReview.setComment(request.getComment());
-                        existingReview.setTitle(request.getTitle());
-                        existingReview.setUpdatedAt(LocalDateTime.now());
-                        reactionMapper.updateReaction(existingReview);
-                        savedReaction = existingReview;
-                    } else {
-                        // Create new review
-                        Reaction review = new Reaction();
-                        review.setUserId(user.getId());
-                        review.setBookId(book.getId());
-                        review.setReactionType("COMMENT");
-                        review.setComment(request.getComment());
-                        review.setTitle(request.getTitle());
-                        review.setRating(null);
-                        review.setParentId(null);
-                        review.setCreatedAt(LocalDateTime.now());
-                        review.setUpdatedAt(LocalDateTime.now());
-
-                        reactionMapper.insertReaction(review);
-                        savedReaction = review;
-                    }
-                } else {
-                    throw new IllegalArgumentException("Invalid reaction type for book. Use RATING or COMMENT");
-                }
+            if (existingReview != null) {
+                throw new IllegalArgumentException("You already have a review for this book. Use update endpoint to modify it.");
             }
 
-            ReactionResponse response = mapToReactionResponse(savedReaction, user, book.getId(), user.getId());
-            return new DataResponse<>(SUCCESS, "Reaction processed successfully", HttpStatus.OK.value(), response);
+            // Create new review
+            Reaction review = new Reaction();
+            review.setUserId(user.getId());
+            review.setBookId(book.getId());
+            review.setReactionType("COMMENT");
+            review.setComment(request.getComment());
+            review.setTitle(request.getTitle());
+            review.setRating(null);
+            review.setParentId(null);
+            review.setCreatedAt(LocalDateTime.now());
+            review.setUpdatedAt(LocalDateTime.now());
+
+            reactionMapper.insertReaction(review);
+
+            ReactionResponse response = mapToReactionResponse(review, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Review added successfully", HttpStatus.CREATED.value(), response);
 
         } catch (Exception e) {
-            log.error("Error processing reaction for book: {}", slug, e);
+            log.error("Error adding review for book: {}", slug, e);
             throw e;
         }
     }
 
     @Override
     @Transactional
-    public DataResponse<Void> removeReaction(String slug, Long reactionId) {
+    public DataResponse<ReactionResponse> updateReview(String slug, ReviewRequest request) {
         try {
             String username = headerHolder.getUsername();
             if (username == null || username.isEmpty()) {
@@ -1299,24 +1269,275 @@ public class BookServiceImpl implements BookService {
                 throw new DataNotFoundException();
             }
 
-            // Get the reaction to verify ownership
-            Reaction reaction = reactionMapper.findReactionById(reactionId);
-            if (reaction == null) {
+            if (request.getComment() == null || request.getComment().trim().isEmpty()) {
+                throw new IllegalArgumentException("Review content is required");
+            }
+
+            // Find user's review for this book
+            Reaction existingReview = reactionMapper.findReviewByUserAndBook(user.getId(), book.getId());
+
+            if (existingReview == null) {
                 throw new DataNotFoundException();
             }
 
-            // Check if user owns the reaction or has admin privileges
-            if (!reaction.getUserId().equals(user.getId())) {
+            // Update review
+            existingReview.setComment(request.getComment());
+            existingReview.setTitle(request.getTitle());
+            existingReview.setUpdatedAt(LocalDateTime.now());
+            reactionMapper.updateReaction(existingReview);
+
+            ReactionResponse response = mapToReactionResponse(existingReview, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Review updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error updating review for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> deleteReview(String slug) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
                 throw new UnauthorizedException();
             }
 
-            // Remove the reaction and its replies
-            reactionMapper.deleteReactionAndReplies(reactionId);
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
 
-            return new DataResponse<>(SUCCESS, "Reaction removed successfully", HttpStatus.OK.value(), null);
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Find user's review for this book
+            Reaction review = reactionMapper.findReviewByUserAndBook(user.getId(), book.getId());
+
+            if (review == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Delete the review and all its replies/feedback
+            reactionMapper.deleteReactionAndReplies(review.getId());
+
+            return new DataResponse<>(SUCCESS, "Review deleted successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
-            log.error("Error removing reaction: {}", reactionId, e);
+            log.error("Error deleting review for book: {}", slug, e);
+            throw e;
+        }
+    }
+
+// ============ REPLY OPERATIONS ============
+
+    @Override
+    @Transactional
+    public DataResponse<ReactionResponse> addReply(String slug, Long parentId, ReplyRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            if (request.getComment() == null || request.getComment().trim().isEmpty()) {
+                throw new IllegalArgumentException("Reply content is required");
+            }
+
+            // Verify parent review/comment exists
+            Reaction parentReaction = reactionMapper.findReactionById(parentId);
+            if (parentReaction == null) {
+                throw new DataNotFoundException();
+            }
+
+            // User cannot reply to their own review/comment
+            if (parentReaction.getUserId().equals(user.getId())) {
+                throw new IllegalArgumentException("Cannot reply to your own review/comment");
+            }
+
+            // Verify parent belongs to the same book
+            if (!parentReaction.getBookId().equals(book.getId())) {
+                throw new IllegalArgumentException("Parent reaction does not belong to this book");
+            }
+
+            // Create reply
+            Reaction reply = new Reaction();
+            reply.setUserId(user.getId());
+            reply.setBookId(book.getId());
+            reply.setReactionType("COMMENT");
+            reply.setComment(request.getComment());
+            reply.setTitle(null);
+            reply.setParentId(parentId);
+            reply.setRating(null);
+            reply.setCreatedAt(LocalDateTime.now());
+            reply.setUpdatedAt(LocalDateTime.now());
+
+            reactionMapper.insertReaction(reply);
+
+            ReactionResponse response = mapToReactionResponse(reply, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reply added successfully", HttpStatus.CREATED.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error adding reply for review: {}", parentId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> deleteReply(String slug, Long replyId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Get the reply to verify ownership
+            Reaction reply = reactionMapper.findReactionById(replyId);
+            if (reply == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Verify it's a reply (has parentId)
+            if (reply.getParentId() == null) {
+                throw new IllegalArgumentException("This is not a reply");
+            }
+
+            // Check if user owns the reply
+            if (!reply.getUserId().equals(user.getId())) {
+                throw new UnauthorizedException();
+            }
+
+            // Delete the reply and its nested replies
+            reactionMapper.deleteReactionAndReplies(replyId);
+
+            return new DataResponse<>(SUCCESS, "Reply deleted successfully", HttpStatus.OK.value(), null);
+
+        } catch (Exception e) {
+            log.error("Error deleting reply: {}", replyId, e);
+            throw e;
+        }
+    }
+
+// ============ FEEDBACK OPERATIONS (HELPFUL/NOT_HELPFUL) ============
+
+    @Override
+    @Transactional
+    public DataResponse<ReactionResponse> addOrUpdateFeedback(String slug, Long reviewId, FeedbackRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Validate feedback type
+            String feedbackType = request.getType().toUpperCase();
+            if (!feedbackType.equals("HELPFUL") && !feedbackType.equals("NOT_HELPFUL")) {
+                throw new IllegalArgumentException("Feedback type must be HELPFUL or NOT_HELPFUL");
+            }
+
+            // Verify review exists
+            Reaction review = reactionMapper.findReactionById(reviewId);
+            if (review == null) {
+                throw new DataNotFoundException();
+            }
+
+            // User cannot give feedback to their own review
+            if (review.getUserId().equals(user.getId())) {
+                throw new IllegalArgumentException("Cannot give feedback to your own review");
+            }
+
+            // Check if user already gave feedback on this review
+            Reaction existingFeedback = reactionMapper.findFeedbackByUserAndReview(user.getId(), reviewId);
+
+            Reaction savedFeedback;
+            String message;
+
+            if (existingFeedback != null) {
+                // Update existing feedback
+                existingFeedback.setReactionType(feedbackType);
+                existingFeedback.setUpdatedAt(LocalDateTime.now());
+                reactionMapper.updateReaction(existingFeedback);
+                savedFeedback = existingFeedback;
+                message = "Feedback updated successfully";
+            } else {
+                // Create new feedback
+                Reaction feedback = new Reaction();
+                feedback.setUserId(user.getId());
+                feedback.setBookId(book.getId());
+                feedback.setReactionType(feedbackType);
+                feedback.setComment(null);
+                feedback.setTitle(null);
+                feedback.setRating(null);
+                feedback.setParentId(reviewId);
+                feedback.setCreatedAt(LocalDateTime.now());
+                feedback.setUpdatedAt(LocalDateTime.now());
+
+                reactionMapper.insertReaction(feedback);
+                savedFeedback = feedback;
+                message = "Feedback added successfully";
+            }
+
+            ReactionResponse response = mapToReactionResponse(savedFeedback, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, message, HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error processing feedback for review: {}", reviewId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> deleteFeedback(String slug, Long reviewId) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Find user's feedback for this review
+            Reaction feedback = reactionMapper.findFeedbackByUserAndReview(user.getId(), reviewId);
+
+            if (feedback == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Delete the feedback
+            reactionMapper.deleteReaction(feedback.getId());
+
+            return new DataResponse<>(SUCCESS, "Feedback deleted successfully", HttpStatus.OK.value(), null);
+
+        } catch (Exception e) {
+            log.error("Error deleting feedback for review: {}", reviewId, e);
             throw e;
         }
     }

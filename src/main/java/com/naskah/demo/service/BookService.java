@@ -50,10 +50,23 @@ public interface BookService {
     DataResponse<TranslationResponse> translateText(String slug, TranslationRequest request);
     DataResponse<TranslatedHighlightResponse> translateHighlight(String slug, TranslateHighlightRequest request);
 
-    // Reactions CRUD
-    DataResponse<List<ReactionResponse>> getReactions(String slug, int page, int limit);
-    DataResponse<ReactionResponse> addReaction(String slug, ReactionRequest request);
-    DataResponse<Void> removeReaction(String slug, Long reactionId);
+    // ============ RATING OPERATIONS ============
+    DataResponse<ReactionResponse> addOrUpdateRating(String slug, RatingRequest request);
+    DataResponse<Void> deleteRating(String slug);
+
+    // ============ REVIEW/COMMENT OPERATIONS ============
+    DataResponse<List<ReactionResponse>> getReviews(String slug, int page, int limit);
+    DataResponse<ReactionResponse> addReview(String slug, ReviewRequest request);
+    DataResponse<ReactionResponse> updateReview(String slug, ReviewRequest request);
+    DataResponse<Void> deleteReview(String slug);
+
+    // ============ REPLY OPERATIONS ============
+    DataResponse<ReactionResponse> addReply(String slug, Long parentId, ReplyRequest request);
+    DataResponse<Void> deleteReply(String slug, Long replyId);
+
+    // ============ FEEDBACK OPERATIONS ============
+    DataResponse<ReactionResponse> addOrUpdateFeedback(String slug, Long reviewId, FeedbackRequest request);
+    DataResponse<Void> deleteFeedback(String slug, Long reviewId);
 
     // TTS and Audio Sync
     DataResponse<TTSResponse> generateTextToSpeech(String slug, TTSRequest request);

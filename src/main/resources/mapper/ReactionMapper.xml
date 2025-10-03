@@ -16,6 +16,8 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <!-- ============ BASIC CRUD ============ -->
+
     <!-- Insert new reaction -->
     <insert id="insertReaction" parameterType="com.naskah.demo.model.entity.Reaction" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reactions (
@@ -43,15 +45,18 @@
         SELECT * FROM reactions WHERE id = #{reactionId}
     </select>
 
-    <!-- Find main reactions with pagination -->
-    <select id="findReactionsByBookIdWithPagination" resultMap="ReactionResultMap">
-        SELECT * FROM reactions
-        WHERE book_id = #{bookId}
-        AND parent_id IS NULL
-        AND reaction_type = 'COMMENT'
-        ORDER BY created_at DESC
-        LIMIT #{limit} OFFSET #{offset}
-    </select>
+    <!-- Delete single reaction -->
+    <delete id="deleteReaction">
+        DELETE FROM reactions WHERE id = #{reactionId}
+    </delete>
+
+    <!-- Delete reaction and all its replies (cascading delete) -->
+    <delete id="deleteReactionAndReplies">
+        DELETE FROM reactions
+        WHERE id = #{reactionId} OR parent_id = #{reactionId}
+    </delete>
+
+    <!-- ============ RATING QUERIES ============ -->
 
     <!-- Find rating by user and book -->
     <select id="findRatingByUserAndBook" resultMap="ReactionResultMap">
@@ -61,6 +66,18 @@
         AND reaction_type = 'RATING'
         AND parent_id IS NULL
         LIMIT 1
+    </select>
+
+    <!-- ============ REVIEW QUERIES ============ -->
+
+    <!-- Find reviews with pagination -->
+    <select id="findReviewsByBookIdWithPagination" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE book_id = #{bookId}
+        AND reaction_type = 'COMMENT'
+        AND parent_id IS NULL
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <!-- Find review by user and book -->
@@ -73,6 +90,25 @@
         LIMIT 1
     </select>
 
+    <!-- ============ REPLY QUERIES ============ -->
+
+    <!-- Find replies by parent ID -->
+    <select id="findRepliesByParentId" resultMap="ReactionResultMap">
+        SELECT * FROM reactions
+        WHERE parent_id = #{parentId}
+        AND reaction_type = 'COMMENT'
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- Count replies by parent ID -->
+    <select id="countRepliesByParentId" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE parent_id = #{parentId}
+        AND reaction_type = 'COMMENT'
+    </select>
+
+    <!-- ============ FEEDBACK QUERIES ============ -->
+
     <!-- Find feedback by user and review -->
     <select id="findFeedbackByUserAndReview" resultMap="ReactionResultMap">
         SELECT * FROM reactions
@@ -82,24 +118,28 @@
         LIMIT 1
     </select>
 
-    <!-- Find replies by parent ID -->
-    <select id="findRepliesByParentId" resultMap="ReactionResultMap">
-        SELECT * FROM reactions
-        WHERE parent_id = #{parentId}
-        ORDER BY created_at ASC
+    <!-- Count helpful feedback for a review -->
+    <select id="countHelpfulByReviewId" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE parent_id = #{reviewId}
+        AND reaction_type = 'HELPFUL'
     </select>
+
+    <!-- Count not helpful feedback for a review -->
+    <select id="countNotHelpfulByReviewId" resultType="int">
+        SELECT COUNT(*) FROM reactions
+        WHERE parent_id = #{reviewId}
+        AND reaction_type = 'NOT_HELPFUL'
+    </select>
+
+    <!-- ============ STATISTICS ============ -->
 
     <!-- Get reaction statistics for a book -->
     <select id="getReactionStats" resultType="com.naskah.demo.model.dto.response.ReactionStatsResponse">
         SELECT
-        COUNT(CASE WHEN reaction_type = 'RATING' THEN 1 END) as totalRatings,
+        COUNT(CASE WHEN reaction_type = 'RATING' AND parent_id IS NULL THEN 1 END) as totalRatings,
         COUNT(CASE WHEN reaction_type = 'COMMENT' AND parent_id IS NULL THEN 1 END) as totalComments,
-        COALESCE(AVG(CASE WHEN reaction_type = 'RATING' THEN rating END), 0.0) as averageRating,
-        0 as totalAngry,
-        0 as totalLikes,
-        0 as totalLoves,
-        0 as totalDislikes,
-        0 as totalSad
+        COALESCE(AVG(CASE WHEN reaction_type = 'RATING' AND parent_id IS NULL THEN rating END), 0.0) as averageRating
         FROM reactions
         WHERE book_id = #{bookId}
     </select>
@@ -112,11 +152,5 @@
         AND parent_id IS NULL
         LIMIT 1
     </select>
-
-    <!-- Delete reaction and all its replies (cascading delete) -->
-    <delete id="deleteReactionAndReplies">
-        DELETE FROM reactions
-        WHERE id = #{reactionId} OR parent_id = #{reactionId}
-    </delete>
 
 </mapper>

@@ -185,32 +185,138 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // ============ REACTIONS ENDPOINTS ============
-    @GetMapping("/{slug}/reactions")
-    public ResponseEntity<DataResponse<List<ReactionResponse>>> getReactions(
+    // ============ RATING ENDPOINTS ============
+
+    /**
+     * POST /api/books/{slug}/rating
+     * Add or update rating for a book
+     */
+    @PostMapping("/{slug}/rating")
+    public ResponseEntity<DataResponse<ReactionResponse>> addOrUpdateRating(
+            @PathVariable String slug,
+            @RequestBody @Valid RatingRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.addOrUpdateRating(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DELETE /api/books/{slug}/rating
+     * Delete user's rating for a book
+     */
+    @DeleteMapping("/{slug}/rating")
+    public ResponseEntity<DataResponse<Void>> deleteRating(@PathVariable String slug) {
+        DataResponse<Void> response = bookService.deleteRating(slug);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============ REVIEW ENDPOINTS ============
+
+    /**
+     * GET /api/books/{slug}/reviews
+     * Get all reviews for a book with pagination
+     */
+    @GetMapping("/{slug}/reviews")
+    public ResponseEntity<DataResponse<List<ReactionResponse>>> getReviews(
             @PathVariable String slug,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
 
-        DataResponse<List<ReactionResponse>> response = bookService.getReactions(slug, page, limit);
+        DataResponse<List<ReactionResponse>> response = bookService.getReviews(slug, page, limit);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{slug}/reactions")
-    public ResponseEntity<DataResponse<ReactionResponse>> addReaction(
+    /**
+     * POST /api/books/{slug}/reviews
+     * Add a new review for a book
+     */
+    @PostMapping("/{slug}/reviews")
+    public ResponseEntity<DataResponse<ReactionResponse>> addReview(
             @PathVariable String slug,
-            @RequestBody @Valid ReactionRequest request) {
+            @RequestBody @Valid ReviewRequest request) {
 
-        DataResponse<ReactionResponse> response = bookService.addReaction(slug, request);
+        DataResponse<ReactionResponse> response = bookService.addReview(slug, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @DeleteMapping("/{slug}/reactions/{reactionId}")
-    public ResponseEntity<DataResponse<Void>> removeReaction(
+    /**
+     * PUT /api/books/{slug}/reviews
+     * Update user's existing review
+     */
+    @PutMapping("/{slug}/reviews")
+    public ResponseEntity<DataResponse<ReactionResponse>> updateReview(
             @PathVariable String slug,
-            @PathVariable Long reactionId) {
+            @RequestBody @Valid ReviewRequest request) {
 
-        DataResponse<Void> response = bookService.removeReaction(slug, reactionId);
+        DataResponse<ReactionResponse> response = bookService.updateReview(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DELETE /api/books/{slug}/reviews
+     * Delete user's review for a book
+     */
+    @DeleteMapping("/{slug}/reviews")
+    public ResponseEntity<DataResponse<Void>> deleteReview(@PathVariable String slug) {
+        DataResponse<Void> response = bookService.deleteReview(slug);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============ REPLY ENDPOINTS ============
+
+    /**
+     * POST /api/books/{slug}/reviews/{parentId}/replies
+     * Add a reply to a review or comment
+     */
+    @PostMapping("/{slug}/reviews/{parentId}/replies")
+    public ResponseEntity<DataResponse<ReactionResponse>> addReply(
+            @PathVariable String slug,
+            @PathVariable Long parentId,
+            @RequestBody @Valid ReplyRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.addReply(slug, parentId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * DELETE /api/books/{slug}/replies/{replyId}
+     * Delete a reply
+     */
+    @DeleteMapping("/{slug}/replies/{replyId}")
+    public ResponseEntity<DataResponse<Void>> deleteReply(
+            @PathVariable String slug,
+            @PathVariable Long replyId) {
+
+        DataResponse<Void> response = bookService.deleteReply(slug, replyId);
+        return ResponseEntity.ok(response);
+    }
+
+    // ============ FEEDBACK ENDPOINTS ============
+
+    /**
+     * POST /api/books/{slug}/reviews/{reviewId}/feedback
+     * Add or update feedback (HELPFUL/NOT_HELPFUL) on a review
+     */
+    @PostMapping("/{slug}/reviews/{reviewId}/feedback")
+    public ResponseEntity<DataResponse<ReactionResponse>> addOrUpdateFeedback(
+            @PathVariable String slug,
+            @PathVariable Long reviewId,
+            @RequestBody @Valid FeedbackRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.addOrUpdateFeedback(slug, reviewId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DELETE /api/books/{slug}/reviews/{reviewId}/feedback
+     * Delete user's feedback on a review
+     */
+    @DeleteMapping("/{slug}/reviews/{reviewId}/feedback")
+    public ResponseEntity<DataResponse<Void>> deleteFeedback(
+            @PathVariable String slug,
+            @PathVariable Long reviewId) {
+
+        DataResponse<Void> response = bookService.deleteFeedback(slug, reviewId);
         return ResponseEntity.ok(response);
     }
 
