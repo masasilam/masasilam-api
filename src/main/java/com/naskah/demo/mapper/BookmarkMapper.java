@@ -1,6 +1,7 @@
 package com.naskah.demo.mapper;
 
 import com.naskah.demo.model.entity.Bookmark;
+import jakarta.validation.constraints.NotNull;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -16,8 +17,8 @@ public interface BookmarkMapper {
     @Select("SELECT * FROM bookmarks WHERE user_id = #{userId} AND book_id = #{bookId} ORDER BY page ASC")
     List<Bookmark> findBookmarksByUserAndBook(@Param("userId") Long userId, @Param("bookId") Long bookId);
 
-    @Select("SELECT * FROM bookmarks WHERE user_id = #{userId} AND book_id = #{bookId} AND page = #{page}")
-    Bookmark findBookmarkByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("page") Integer page);
+    @Select("SELECT * FROM bookmarks WHERE user_id = #{userId} AND book_id = #{bookId} AND position = #{position}")
+    Bookmark findBookmarkByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("position") String position);
 
     @Delete("DELETE FROM bookmarks WHERE id = #{id}")
     void deleteBookmark(@Param("id") Long id);

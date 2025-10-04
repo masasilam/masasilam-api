@@ -654,7 +654,7 @@ public class BookServiceImpl implements BookService {
             }
 
             // Check for duplicate bookmark
-            Bookmark existing = bookmarkMapper.findBookmarkByUserBookAndPage(user.getId(), book.getId(), request.getPage());
+            Bookmark existing = bookmarkMapper.findBookmarkByUserBookAndPage(user.getId(), book.getId(), request.getPosition());
             if (existing != null) {
                 throw new DataAlreadyExistsException();
             }
