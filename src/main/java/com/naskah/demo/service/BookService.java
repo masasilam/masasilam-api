@@ -62,6 +62,7 @@ public interface BookService {
 
     // ============ REPLY OPERATIONS ============
     DataResponse<ReactionResponse> addReply(String slug, Long parentId, ReplyRequest request);
+    DataResponse<ReactionResponse> updateReply(String slug, Long replyId, ReplyRequest request);
     DataResponse<Void> deleteReply(String slug, Long replyId);
 
     // ============ FEEDBACK OPERATIONS ============

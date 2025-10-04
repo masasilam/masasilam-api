@@ -74,8 +74,6 @@
     <select id="findReviewsByBookIdWithPagination" resultMap="ReactionResultMap">
         SELECT * FROM reactions
         WHERE book_id = #{bookId}
-        AND reaction_type = 'COMMENT'
-        AND parent_id IS NULL
         ORDER BY created_at DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>

@@ -1392,6 +1392,56 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
+    public DataResponse<ReactionResponse> updateReply(String slug, Long replyId, ReplyRequest request) {
+        try {
+            String username = headerHolder.getUsername();
+            if (username == null || username.isEmpty()) {
+                throw new UnauthorizedException();
+            }
+
+            User user = userMapper.findUserByUsername(username);
+            Book book = bookMapper.findBookBySlug(slug);
+
+            if (user == null || book == null) {
+                throw new DataNotFoundException();
+            }
+
+            if (request.getComment() == null || request.getComment().trim().isEmpty()) {
+                throw new IllegalArgumentException("Reply content is required");
+            }
+
+            // Get the reply to verify ownership
+            Reaction reply = reactionMapper.findReactionById(replyId);
+            if (reply == null) {
+                throw new DataNotFoundException();
+            }
+
+            // Verify it's a reply (has parentId)
+            if (reply.getParentId() == null) {
+                throw new IllegalArgumentException("This is not a reply");
+            }
+
+            // Check if user owns the reply
+            if (!reply.getUserId().equals(user.getId())) {
+                throw new UnauthorizedException();
+            }
+
+            // Update the reply
+            reply.setComment(request.getComment());
+            reply.setUpdatedAt(LocalDateTime.now());
+            reactionMapper.updateReaction(reply);
+
+            ReactionResponse response = mapToReactionResponse(reply, user, book.getId(), user.getId());
+            return new DataResponse<>(SUCCESS, "Reply updated successfully", HttpStatus.OK.value(), response);
+
+        } catch (Exception e) {
+            log.error("Error updating reply: {}", replyId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
     public DataResponse<Void> deleteReply(String slug, Long replyId) {
         try {
             String username = headerHolder.getUsername();

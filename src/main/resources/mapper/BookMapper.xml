@@ -200,7 +200,7 @@
         COUNT(case when UPPER(reaction_type) = 'DISLIKE' then 1 end) as total_dislikes,
         COUNT(case when UPPER(reaction_type) = 'SAD' then 1 end) as total_sad,
         COUNT(case when UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') then 1 end) as total_reactions,
-        COUNT(case when comment is not null then 1 end) as total_comments,
+        COUNT(case when comment is not null and parent_id is null then 1 end) as total_comments,
         AVG(case when rating is not null then rating end) as average_rating
         from
         reactions

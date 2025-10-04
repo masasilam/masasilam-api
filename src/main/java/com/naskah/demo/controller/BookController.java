@@ -279,6 +279,20 @@ public class BookController {
     }
 
     /**
+     * PUT /api/books/{slug}/replies/{replyId}
+     * Update a reply
+     */
+    @PutMapping("/{slug}/replies/{replyId}")
+    public ResponseEntity<DataResponse<ReactionResponse>> updateReply(
+            @PathVariable String slug,
+            @PathVariable Long replyId,
+            @RequestBody @Valid ReplyRequest request) {
+
+        DataResponse<ReactionResponse> response = bookService.updateReply(slug, replyId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * DELETE /api/books/{slug}/replies/{replyId}
      * Delete a reply
      */
