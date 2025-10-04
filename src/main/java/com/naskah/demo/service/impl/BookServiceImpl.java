@@ -666,7 +666,7 @@ public class BookServiceImpl implements BookService {
             bookmark.setPosition(request.getPosition());
             bookmark.setTitle(request.getTitle());
             bookmark.setDescription(request.getDescription());
-            bookmark.setColor(request.getColor() != null ? request.getColor() : "#FFD700");
+            bookmark.setColor(request.getColor() != null ? request.getColor() : "#de96be");
             bookmark.setCreatedAt(LocalDateTime.now());
 
             bookmarkMapper.insertBookmark(bookmark);
