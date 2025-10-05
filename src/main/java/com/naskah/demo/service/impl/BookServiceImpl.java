@@ -441,6 +441,10 @@ public class BookServiceImpl implements BookService {
             String username = headerHolder.getUsername();
             boolean isAuthenticated = username != null && !username.isEmpty();
 
+            // ✅ TAMBAHKAN: Update download count untuk SEMUA pengguna
+            bookMapper.incrementDownloadCount(book.getId());
+            log.info("Increased download count for book: {} (ID: {})", book.getTitle(), book.getId());
+
             // Always allow download, but track differently for authenticated users
             if (isAuthenticated) {
                 User user = userMapper.findUserByUsername(username);

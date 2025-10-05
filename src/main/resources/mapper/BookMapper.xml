@@ -441,4 +441,11 @@
         WHERE id = #{id}
     </delete>
 
+    <update id="incrementDownloadCount">
+        UPDATE books
+        SET download_count = COALESCE(download_count, 0) + 1,
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
 </mapper>

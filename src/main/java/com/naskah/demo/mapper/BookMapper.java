@@ -40,4 +40,6 @@ public interface BookMapper {
     Book getDetailEbook(@Param("id") Long id);  // Changed from String to Long
     void updateEbook(Book book);
     void deleteEbook(@Param("id") Long id);  // Changed from String to Long
+
+    void incrementDownloadCount(@Param("id") Long id);
 }
