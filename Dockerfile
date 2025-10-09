@@ -1,5 +1,3 @@
-# Multi-stage build untuk build dan runtime
-
 # Stage 1: Build stage dengan Maven built-in
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
 
@@ -9,14 +7,19 @@ WORKDIR /app
 # Copy pom.xml terlebih dahulu (untuk layer caching)
 COPY pom.xml ./
 
+# Copy mvnw dan berikan izin eksekusi
+COPY mvnw ./
+COPY .mvn .mvn
+RUN chmod +x ./mvnw
+
 # Download dependencies (akan di-cache jika pom.xml tidak berubah)
-RUN mvn dependency:go-offline -B
+RUN ./mvnw dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
 # Build aplikasi (skip tests untuk deployment yang lebih cepat)
-RUN mvn clean package -DskipTests -B
+RUN ./mvnw clean package -DskipTests -B
 
 # Stage 2: Runtime stage
 FROM eclipse-temurin:21-jre-alpine
