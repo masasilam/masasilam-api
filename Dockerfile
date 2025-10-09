@@ -1,58 +1,34 @@
-# Stage 1: Build stage dengan Maven built-in
+# Build stage - super optimized dengan Java 21
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
 
-# Set working directory untuk build
 WORKDIR /app
 
-# Copy pom.xml terlebih dahulu (untuk layer caching)
+# Verify Java version
+RUN java -version && mvn -version
+
+# Copy pom.xml dan download dependencies
 COPY pom.xml ./
+RUN mvn dependency:go-offline -B -T 2C --no-transfer-progress
 
-# Copy mvnw dan berikan izin eksekusi
-COPY mvnw ./
-COPY .mvn .mvn
-RUN chmod +x ./mvnw
-
-# Download dependencies (akan di-cache jika pom.xml tidak berubah)
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
+# Copy source dan build dengan Java 21
 COPY src ./src
+RUN mvn package -DskipTests -B -T 2C -o --no-transfer-progress -Dmaven.compiler.source=21 -Dmaven.compiler.target=21
 
-# Build aplikasi (skip tests untuk deployment yang lebih cepat)
-RUN ./mvnw clean package -DskipTests -B
-
-# Stage 2: Runtime stage
+# Runtime stage - minimal
 FROM eclipse-temurin:21-jre-alpine
 
-# Install tzdata untuk timezone support (opsional)
-RUN apk add --no-cache tzdata
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 
-# Create non-root user untuk security
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
-
-# Set working directory
 WORKDIR /app
 
-# Copy jar dari build stage
 COPY --from=builder /app/target/*.jar app.jar
+RUN mkdir -p storage/covers storage/books storage/authors && chown -R appuser:appuser /app
 
-# Create storage directories dengan proper ownership
-RUN mkdir -p /app/storage/covers /app/storage/books /app/storage/authors && \
-    chown -R appuser:appgroup /app
-
-# Switch ke non-root user
 USER appuser
 
-# Expose port aplikasi
 EXPOSE 8080
 
-# Health check (opsional - untuk monitoring)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+# Memory optimized untuk hosting gratis (256MB-512MB RAM)
+ENV JAVA_OPTS="-Xms64m -Xmx256m -XX:+UseSerialGC -Djava.security.egd=file:/dev/./urandom"
 
-# JVM options yang dioptimalkan untuk container
-ENV JAVA_OPTS="-Xms128m -Xmx512m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
-
-# Run application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
