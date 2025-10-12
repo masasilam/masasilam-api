@@ -4,15 +4,13 @@
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
-# Salin hanya file pom.xml dulu (untuk caching dependencies)
+# Salin pom.xml dan download dependencies
 COPY pom.xml .
+RUN mvn dependency:resolve dependency:resolve-plugins -B --no-transfer-progress
 
-# Download dependencies (Railway akan cache layer ini)
-RUN mvn dependency:go-offline -B --no-transfer-progress
-
-# Salin source code dan build jar
+# Salin source code dan build
 COPY src ./src
-RUN mvn clean package -DskipTests -B --no-transfer-progress
+RUN mvn clean package -DskipTests -B --no-transfer-progress -T 1C
 
 # ===================================
 # 🚀 STAGE 2: RUNTIME
@@ -20,11 +18,11 @@ RUN mvn clean package -DskipTests -B --no-transfer-progress
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Salin hasil build ke runtime container
+# Salin jar
 COPY --from=builder /app/target/*.jar app.jar
 
-# Railway menggunakan port dinamis
+# Railway port
 EXPOSE 8080
 
-# Jalankan aplikasi Spring Boot
-CMD ["sh", "-c", "java -Xms64m -Xmx256m -jar app.jar --server.port=${PORT:-8080}"]
+# Jalankan dengan memory minimal
+CMD ["java", "-Xms64m", "-Xmx256m", "-jar", "app.jar"]
