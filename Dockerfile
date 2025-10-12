@@ -1,30 +1,28 @@
-# ================================
-# 🏗️ STAGE 1: BUILD (Maven + Java 21)
-# ================================
+# ===================================
+# ⚙️ STAGE 1: BUILD
+# ===================================
 FROM maven:3.9.8-eclipse-temurin-21-alpine AS builder
-
 WORKDIR /app
 
-# Salin file pom.xml terlebih dahulu untuk caching dependencies
-COPY pom.xml ./
-RUN mvn dependency:go-offline -B -T 2C --no-transfer-progress
+# Salin hanya file pom.xml dulu (agar caching dependencies)
+COPY pom.xml .
 
-# Salin source code dan build
+# Gunakan folder cache Maven lokal
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B --no-transfer-progress
+
+# Salin source code dan build jar
 COPY src ./src
-RUN mvn clean package -DskipTests -B -T 2C --no-transfer-progress
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean package -DskipTests -B --no-transfer-progress
 
-# ================================
-# 🚀 STAGE 2: RUNTIME (Java 21 JRE)
-# ================================
+# ===================================
+# 🚀 STAGE 2: RUNTIME
+# ===================================
 FROM eclipse-temurin:21-jre-alpine
-
 WORKDIR /app
 
-# Salin hasil build dari stage builder
 COPY --from=builder /app/target/*.jar app.jar
 
-# Railway akan menetapkan PORT secara dinamis
 EXPOSE 8080
-
-# Gunakan environment variable PORT dari Railway (default 8080)
 CMD ["sh", "-c", "java -Xms64m -Xmx256m -jar app.jar --server.port=${PORT:-8080}"]
