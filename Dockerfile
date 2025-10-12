@@ -7,13 +7,13 @@ WORKDIR /app
 # Salin hanya file pom.xml dulu (untuk caching dependencies)
 COPY pom.xml .
 
-# Gunakan cache Maven dengan ID unik sesuai format Railway
-RUN --mount=type=cache,id=railway-maven-cache,target=/root/.m2 \
+# Gunakan cache Maven dengan ID yang sesuai format Railway
+RUN --mount=type=cache,id=maven-cache,target=/root/.m2 \
     mvn dependency:go-offline -B --no-transfer-progress
 
 # Salin source code dan build jar
 COPY src ./src
-RUN --mount=type=cache,id=railway-maven-cache,target=/root/.m2 \
+RUN --mount=type=cache,id=maven-cache,target=/root/.m2 \
     mvn clean package -DskipTests -B --no-transfer-progress
 
 # ===================================
