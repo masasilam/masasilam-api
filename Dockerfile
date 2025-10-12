@@ -7,14 +7,12 @@ WORKDIR /app
 # Salin hanya file pom.xml dulu (untuk caching dependencies)
 COPY pom.xml .
 
-# Gunakan cache Maven dengan ID yang include region prefix
-RUN --mount=type=cache,id=asia-southeast1-maven-cache,target=/root/.m2 \
-    mvn dependency:go-offline -B --no-transfer-progress
+# Download dependencies (Railway akan cache layer ini)
+RUN mvn dependency:go-offline -B --no-transfer-progress
 
 # Salin source code dan build jar
 COPY src ./src
-RUN --mount=type=cache,id=asia-southeast1-maven-cache,target=/root/.m2 \
-    mvn clean package -DskipTests -B --no-transfer-progress
+RUN mvn clean package -DskipTests -B --no-transfer-progress
 
 # ===================================
 # 🚀 STAGE 2: RUNTIME
