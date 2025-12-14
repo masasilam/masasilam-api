@@ -27,4 +27,6 @@ public interface BookmarkMapper {
     void updateBookmark(Bookmark bookmark);
 
     Bookmark findBookmarkById(@Param("id") Long id);
+
+    List<Bookmark> findByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("page") Integer page);
 }

@@ -1,4 +1,4 @@
-package com.naskah.demo.util.file;
+package com.naskah.demo.model.dto;
 
 import lombok.Data;
 
@@ -8,5 +8,4 @@ public class BookMetadata {
     private final long fileSize;
     private final int totalPages;
     private final long totalWord;
-    private final int difficultyLevel;
 }

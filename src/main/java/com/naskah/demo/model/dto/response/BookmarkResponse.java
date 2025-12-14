@@ -13,4 +13,5 @@ public class BookmarkResponse {
     private String description;
     private String color;
     private LocalDateTime createdAt;
+    private ChapterNavigationInfo chapter;
 }

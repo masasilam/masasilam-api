@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.ChapterReviewMapper">
+
+    <resultMap id="ChapterReviewResultMap" type="com.naskah.demo.model.entity.ChapterReview">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="chapterNumber" column="chapter_number"/>
+        <result property="comment" column="comment"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="isSpoiler" column="is_spoiler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Find reviews by chapter (parent reviews only) -->
+    <select id="findReviewsByChapter" resultMap="ChapterReviewResultMap">
+        SELECT *
+        FROM chapter_reviews
+        WHERE book_id = #{param1}
+        AND chapter_number = #{param2}
+        AND parent_id IS NULL
+        ORDER BY created_at DESC
+        LIMIT #{param4} OFFSET #{param3}
+    </select>
+
+    <!-- Find review by ID -->
+    <select id="findById" resultMap="ChapterReviewResultMap">
+        SELECT *
+        FROM chapter_reviews
+        WHERE id = #{reviewId}
+    </select>
+
+    <!-- Find replies for a review -->
+    <select id="findReplies" resultMap="ChapterReviewResultMap">
+        SELECT *
+        FROM chapter_reviews
+        WHERE parent_id = #{id}
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- Insert new review -->
+    <insert id="insertChapterReview" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chapter_reviews (user_id, book_id, chapter_number, comment, parent_id, is_spoiler, like_count, created_at, updated_at)
+        VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{comment}, #{parentId}, #{isSpoiler},
+        COALESCE(#{likeCount}, 0), #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- Like review -->
+    <insert id="likeReview">
+        INSERT INTO chapter_review_likes (review_id, user_id, created_at)
+        VALUES (#{param1}, #{param2}, NOW())
+        ON CONFLICT (review_id, user_id) DO NOTHING
+    </insert>
+
+    <!-- Unlike review -->
+    <delete id="unlikeReview">
+        DELETE FROM chapter_review_likes
+        WHERE review_id = #{param1}
+        AND user_id = #{param2}
+    </delete>
+
+    <!-- Increment like count -->
+    <update id="incrementLikeCount">
+        UPDATE chapter_reviews
+        SET like_count = like_count + 1
+        WHERE id = #{reviewId}
+    </update>
+
+    <!-- Decrement like count -->
+    <update id="decrementLikeCount">
+        UPDATE chapter_reviews
+        SET like_count = GREATEST(like_count - 1, 0)
+        WHERE id = #{reviewId}
+    </update>
+
+    <!-- Check if review is liked by user -->
+    <select id="isReviewLikedByUser" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1
+        FROM chapter_review_likes
+        WHERE review_id = #{param1}
+        AND user_id = #{param2}
+        )
+    </select>
+
+</mapper>

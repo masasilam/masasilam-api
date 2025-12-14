@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.AnalyticsMapper">
+
+    <!-- Update highlight heatmap -->
+    <update id="updateHighlightHeatmap">
+        INSERT INTO reading_heatmap (book_id, chapter_number, highlight_count, date)
+        VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
+        ON CONFLICT (book_id, chapter_number, date)
+        DO UPDATE SET
+        highlight_count = reading_heatmap.highlight_count + #{count},
+        updated_at = CURRENT_TIMESTAMP
+    </update>
+
+    <!-- Update note heatmap -->
+    <update id="updateNoteHeatmap">
+        INSERT INTO reading_heatmap (book_id, chapter_number, note_count, date)
+        VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
+        ON CONFLICT (book_id, chapter_number, date)
+        DO UPDATE SET
+        note_count = reading_heatmap.note_count + #{count},
+        updated_at = CURRENT_TIMESTAMP
+    </update>
+
+    <!-- Update reading heatmap -->
+    <update id="updateReadingHeatmap">
+        INSERT INTO reading_heatmap (book_id, chapter_number, read_count, date)
+        VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
+        ON CONFLICT (book_id, chapter_number, date)
+        DO UPDATE SET
+        read_count = reading_heatmap.read_count + #{count},
+        updated_at = CURRENT_TIMESTAMP
+    </update>
+
+    <!-- Get chapter statistics -->
+    <select id="getChapterStats" resultType="java.util.HashMap">
+        SELECT
+        COALESCE(SUM(read_count), 0) as reader_count,
+        COALESCE(AVG(completion_rate), 0) as completion_rate,
+        COALESCE(AVG(avg_reading_time), 0) as avg_reading_time,
+        COALESCE(SUM(highlight_count), 0) as highlight_count,
+        COALESCE(SUM(note_count), 0) as note_count,
+        COALESCE(SUM(comment_count), 0) as comment_count
+        FROM reading_heatmap
+        WHERE book_id = #{bookId} AND chapter_number = #{chapterNumber}
+    </select>
+
+</mapper>

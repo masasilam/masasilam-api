@@ -1,4 +1,4 @@
-package com.naskah.demo.util.file;
+package com.naskah.demo.model.dto;
 
 import lombok.Data;
 

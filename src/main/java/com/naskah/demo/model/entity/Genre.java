@@ -1,7 +1,8 @@
 package com.naskah.demo.model.entity;
 
 import lombok.Data;
-import java.time.LocalDateTime;
+
+import java.time.Instant;
 
 @Data
 public class Genre {
@@ -12,6 +13,7 @@ public class Genre {
     private String colorHex;
     private String iconName;
     private Boolean isFiction;
+    private Integer bookCount;
     private Boolean isActive;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

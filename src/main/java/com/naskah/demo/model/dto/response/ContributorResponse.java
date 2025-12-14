@@ -1,14 +1,17 @@
 package com.naskah.demo.model.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ContributorResponse {
     private Long id;
     private String name;
     private String slug;
     private String role;
     private String websiteUrl;
+    private Integer totalBooks;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

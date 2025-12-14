@@ -135,7 +135,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Send verification email
         emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                frontendUrl + "/verify-email?token=" + verificationToken);
+                frontendUrl + "/verifikasi-email?token=" + verificationToken);
 
         RegisterResponse response = new RegisterResponse();
         response.setUsername(user.getUsername());
@@ -288,7 +288,7 @@ public class AuthServiceImpl implements AuthService {
         userMapper.saveVerificationToken(user.getId(), verificationToken, LocalDateTime.now().plusHours(24));
 
         emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                frontendUrl + "/verify-email?token=" + verificationToken);
+                frontendUrl + "/verifikasi-email?token=" + verificationToken);
 
         return new DataResponse<>("Success", "Verification email sent", HttpStatus.OK.value(), null);
     }

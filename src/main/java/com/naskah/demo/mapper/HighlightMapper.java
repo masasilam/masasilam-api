@@ -46,4 +46,10 @@ public interface HighlightMapper {
 
     @Select("SELECT COUNT(*) FROM highlights WHERE book_id = #{bookId}")
     Integer countHighlightsByBook(@Param("bookId") Long bookId);
+
+    List<Highlight> findByUserBookAndPage(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId,
+            @Param("page") Integer page
+    );
 }

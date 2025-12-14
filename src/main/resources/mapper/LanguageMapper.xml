@@ -5,7 +5,7 @@
     <select id="findLanguageByName" resultType="com.naskah.demo.model.entity.Language">
         SELECT id, code, name, native_name, created_at, updated_at
         FROM languages
-        WHERE LOWER(name) LIKE LOWER(CONCAT('%', #{name}, '%'))
+        WHERE LOWER(code) LIKE LOWER(CONCAT('%', #{name}, '%'))
     </select>
 
     <select id="findLanguageNameById" resultType="String">

@@ -18,4 +18,5 @@ public class NoteResponse {
     private Integer commentCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private ChapterNavigationInfo chapter;
 }

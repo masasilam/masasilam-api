@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ChapterProgressMapper">
+
+    <select id="findProgress" resultType="com.naskah.demo.model.entity.ChapterProgress">
+        SELECT
+        id, user_id, book_id, chapter_number, position,
+        reading_time_seconds, is_completed, last_read_at,
+        created_at, updated_at
+        FROM chapter_progress
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <select id="findListeningProgress" resultType="com.naskah.demo.model.entity.ChapterListeningProgress">
+        SELECT
+        id, user_id, book_id, chapter_number, current_position,
+        is_completed, last_listened_at, created_at, updated_at
+        FROM chapter_listening_progress
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <insert id="insertProgress" parameterType="com.naskah.demo.model.entity.ChapterProgress" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chapter_progress (
+        user_id, book_id, chapter_number, position,
+        reading_time_seconds, is_completed, last_read_at,
+        created_at, updated_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{chapterNumber}, #{position},
+        #{readingTimeSeconds}, #{isCompleted}, #{lastReadAt},
+        #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateProgress" parameterType="com.naskah.demo.model.entity.ChapterProgress">
+        UPDATE chapter_progress
+        SET
+        position = #{position},
+        reading_time_seconds = #{readingTimeSeconds},
+        is_completed = #{isCompleted},
+        last_read_at = #{lastReadAt},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertListeningProgress" parameterType="com.naskah.demo.model.entity.ChapterListeningProgress" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chapter_listening_progress (
+        user_id, book_id, chapter_number, current_position,
+        is_completed, last_listened_at, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{chapterNumber}, #{currentPosition},
+        #{isCompleted}, #{lastListenedAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateListeningProgress" parameterType="com.naskah.demo.model.entity.ChapterListeningProgress">
+        UPDATE chapter_listening_progress
+        SET
+        current_position = #{currentPosition},
+        is_completed = #{isCompleted},
+        last_listened_at = #{lastListenedAt},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findAllByUserAndBook" resultType="com.naskah.demo.model.entity.ChapterProgress">
+        SELECT
+        id, user_id, book_id, chapter_number, position,
+        reading_time_seconds, is_completed, last_read_at,
+        created_at, updated_at
+        FROM chapter_progress
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+        ORDER BY chapter_number
+    </select>
+
+</mapper>

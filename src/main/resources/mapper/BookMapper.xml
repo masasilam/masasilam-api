@@ -2,10 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.naskah.demo.mapper.BookMapper">
 
-    <select id="countByTitleAndPublicationYear" resultType="int">
+    <select id="countBySlug" resultType="int">
         SELECT COUNT(*) FROM books
-        WHERE title = #{title}
-        AND publication_year = #{publicationYear}
+        WHERE slug = #{slug}
     </select>
 
     <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book" useGeneratedKeys="true" keyProperty="id">
@@ -21,7 +20,6 @@
             <if test="publisher != null">publisher,</if>
             <if test="languageId != null">language_id,</if>
             <if test="description != null">description,</if>
-            <if test="summary != null">summary,</if>
             <if test="coverImageUrl != null">cover_image_url,</if>
             <if test="coverImagePath != null">cover_image_path,</if>
             <if test="fileUrl != null">file_url,</if>
@@ -54,7 +52,6 @@
             <if test="publisher != null">#{publisher},</if>
             <if test="languageId != null">#{languageId},</if>
             <if test="description != null">#{description},</if>
-            <if test="summary != null">#{summary},</if>
             <if test="coverImageUrl != null">#{coverImageUrl},</if>
             <if test="coverImagePath != null">#{coverImagePath},</if>
             <if test="fileUrl != null">#{fileUrl},</if>
@@ -93,8 +90,8 @@
     </insert>
 
     <insert id="insertBookContributor">
-        INSERT INTO book_contributors (book_id, contributor_id, role_id)
-        VALUES (#{bookId}, #{contributorId}, #{roleId})
+        INSERT INTO book_contributors (book_id, contributor_id, role)
+        VALUES (#{bookId}, #{contributorId}, #{role})
     </insert>
 
     <!-- Query dengan aggregated data untuk menghindari duplikasi -->
@@ -112,7 +109,6 @@
         b.file_size,
         b.total_pages,
         b.description,
-        b.summary,
         b.estimated_read_time,
         l.name as language,
         b.total_word,
@@ -224,7 +220,6 @@
         b.file_size,
         b.total_pages,
         b.description,
-        b.summary,
         b.estimated_read_time,
         l.name as language,
         b.total_word,
@@ -341,7 +336,7 @@
     <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
         SELECT
         id, title, slug, subtitle, series_id, series_order, edition,
-        publication_year, publisher, language_id, description, summary,
+        publication_year, publisher, language_id, description,
         cover_image_url, cover_image_path, file_url, file_path,
         file_format, file_size, total_word, total_pages, estimated_read_time,
         difficulty_level, copyright_status_id, view_count, read_count,
@@ -366,7 +361,6 @@
             <if test="publisher != null">publisher = #{publisher},</if>
             <if test="languageId != null">language_id = #{languageId},</if>
             <if test="description != null">description = #{description},</if>
-            <if test="summary != null">summary = #{summary},</if>
             <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
             <if test="coverImagePath != null">cover_image_path = #{coverImagePath},</if>
             <if test="fileUrl != null">file_url = #{fileUrl},</if>
@@ -411,7 +405,6 @@
             <if test="publisher != null">publisher = #{publisher},</if>
             <if test="languageId != null">language_id = #{languageId},</if>
             <if test="description != null">description = #{description},</if>
-            <if test="summary != null">summary = #{summary},</if>
             <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
             <if test="coverImagePath != null">cover_image_path = #{coverImagePath},</if>
             <if test="fileUrl != null">file_url = #{fileUrl},</if>

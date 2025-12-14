@@ -4,6 +4,7 @@ import com.naskah.demo.model.dto.response.AuthorResponse;
 import com.naskah.demo.model.entity.Author;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -13,4 +14,29 @@ public interface AuthorMapper {
     void updateAuthor(Author author);
     void insertAuthor(Author author);
     List<AuthorResponse> findAuthorsByBookId(@Param("bookId") Long bookId);
+
+    @Select("<script>" +
+            "SELECT * FROM authors " +
+            "<where>" +
+            "  <if test='search != null and search != \"\"'>" +
+            "    name LIKE CONCAT('%', #{search}, '%')" +
+            "  </if>" +
+            "</where>" +
+            "ORDER BY ${sortColumn} ASC " +
+            "LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Author> findAllWithPagination(@Param("offset") int offset,
+                                       @Param("limit") int limit,
+                                       @Param("search") String search,
+                                       @Param("sortColumn") String sortColumn);
+
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM authors " +
+            "<where>" +
+            "  <if test='search != null and search != \"\"'>" +
+            "    name LIKE CONCAT('%', #{search}, '%')" +
+            "  </if>" +
+            "</where>" +
+            "</script>")
+    int countAll(@Param("search") String search);
 }

@@ -9,44 +9,6 @@ import java.util.List;
 
 @Data
 public class BookRequest {
-    @NotBlank
-    private String title;
-
-    @NotNull
-    private MultipartFile coverImage;
-
     @NotNull
     private MultipartFile bookFile;
-
-    @NotBlank
-    private String language;
-
-    @NotBlank
-    private String publisher;
-
-    @NotNull
-    private Integer publicationYear;
-
-    @NotBlank
-    private String description;
-
-    @NotBlank
-    private String copyrightStatus;
-
-    @NotBlank
-    private String category;
-
-    @NotEmpty
-    private List<Long> genreIds;
-
-    @NotEmpty
-    private List<AuthorRequest> authors;
-
-    private List<ContributorRequest> contributors;
-
-    private String subtitle;
-    private Integer seriesId;
-    private Integer seriesOrder;
-    private String summary;
-    private LocalDateTime publishedAt;
 }

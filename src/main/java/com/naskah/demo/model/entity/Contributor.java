@@ -11,6 +11,7 @@ public class Contributor {
     private String slug;
     private String role;
     private String websiteUrl;
+    private Integer totalBooks;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

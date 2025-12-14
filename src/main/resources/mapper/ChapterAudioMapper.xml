@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.naskah.demo.mapper.ChapterAudioMapper">
+
+    <select id="findChapterAudio" resultType="com.naskah.demo.model.entity.ChapterAudio">
+        SELECT
+        id, book_id, chapter_number, audio_url, duration,
+        file_size, format, voice, status, created_at, updated_at
+        FROM chapter_audio
+        WHERE book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+</mapper>

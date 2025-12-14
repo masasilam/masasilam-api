@@ -1,13 +1,105 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Verification</title>
+    <!--[if mso]>
+    <style type="text/css">
+        .button { padding: 16px 45px !important; }
+    </style>
+    <![endif]-->
 </head>
-<body>
-<h1>Welcome to <span th:text="${appName}">App</span>!</h1>
-<p>Dear <span th:text="${name}">User</span>,</p>
-<p>Please click the link below to verify your email address:</p>
-<a th:href="${verificationLink}" th:text="${verificationLink}">Verification Link</a>
-<p>If you didn't request this, please ignore this email.</p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+        <td style="padding: 20px;">
+            <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" align="center" style="max-width: 600px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+                <!-- Header -->
+                <tr>
+                    <td style="background: #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px;" th:text="'Selamat Datang di ' + ${appName} + '!'">Selamat Datang di skah.org!</h1>
+                    </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                    <td style="padding: 40px 30px;">
+                        <p style="font-size: 16px; margin: 0 0 20px 0;">
+                            Halo <strong th:text="${name}">User</strong>,
+                        </p>
+
+                        <p style="font-size: 16px; margin: 0 0 20px 0;">
+                            Terima kasih telah mendaftar di <span th:text="${appName}">skah.org</span>.
+                            Untuk melanjutkan, silakan verifikasi email Anda dengan mengklik tombol di bawah ini:
+                        </p>
+
+                        <!-- CTA Button -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td align="center" style="padding: 35px 0;">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                        <tr>
+                                            <td style="border-radius: 8px; background: #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                                <a th:href="${verificationLink}" target="_blank" class="button" style="display: inline-block; padding: 16px 45px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px; border-radius: 8px;">
+                                                    Verifikasi Email Saya
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Alternative Link -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td style="padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #667eea;">
+                                    <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">
+                                        <strong>Atau copy dan paste link berikut ke browser Anda:</strong>
+                                    </p>
+                                    <p style="font-size: 12px; word-break: break-all; background: white; padding: 12px; border-radius: 5px; border: 1px solid #ddd; color: #667eea; font-family: monospace; margin: 0;">
+                                        <span th:text="${verificationLink}">verification-link</span>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Warning -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                            <tr>
+                                <td style="padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 30px;">
+                                    <p style="font-size: 14px; color: #856404; margin: 0;">
+                                        ⏱️ Link verifikasi ini akan kadaluarsa dalam <strong>24 jam</strong>.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Disclaimer -->
+                        <p style="font-size: 14px; color: #666; margin: 30px 0 0 0;">
+                            Jika Anda tidak mendaftar di <span th:text="${appName}">skah.org</span>,
+                            abaikan email ini dan akun tidak akan dibuat.
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="background: #f8f9fa; padding: 25px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                        <p style="font-size: 12px; color: #6c757d; margin: 0 0 10px 0;">
+                            &copy; 2024 <span th:text="${appName}">skah.org</span>. All rights reserved.
+                        </p>
+                        <p style="font-size: 11px; color: #adb5bd; margin: 0;">
+                            Email ini dikirim secara otomatis, mohon tidak membalas email ini.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>

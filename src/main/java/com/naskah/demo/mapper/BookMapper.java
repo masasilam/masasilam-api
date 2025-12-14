@@ -10,7 +10,7 @@ import java.util.List;
 @Mapper
 public interface BookMapper {
     // Book creation methods
-    int countByTitleAndPublicationYear(@Param("title") String title, @Param("publicationYear") Integer publicationYear);
+    int countBySlug(@Param("slug") String slug);
     void insertBook(Book book);
     void insertBookGenre(@Param("bookId") Long bookId, @Param("genreId") Long genreId);
     void insertBookTag(@Param("bookId") Long bookId, @Param("tagId") Long tagId);
@@ -38,8 +38,10 @@ public interface BookMapper {
 
     // Book update/delete methods - fixed method names and parameter types
     Book getDetailEbook(@Param("id") Long id);  // Changed from String to Long
-    void updateEbook(Book book);
+    void updateBook(Book book);
     void deleteEbook(@Param("id") Long id);  // Changed from String to Long
 
     void incrementDownloadCount(@Param("id") Long id);
+
+    Book findById(Long bookId);
 }

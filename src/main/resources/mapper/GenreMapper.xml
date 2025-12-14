@@ -1,13 +1,77 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.naskah.demo.mapper.GenreMapper">
 
-    <select id="findGenresByBookId" resultType="com.naskah.demo.model.dto.response.GenreResponse">
-        SELECT
-        g.id, g.name, g.slug, g.color_hex, g.is_fiction
-        FROM genres g
-        INNER JOIN book_genres bg ON g.id = bg.genre_id
-        WHERE bg.book_id = #{bookId}
+    <!-- Result Map -->
+    <resultMap id="GenreResultMap" type="com.naskah.demo.model.entity.Genre">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- Find by name (exact match, case-insensitive) -->
+    <select id="findByName" resultMap="GenreResultMap">
+        SELECT id, name, slug, description, created_at
+        FROM genres
+        WHERE LOWER(name) = LOWER(#{name})
+        LIMIT 1
+    </select>
+
+    <!-- Find by slug -->
+    <select id="findBySlug" resultMap="GenreResultMap">
+        SELECT id, name, slug, description, created_at
+        FROM genres
+        WHERE slug = #{slug}
+        LIMIT 1
+    </select>
+
+    <!-- Find by ID -->
+    <select id="findById" resultMap="GenreResultMap">
+        SELECT id, name, slug, description, created_at
+        FROM genres
+        WHERE id = #{id}
+    </select>
+
+    <!-- Find all genres -->
+    <select id="findAll" resultMap="GenreResultMap">
+        SELECT id, name, slug, description, created_at
+        FROM genres
+        ORDER BY name ASC
+    </select>
+
+    <!-- Insert genre -->
+    <insert id="insertGenre" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO genres
+        (name, slug, description, created_at)
+        VALUES
+        (#{name}, #{slug}, #{description}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- Update genre -->
+    <update id="updateGenre">
+        UPDATE genres
+        SET
+        name = #{name},
+        slug = #{slug},
+        description = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Delete genre -->
+    <delete id="deleteGenre">
+        DELETE FROM genres
+        WHERE id = #{id}
+    </delete>
+
+    <!-- Count by name -->
+    <select id="countByName" resultType="int">
+        SELECT COUNT(*)
+        FROM genres
+        WHERE LOWER(name) = LOWER(#{name})
     </select>
 
 </mapper>

@@ -37,4 +37,6 @@ public interface NoteMapper {
 
     @Select("SELECT COUNT(*) FROM note_comments WHERE note_id = #{noteId}")
     Integer countCommentsByNoteId(@Param("noteId") Long noteId);
+
+    List<Note> findByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("page") Integer page);
 }

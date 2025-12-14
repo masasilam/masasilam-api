@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.BookReviewMapper">
+
+    <resultMap id="BookReviewResultMap" type="com.naskah.demo.model.entity.BookReview">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="helpfulCount" column="helpful_count"/>
+        <result property="notHelpfulCount" column="not_helpful_count"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.naskah.demo.model.entity.BookReview"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO book_reviews (user_id, book_id, title, content, helpful_count, not_helpful_count, reply_count, created_at, updated_at)
+        VALUES (#{userId}, #{bookId}, #{title}, #{content}, #{helpfulCount}, #{notHelpfulCount}, #{replyCount}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="com.naskah.demo.model.entity.BookReview">
+        UPDATE book_reviews
+        SET title = #{title},
+        content = #{content},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE book_reviews
+        SET deleted_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM book_reviews WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="BookReviewResultMap">
+        SELECT id, user_id, book_id, title, content, helpful_count, not_helpful_count, reply_count, created_at, updated_at, deleted_at
+        FROM book_reviews
+        WHERE id = #{id} AND deleted_at IS NULL
+    </select>
+
+    <select id="findByUserAndBook" resultMap="BookReviewResultMap">
+        SELECT id, user_id, book_id, title, content, helpful_count, not_helpful_count, reply_count, created_at, updated_at, deleted_at
+        FROM book_reviews
+        WHERE user_id = #{userId} AND book_id = #{bookId} AND deleted_at IS NULL
+    </select>
+
+    <select id="findByBookWithPagination" resultMap="BookReviewResultMap">
+        SELECT id, user_id, book_id, title, content, helpful_count, not_helpful_count, reply_count, created_at, updated_at, deleted_at
+        FROM book_reviews
+        WHERE book_id = #{bookId} AND deleted_at IS NULL
+        <choose>
+            <when test="sortBy == 'recent'">
+                ORDER BY created_at DESC
+            </when>
+            <when test="sortBy == 'oldest'">
+                ORDER BY created_at ASC
+            </when>
+            <when test="sortBy == 'helpful'">
+                ORDER BY helpful_count DESC, created_at DESC
+            </when>
+            <otherwise>
+                ORDER BY helpful_count DESC, created_at DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByBook" resultType="int">
+        SELECT COUNT(*)
+        FROM book_reviews
+        WHERE book_id = #{bookId} AND deleted_at IS NULL
+    </select>
+
+</mapper>

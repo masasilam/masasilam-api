@@ -1,12 +1,11 @@
 package com.naskah.demo.model.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthorResponse {
     private Long id;
     private String name;
@@ -15,5 +14,9 @@ public class AuthorResponse {
     private LocalDate deathDate;
     private String birthPlace;
     private String nationality;
+    private String biography;
     private String photoUrl;
+    private Integer totalBooks;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.BookRatingMapper">
+
+    <resultMap id="BookRatingResultMap" type="com.naskah.demo.model.entity.BookRating">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="rating" column="rating"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="BookRatingStatsResultMap" type="com.naskah.demo.model.dto.response.BookRatingStatsResponse">
+        <result property="bookId" column="book_id"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="totalRatings" column="total_ratings"/>
+        <result property="rating5Count" column="rating_5_count"/>
+        <result property="rating4Count" column="rating_4_count"/>
+        <result property="rating3Count" column="rating_3_count"/>
+        <result property="rating2Count" column="rating_2_count"/>
+        <result property="rating1Count" column="rating_1_count"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.naskah.demo.model.entity.BookRating"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO book_ratings (user_id, book_id, rating, created_at, updated_at)
+        VALUES (#{userId}, #{bookId}, #{rating}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="com.naskah.demo.model.entity.BookRating">
+        UPDATE book_ratings
+        SET rating = #{rating},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM book_ratings WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="BookRatingResultMap">
+        SELECT id, user_id, book_id, rating, created_at, updated_at
+        FROM book_ratings
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByUserAndBook" resultMap="BookRatingResultMap">
+        SELECT id, user_id, book_id, rating, created_at, updated_at
+        FROM book_ratings
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+    </select>
+
+    <select id="getBookRatingStats" resultMap="BookRatingStatsResultMap">
+        SELECT
+        #{bookId} as book_id,
+        COALESCE(AVG(rating), 0) as average_rating,
+        COUNT(*) as total_ratings,
+        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as rating_5_count,
+        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as rating_4_count,
+        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as rating_3_count,
+        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as rating_2_count,
+        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as rating_1_count
+        FROM book_ratings
+        WHERE book_id = #{bookId}
+    </select>
+
+</mapper>

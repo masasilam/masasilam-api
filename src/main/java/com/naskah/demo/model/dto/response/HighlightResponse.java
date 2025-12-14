@@ -15,4 +15,5 @@ public class HighlightResponse {
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private ChapterNavigationInfo chapter;
 }

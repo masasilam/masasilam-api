@@ -9,7 +9,7 @@
     </select>
 
     <insert id="insertContributor" parameterType="com.naskah.demo.model.entity.Contributor" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO authors
+        INSERT INTO contributors
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="name != null">name,</if>
             <if test="slug != null">slug,</if>
@@ -22,8 +22,8 @@
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="name != null">#{name},</if>
             <if test="slug != null">#{slug},</if>
-            <if test="role != null">role,</if>
-            <if test="websiteUrl != null">website_url,</if>
+            <if test="role != null">#{role},</if>
+            <if test="websiteUrl != null">#{websiteUrl},</if>
             #{createdAt},
             #{updatedAt},
         </trim>

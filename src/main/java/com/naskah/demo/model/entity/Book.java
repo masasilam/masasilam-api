@@ -18,7 +18,6 @@ public class Book {
     private String publisher;
     private Integer languageId;
     private String description;
-    private String summary;
     private String coverImageUrl;
     private String coverImagePath;
     private String fileUrl;

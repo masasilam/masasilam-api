@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.BookChapterMapper">
+
+    <!-- Result Map -->
+    <resultMap id="ChapterResultMap" type="com.naskah.demo.model.entity.BookChapter">
+        <id property="id" column="id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="chapterNumber" column="chapter_number"/>
+        <result property="parentChapterId" column="parent_chapter_id"/>
+        <result property="chapterLevel" column="chapter_level"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="content" column="content"/>
+        <result property="htmlContent" column="html_content"/>
+        <result property="wordCount" column="word_count"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Insert Chapter -->
+    <insert id="insertChapter" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO book_chapters (
+        book_id,
+        chapter_number,
+        parent_chapter_id,
+        chapter_level,
+        title,
+        slug,
+        content,
+        html_content,
+        word_count,
+        created_at,
+        updated_at
+        )
+        VALUES (
+        #{bookId},
+        #{chapterNumber},
+        #{parentChapterId},
+        #{chapterLevel},
+        #{title},
+        #{slug},
+        #{content},
+        #{htmlContent},
+        #{wordCount},
+        #{createdAt},
+        #{updatedAt}
+        )
+    </insert>
+
+    <!-- Find Chapter by Number -->
+    <select id="findChapterByNumber" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId} AND chapter_number = #{chapterNumber}
+    </select>
+
+    <!-- Find Chapter by ID -->
+    <select id="findChapterById" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE id = #{id}
+    </select>
+
+    <!-- Find All Chapters by Book ID -->
+    <select id="findChaptersByBookId" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId}
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- Find Sub-Chapters by Parent Chapter ID -->
+    <select id="findSubChapters" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE parent_chapter_id = #{parentChapterId}
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- Find Main Chapters Only (Level 1) -->
+    <select id="findMainChapters" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND (parent_chapter_id IS NULL OR chapter_level = 1)
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- Find Chapters by Level -->
+    <select id="findChaptersByLevel" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId} AND chapter_level = #{level}
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- Search in Book Content -->
+    <select id="searchInBook" resultMap="ChapterResultMap">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND (
+        title ILIKE CONCAT('%', #{query}, '%')
+        OR content ILIKE CONCAT('%', #{query}, '%')
+        )
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- Delete All Chapters by Book ID -->
+    <delete id="deleteChaptersByBookId">
+        DELETE FROM book_chapters WHERE book_id = #{bookId}
+    </delete>
+
+    <!-- Update Chapter -->
+    <update id="updateChapter">
+        UPDATE book_chapters
+        SET title = #{title},
+        slug = #{slug},
+        content = #{content},
+        html_content = #{htmlContent},
+        word_count = #{wordCount},
+        parent_chapter_id = #{parentChapterId},
+        chapter_level = #{chapterLevel},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Count Chapters by Book ID -->
+    <select id="countChaptersByBookId" resultType="int">
+        SELECT COUNT(*) FROM book_chapters WHERE book_id = #{bookId}
+    </select>
+
+    <!-- Count Main Chapters Only -->
+    <select id="countMainChapters" resultType="int">
+        SELECT COUNT(*) FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND (parent_chapter_id IS NULL OR chapter_level = 1)
+    </select>
+
+    <!-- Count Sub-Chapters -->
+    <select id="countSubChapters" resultType="int">
+        SELECT COUNT(*) FROM book_chapters
+        WHERE parent_chapter_id = #{parentChapterId}
+    </select>
+
+    <!-- ✅ Find Chapter by Slug and Parent (handles NULL parent properly) -->
+    <select id="findChapterBySlugAndParent" resultMap="ChapterResultMap">
+        SELECT *
+        FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND slug = #{slug}
+        AND (
+        <choose>
+            <when test="parentId != null">
+                parent_chapter_id = #{parentId}
+            </when>
+            <otherwise>
+                parent_chapter_id IS NULL
+            </otherwise>
+        </choose>
+        )
+    </select>
+
+    <select id="findChaptersByBookAndNumbers" resultType="BookChapter">
+        SELECT * FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND chapter_number IN
+        <foreach item="num" collection="chapterNumbers" open="(" separator="," close=")">
+            #{num}
+        </foreach>
+    </select>
+
+    <select id="findChaptersByIds" resultType="BookChapter">
+        SELECT * FROM book_chapters
+        WHERE id IN
+        <foreach item="id" collection="ids" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

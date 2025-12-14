@@ -166,9 +166,9 @@ public class ProjectServiceImpl implements ProjectService {
 
                             case EPUB:
                                 try {
-                                    List<String> extractedContent = FileUtil.extractTextFromEPUB(filePath);
-                                    pages = FileUtil.createEPUBPages(project.getId(),
-                                            file.getOriginalFilename(), extractedContent);
+//                                    List<String> extractedContent = FileUtil.extractTextFromEPUB(filePath);
+//                                    pages = FileUtil.createEPUBPages(project.getId(),
+//                                            file.getOriginalFilename(), extractedContent);
                                     pagesCreated = pages.size();
                                 } catch (Exception e) {
                                     log.error("Failed to process EPUB file {}: {}", file.getOriginalFilename(), e.getMessage());
