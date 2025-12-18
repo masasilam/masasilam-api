@@ -53,18 +53,24 @@
         WHERE user_id = #{userId} AND book_id = #{bookId}
     </select>
 
-    <select id="getBookRatingStats" resultMap="BookRatingStatsResultMap">
+    <select id="getBookRatingStats" resultType="com.naskah.demo.model.dto.response.BookRatingStatsResponse">
         SELECT
-        #{bookId} as book_id,
-        COALESCE(AVG(rating), 0) as average_rating,
-        COUNT(*) as total_ratings,
-        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as rating_5_count,
-        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as rating_4_count,
-        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as rating_3_count,
-        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as rating_2_count,
-        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as rating_1_count
+        #{bookId} AS bookId,
+        COALESCE(AVG(rating), 0.0) AS averageRating,
+        COALESCE(COUNT(*), 0) AS totalRatings,
+        COALESCE(SUM(CASE WHEN rating = 5.0 THEN 1 ELSE 0 END), 0) AS rating50Count,
+        COALESCE(SUM(CASE WHEN rating = 4.5 THEN 1 ELSE 0 END), 0) AS rating45Count,
+        COALESCE(SUM(CASE WHEN rating = 4.0 THEN 1 ELSE 0 END), 0) AS rating40Count,
+        COALESCE(SUM(CASE WHEN rating = 3.5 THEN 1 ELSE 0 END), 0) AS rating35Count,
+        COALESCE(SUM(CASE WHEN rating = 3.0 THEN 1 ELSE 0 END), 0) AS rating30Count,
+        COALESCE(SUM(CASE WHEN rating = 2.5 THEN 1 ELSE 0 END), 0) AS rating25Count,
+        COALESCE(SUM(CASE WHEN rating = 2.0 THEN 1 ELSE 0 END), 0) AS rating20Count,
+        COALESCE(SUM(CASE WHEN rating = 1.5 THEN 1 ELSE 0 END), 0) AS rating15Count,
+        COALESCE(SUM(CASE WHEN rating = 1.0 THEN 1 ELSE 0 END), 0) AS rating10Count,
+        COALESCE(SUM(CASE WHEN rating = 0.5 THEN 1 ELSE 0 END), 0) AS rating05Count
         FROM book_ratings
         WHERE book_id = #{bookId}
+        AND rating IS NOT NULL
     </select>
 
 </mapper>

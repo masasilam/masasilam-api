@@ -23,9 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * Service untuk processing EPUB files dengan HTML & Images support
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -43,10 +40,10 @@ public class EpubServiceImpl implements EpubService {
             EpubReader reader = new EpubReader();
             nl.siegmann.epublib.domain.Book epubBook = reader.readEpub(is);
 
-            // ✅ 1. Parse TOC untuk mendapatkan struktur hierarki
+            // 1. Parse TOC structure
             Map<String, ChapterHierarchy> tocStructure = parseTocStructure(epubBook);
 
-            // ✅ 2. Extract chapters dengan hierarki
+            // 2. Extract chapters with hierarchy
             List<BookChapter> chapters = extractAndSaveChaptersWithHierarchy(
                     epubBook, book.getId(), tocStructure
             );
@@ -84,7 +81,6 @@ public class EpubServiceImpl implements EpubService {
         }
     }
 
-    // ✅ Helper class untuk menyimpan struktur hierarki
     private static class ChapterHierarchy {
         String href;
         String title;
@@ -100,7 +96,7 @@ public class EpubServiceImpl implements EpubService {
     }
 
     /**
-     * ✅ FIXED: Extract chapters WITH CORRECT ORDER and parent relationships
+     * ✅ FIX 3: Extract chapters WITHOUT sub-chapter content
      */
     private List<BookChapter> extractAndSaveChaptersWithHierarchy(
             nl.siegmann.epublib.domain.Book epubBook,
@@ -112,14 +108,15 @@ public class EpubServiceImpl implements EpubService {
 
         log.info("TOC contains {} entries", tocStructure.size());
 
-        // ✅ CRITICAL: Process TOC in ORDER, not spine order
+        // Process TOC in ORDER
         List<ChapterHierarchy> orderedToc = getOrderedTocEntries(epubBook);
-
         log.info("Processing {} TOC entries in correct order", orderedToc.size());
 
         int chapterNumber = 0;
 
-        for (ChapterHierarchy hierarchy : orderedToc) {
+        for (int i = 0; i < orderedToc.size(); i++) {
+            ChapterHierarchy hierarchy = orderedToc.get(i);
+
             try {
                 chapterNumber++;
 
@@ -157,34 +154,42 @@ public class EpubServiceImpl implements EpubService {
                 String content;
                 String htmlContentStr;
 
+                // ✅ FIX 3: Stop at next TOC entry in same file
                 if (anchorId != null) {
-                    // Extract content from anchor
+                    // This is a sub-chapter with anchor (e.g., #sigil_toc_id_1)
+                    // Get next TOC entry to know where to stop
+                    String nextAnchorInSameFile = null;
+                    for (int j = i + 1; j < orderedToc.size(); j++) {
+                        ChapterHierarchy next = orderedToc.get(j);
+                        if (next.href.startsWith(fileName + "#")) {
+                            nextAnchorInSameFile = next.href.split("#")[1];
+                            break;
+                        } else if (!next.href.startsWith(fileName)) {
+                            // Next chapter is in different file
+                            break;
+                        }
+                    }
+
+                    // Extract content from anchor to next anchor (or end)
                     Element startElement = doc.getElementById(anchorId);
                     if (startElement != null) {
-                        // Get content from this anchor to next anchor or end
                         StringBuilder sb = new StringBuilder();
                         StringBuilder htmlSb = new StringBuilder();
 
                         Element current = startElement;
-
-                        // Collect all anchor IDs in this file for boundary detection
-                        Set<String> allAnchors = new HashSet<>();
-                        for (ChapterHierarchy ch : orderedToc) {
-                            if (ch.href.startsWith(fileName + "#")) {
-                                allAnchors.add(ch.href.split("#")[1]);
-                            }
-                        }
-
                         boolean started = false;
+
                         while (current != null) {
                             if (!started && current.id().equals(anchorId)) {
                                 started = true;
                             }
 
                             if (started) {
-                                // Stop if we hit another anchor (except our own)
-                                if (!current.id().isEmpty() && !current.id().equals(anchorId)
-                                        && allAnchors.contains(current.id())) {
+                                // ✅ Stop if we hit the next anchor
+                                if (!current.id().isEmpty()
+                                        && !current.id().equals(anchorId)
+                                        && current.id().equals(nextAnchorInSameFile)) {
+                                    log.debug("Stopping at next anchor: {}", nextAnchorInSameFile);
                                     break;
                                 }
 
@@ -203,19 +208,85 @@ public class EpubServiceImpl implements EpubService {
                         htmlContentStr = doc.body().html();
                     }
                 } else {
-                    // No anchor - use entire document
-                    content = doc.body().text().trim();
-                    htmlContentStr = doc.body().html();
+                    // No anchor - this is a parent chapter
+                    // Check if there are sub-chapters (anchors) in this file
+                    String firstSubAnchor = null;
+                    for (int j = i + 1; j < orderedToc.size(); j++) {
+                        ChapterHierarchy next = orderedToc.get(j);
+                        if (next.href.startsWith(fileName + "#")) {
+                            // Found a sub-chapter in the same file
+                            firstSubAnchor = next.href.split("#")[1];
+                            log.debug("Found sub-chapter anchor in same file: {}", firstSubAnchor);
+                            break;
+                        } else if (!next.href.startsWith(fileName)) {
+                            // Next TOC entry is in different file
+                            break;
+                        }
+                    }
+
+                    if (firstSubAnchor != null) {
+                        // ✅ Parent chapter: Extract ONLY content BEFORE first sub-chapter
+                        Element stopElement = doc.getElementById(firstSubAnchor);
+
+                        if (stopElement != null) {
+                            // Extract elements inside <section> but before the anchor
+                            Element sectionElement = doc.select("section.chapter").first();
+
+                            if (sectionElement != null) {
+                                StringBuilder sb = new StringBuilder();
+                                StringBuilder htmlSb = new StringBuilder();
+
+                                // Add section opening tag
+                                htmlSb.append("<section class=\"chapter\" epub:type=\"chapter\">\n");
+
+                                // Iterate through children and stop at anchor
+                                for (Element child : sectionElement.children()) {
+                                    // Stop when we reach the anchor element
+                                    if (child.id().equals(firstSubAnchor)) {
+                                        log.debug("Stopped before sub-chapter anchor: {}", firstSubAnchor);
+                                        break;
+                                    }
+
+                                    // Check if any descendant has the anchor ID
+                                    if (child.getElementById(firstSubAnchor) != null) {
+                                        log.debug("Found anchor inside child, stopping here");
+                                        break;
+                                    }
+
+                                    sb.append(child.text()).append("\n");
+                                    htmlSb.append(child.outerHtml()).append("\n");
+                                }
+
+                                // Add section closing tag
+                                htmlSb.append("</section>");
+
+                                content = sb.toString().trim();
+                                htmlContentStr = htmlSb.toString();
+
+                                log.info("Extracted parent chapter content, stopped before: {}", firstSubAnchor);
+                            } else {
+                                // Fallback if section not found
+                                content = doc.body().text().trim();
+                                htmlContentStr = doc.body().html();
+                            }
+                        } else {
+                            log.warn("Sub-chapter anchor element not found: {}", firstSubAnchor);
+                            content = doc.body().text().trim();
+                            htmlContentStr = doc.body().html();
+                        }
+                    } else {
+                        // No sub-chapters - use entire document
+                        content = doc.body().text().trim();
+                        htmlContentStr = doc.body().html();
+                    }
                 }
 
                 int wordCount = FileUtil.countWords(content);
 
-                // ✅ CRITICAL: Find parent chapter ID correctly
+                // Find parent chapter ID
                 Long parentChapterId = null;
                 if (hierarchy.parentHref != null && !hierarchy.parentHref.isEmpty()) {
-                    // Parent is the chapter with matching href
                     parentChapterId = hrefToChapterId.get(hierarchy.parentHref);
-
                     if (parentChapterId == null) {
                         log.warn("Parent chapter not found for href: {} (looking for parent: {})",
                                 fullHref, hierarchy.parentHref);
@@ -239,7 +310,6 @@ public class EpubServiceImpl implements EpubService {
                 chapterMapper.insertChapter(chapter);
                 chapters.add(chapter);
 
-                // ✅ Track this chapter by its FULL href (including anchor)
                 hrefToChapterId.put(fullHref, chapter.getId());
 
                 log.info("Saved chapter {} (Level {}): {} [Parent: {}]",
@@ -257,9 +327,6 @@ public class EpubServiceImpl implements EpubService {
         return chapters;
     }
 
-    /**
-     * ✅ Get TOC entries in correct order by parsing TOC structure
-     */
     private List<ChapterHierarchy> getOrderedTocEntries(nl.siegmann.epublib.domain.Book epubBook) {
         List<ChapterHierarchy> ordered = new ArrayList<>();
 
@@ -289,9 +356,6 @@ public class EpubServiceImpl implements EpubService {
         return ordered;
     }
 
-    /**
-     * ✅ Parse TOC recursively maintaining order and parent relationships
-     */
     private void parseOrderedToc(Element ol, List<ChapterHierarchy> ordered,
                                  int level, String parentHref) {
         if (ol == null) return;
@@ -305,39 +369,29 @@ public class EpubServiceImpl implements EpubService {
             String href = link.attr("href");
             String title = link.text();
 
-            // Create hierarchy entry
             ChapterHierarchy ch = new ChapterHierarchy(href, title, level, parentHref);
             ordered.add(ch);
 
             log.debug("TOC Order #{}: Level {} - {} -> {} (parent: {})",
                     ordered.size(), level, title, href, parentHref);
 
-            // Check for nested <ol> (sub-chapters)
             Element nestedOl = li.select("> ol").first();
             if (nestedOl != null) {
-                // ✅ Pass current href as parent for nested items
                 parseOrderedToc(nestedOl, ordered, level + 1, href);
             }
         }
     }
 
-    /**
-     * ✅ Find resource by filename (handles path variations)
-     */
     private Resource findResource(nl.siegmann.epublib.domain.Book epubBook, String fileName) {
-        // Try exact match
         Resource res = epubBook.getResources().getByHref(fileName);
         if (res != null) return res;
 
-        // Try with Text/ prefix
         res = epubBook.getResources().getByHref("Text/" + fileName);
         if (res != null) return res;
 
-        // Try with OEBPS/Text/ prefix
         res = epubBook.getResources().getByHref("OEBPS/Text/" + fileName);
         if (res != null) return res;
 
-        // Search through all resources
         for (Resource r : epubBook.getResources().getAll()) {
             if (r.getHref().endsWith(fileName)) {
                 return r;
@@ -347,9 +401,6 @@ public class EpubServiceImpl implements EpubService {
         return null;
     }
 
-    /**
-     * ✅ Parse TOC untuk mendapatkan struktur hierarki chapter
-     */
     private Map<String, ChapterHierarchy> parseTocStructure(nl.siegmann.epublib.domain.Book epubBook) {
         Map<String, ChapterHierarchy> structure = new HashMap<>();
 
@@ -380,9 +431,6 @@ public class EpubServiceImpl implements EpubService {
         return structure;
     }
 
-    /**
-     * Parse TOC recursively (kept for backwards compatibility)
-     */
     private void parseTocRecursive(Element ol, Map<String, ChapterHierarchy> structure,
                                    int level, String parentHref) {
         if (ol == null) return;
@@ -405,20 +453,13 @@ public class EpubServiceImpl implements EpubService {
         }
     }
 
-    /**
-     * Extract image dari EPUB dan upload ke Cloudinary
-     */
     private String extractAndUploadChapterImage(nl.siegmann.epublib.domain.Book epubBook,
                                                 String imagePath, Long bookId) {
         try {
-            // Normalize path (remove ../)
             String normalizedPath = imagePath.replace("../", "");
-
-            // Find image resource in EPUB
             Resource imageResource = epubBook.getResources().getByHref(normalizedPath);
 
             if (imageResource == null) {
-                // Try alternative paths
                 String[] alternatives = {
                         "Images/" + imagePath,
                         imagePath.replace("Images/", ""),
@@ -439,7 +480,6 @@ public class EpubServiceImpl implements EpubService {
             byte[] imageData = imageResource.getData();
             String fileName = normalizedPath.substring(normalizedPath.lastIndexOf("/") + 1);
 
-            // Upload to Cloudinary
             String cloudinaryUrl = FileUtil.uploadChapterImageFromBytes(
                     imageData,
                     bookId,
@@ -455,19 +495,12 @@ public class EpubServiceImpl implements EpubService {
         }
     }
 
-    /**
-     * Extract cover image dari EPUB dan upload ke Cloudinary
-     */
     private String extractAndUploadCover(Resource coverResource, Long bookId, String bookTitle) {
         try {
             byte[] imageData = coverResource.getData();
-
-            // Use FileUtil to upload cover image
             String coverUrl = FileUtil.uploadBookCoverFromBytes(imageData, bookTitle, bookId);
-
             log.info("Uploaded EPUB cover image: {}", coverUrl);
             return coverUrl;
-
         } catch (Exception e) {
             log.error("Failed to upload EPUB cover image: {}", e.getMessage());
             return null;

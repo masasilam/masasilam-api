@@ -8,7 +8,7 @@ public class Highlight {
     private Long id;
     private Long userId;
     private Long bookId;
-    private Integer page;
+    private Integer chapterNumber;
     private String startPosition;
     private String endPosition;
     private String highlightedText;

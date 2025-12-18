@@ -4,13 +4,13 @@
 
     <select id="findByUserBookAndPage" resultType="com.naskah.demo.model.entity.Note">
         SELECT
-        id, user_id, book_id, page, position, title,
+        id, user_id, book_id, chapter_number, position, title,
         content, color, is_private, created_at, updated_at
         FROM notes
         WHERE user_id = #{userId}
         AND book_id = #{bookId}
         <if test="page != null">
-            AND page = #{page}
+            AND chapter_number = #{page}
         </if>
         ORDER BY created_at DESC
     </select>

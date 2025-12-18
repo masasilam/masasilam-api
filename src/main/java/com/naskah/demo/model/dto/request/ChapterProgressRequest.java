@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class ChapterProgressRequest {
-    private Integer position; // Current scroll position or percentage
+    private Integer position;
     private Integer readingTimeSeconds;
     private Boolean isCompleted;
 }

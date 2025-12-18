@@ -1,5 +1,6 @@
 package com.naskah.demo.controller.book;
 
+import com.naskah.demo.model.dto.BookSearchCriteria;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
@@ -68,30 +69,55 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get paginated books with filters
-     *
-     * @param page - Page number (default: 1)
-     * @param limit - Items per page (default: 10)
-     * @param sortField - Sort by field (updateAt, title, publishedAt, author, etc.)
-     * @param sortOrder - ASC or DESC
-     * @param searchTitle - Filter by title (optional)
-     * @param seriesId - Filter by series (optional)
-     * @param genreId - Filter by genre (optional)
-     * @param subGenreId - Filter by sub-genre (optional)
-     */
     @GetMapping
     public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "10") @Min(1) int limit,
-            @RequestParam(defaultValue = "updateAt", required = false) String sortField,
-            @RequestParam(defaultValue = "DESC", required = false) String sortOrder,
+            @RequestParam(defaultValue = "12") @Min(1) int limit,
+            @RequestParam(defaultValue = "updateAt") String sortField,
+            @RequestParam(defaultValue = "DESC") String sortOrder,
             @RequestParam(required = false) String searchTitle,
-            @RequestParam(required = false) Long seriesId,
-            @RequestParam(required = false) Long genreId,
-            @RequestParam(required = false) Long subGenreId) {
+            @RequestParam(required = false) String searchInBook,
+            @RequestParam(required = false) String authorName,
+            @RequestParam(required = false) String contributor,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) Integer minPages,
+            @RequestParam(required = false) Integer maxPages,
+            @RequestParam(required = false) Long minFileSize,
+            @RequestParam(required = false) Long maxFileSize,
+            @RequestParam(required = false) Integer publicationYearFrom,
+            @RequestParam(required = false) Integer publicationYearTo,
+            @RequestParam(required = false) String difficultyLevel,
+            @RequestParam(required = false) String fileFormat,
+            @RequestParam(required = false) Boolean isFeatured,
+            @RequestParam(required = false) Integer languageId,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Integer minViewCount,
+            @RequestParam(required = false) Integer minReadCount) {
+
+        BookSearchCriteria criteria = BookSearchCriteria.builder()
+                .searchTitle(searchTitle)
+                .searchInBook(searchInBook)
+                .authorName(authorName)
+                .contributor(contributor)
+                .genre(genre)  // Changed to genre
+                .minPages(minPages)
+                .maxPages(maxPages)
+                .minFileSize(minFileSize)
+                .maxFileSize(maxFileSize)
+                .publicationYearFrom(publicationYearFrom)
+                .publicationYearTo(publicationYearTo)
+                .difficultyLevel(difficultyLevel)
+                .fileFormat(fileFormat)
+                .isFeatured(isFeatured)
+                .languageId(languageId)
+                .minRating(minRating)
+                .minViewCount(minViewCount)
+                .minReadCount(minReadCount)
+                .build();
+
         DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(
-                page, limit, sortField, sortOrder, searchTitle, seriesId, genreId, subGenreId);
+                page, limit, sortField, sortOrder, criteria);
+
         return ResponseEntity.ok(response);
     }
 

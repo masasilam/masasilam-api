@@ -102,11 +102,16 @@ public class BookReactionServiceImpl implements BookReactionService {
                 stats.setBookId(book.getId());
                 stats.setAverageRating(0.0);
                 stats.setTotalRatings(0L);
-                stats.setRating5Count(0);
-                stats.setRating4Count(0);
-                stats.setRating3Count(0);
-                stats.setRating2Count(0);
-                stats.setRating1Count(0);
+                stats.setRating50Count(0);
+                stats.setRating45Count(0);
+                stats.setRating40Count(0);
+                stats.setRating35Count(0);
+                stats.setRating30Count(0);
+                stats.setRating25Count(0);
+                stats.setRating20Count(0);
+                stats.setRating15Count(0);
+                stats.setRating10Count(0);
+                stats.setRating05Count(0);
             }
 
             return new DataResponse<>(SUCCESS, "Book rating stats retrieved successfully",

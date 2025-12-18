@@ -25,4 +25,30 @@ public interface BookChapterService {
     DataResponse<Void> deleteChapterHighlight(String slug, Integer chapterNumber, Long highlightId);
     DataResponse<Void> deleteChapterNote(String slug, Integer chapterNumber, Long noteId);
     DataResponse<ChapterReadingResponse> readChapterBySlugPath(String bookSlug, String chapterPath);
+
+    DataResponse<ChapterRatingResponse> rateChapter(String slug, Integer chapterNumber, ChapterRatingRequest request);
+
+    DataResponse<ChapterRatingSummaryResponse> getChapterRatingSummary(String slug, Integer chapterNumber);
+
+    DataResponse<Void> deleteChapterRating(String slug, Integer chapterNumber);
+
+    DataResponse<Void> startReading(String slug, StartReadingRequest request);
+
+    DataResponse<Void> endReading(String slug, EndReadingRequest request);
+
+    DataResponse<ReadingHistoryResponse> getReadingHistory(String slug);
+
+    DataResponse<UserReadingPatternResponse> getUserReadingPattern(String slug);
+
+    DataResponse<SearchInBookResponse> searchInBook(String slug, SearchInBookRequest request);
+
+    DataResponse<ExportAnnotationsResponse> exportAnnotations(String slug, ExportAnnotationsRequest request);
+
+    DataResponse<ExportHistoryResponse> getExportHistory(int page, int limit);
+
+    DataResponse<UserBookDataResponse> getMyBookData(String slug);
+
+    DataResponse<BookAnalyticsResponse> getBookAnalytics(String slug, String dateFrom, String dateTo);
+
+    DataResponse<List<ChapterAnalyticsResponse>> getChaptersAnalytics(String slug);
 }

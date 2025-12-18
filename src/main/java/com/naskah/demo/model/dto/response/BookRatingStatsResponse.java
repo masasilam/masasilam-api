@@ -7,9 +7,14 @@ public class BookRatingStatsResponse {
     private Long bookId;
     private Double averageRating;
     private Long totalRatings;
-    private Integer rating5Count;
-    private Integer rating4Count;
-    private Integer rating3Count;
-    private Integer rating2Count;
-    private Integer rating1Count;
+    private Integer rating50Count;
+    private Integer rating45Count;
+    private Integer rating40Count;
+    private Integer rating35Count;
+    private Integer rating30Count;
+    private Integer rating25Count;
+    private Integer rating20Count;
+    private Integer rating15Count;
+    private Integer rating10Count;
+    private Integer rating05Count;
 }

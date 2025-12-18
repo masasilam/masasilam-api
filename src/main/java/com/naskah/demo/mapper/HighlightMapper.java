@@ -4,6 +4,7 @@ import com.naskah.demo.model.entity.Highlight;
 import com.naskah.demo.model.dto.response.HighlightTrendsResponse;
 import org.apache.ibatis.annotations.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -52,4 +53,70 @@ public interface HighlightMapper {
             @Param("bookId") Long bookId,
             @Param("page") Integer page
     );
+
+    @Select("SELECT * FROM highlights WHERE user_id = #{userId} " +
+            "ORDER BY created_at DESC")
+    List<Highlight> findByUser(@Param("userId") Long userId);
+
+    @Select("SELECT * FROM highlights WHERE user_id = #{userId} " +
+            "AND created_at >= #{since} " +
+            "ORDER BY created_at DESC")
+    List<Highlight> findByUserSince(
+            @Param("userId") Long userId,
+            @Param("since") LocalDateTime since);
+
+    @Select("SELECT * FROM highlights " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "ORDER BY chapter_number, created_at")
+    List<Highlight> findByUserAndBook(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
+
+    @Select("SELECT COUNT(*) FROM highlights WHERE user_id = #{userId}")
+    Integer countByUser(@Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM highlights " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId}")
+    Integer countByBookAndUser(
+            @Param("bookId") Long bookId,
+            @Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM highlights " +
+            "WHERE user_id = #{userId} AND is_reviewed = false")
+    Integer countUnreadByUser(@Param("userId") Long userId);
+
+    @Select("SELECT * FROM highlights WHERE id = #{id}")
+    Highlight findById(@Param("id") Long id);
+
+    @Insert("INSERT INTO highlights " +
+            "(user_id, book_id, chapter_number, highlighted_text, color, " +
+            "start_offset, end_offset, created_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{highlightedText}, " +
+            "#{color}, #{startOffset}, #{endOffset}, NOW())")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    void insert(Highlight highlight);
+
+    @Update("UPDATE highlights SET " +
+            "color = #{color}, " +
+            "is_reviewed = #{isReviewed}, " +
+            "updated_at = NOW() " +
+            "WHERE id = #{id}")
+    void update(Highlight highlight);
+
+    @Delete("DELETE FROM highlights WHERE id = #{id}")
+    void delete(@Param("id") Long id);
+
+    @Select("SELECT * FROM highlights " +
+            "WHERE user_id = #{userId} " +
+            "ORDER BY created_at DESC LIMIT #{limit}")
+    List<Highlight> findRecentByUser(
+            @Param("userId") Long userId,
+            @Param("limit") int limit);
+
+
+    @Select("SELECT COUNT(*) FROM highlights " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId}")
+    Integer countByUserAndBook(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
 }

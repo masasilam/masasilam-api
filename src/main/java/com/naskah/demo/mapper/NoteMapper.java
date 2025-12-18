@@ -4,6 +4,7 @@ import com.naskah.demo.model.entity.Note;
 import com.naskah.demo.model.entity.NoteComment;
 import org.apache.ibatis.annotations.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -39,4 +40,70 @@ public interface NoteMapper {
     Integer countCommentsByNoteId(@Param("noteId") Long noteId);
 
     List<Note> findByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("page") Integer page);
+
+    @Select("SELECT * FROM notes WHERE user_id = #{userId} " +
+            "ORDER BY created_at DESC")
+    List<Note> findByUser(@Param("userId") Long userId);
+
+    @Select("SELECT * FROM notes WHERE user_id = #{userId} " +
+            "AND created_at >= #{since} " +
+            "ORDER BY created_at DESC")
+    List<Note> findByUserSince(
+            @Param("userId") Long userId,
+            @Param("since") LocalDateTime since);
+
+    @Select("SELECT * FROM notes " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "ORDER BY chapter_number, created_at")
+    List<Note> findByUserAndBook(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
+
+    @Select("SELECT COUNT(*) FROM notes WHERE user_id = #{userId}")
+    Integer countByUser(@Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM notes " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId}")
+    Integer countByBookAndUser(
+            @Param("bookId") Long bookId,
+            @Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM notes " +
+            "WHERE user_id = #{userId} AND is_draft = true")
+    Integer countDraftsByUser(@Param("userId") Long userId);
+
+    @Select("SELECT * FROM notes WHERE id = #{id}")
+    Note findById(@Param("id") Long id);
+
+    @Insert("INSERT INTO notes " +
+            "(user_id, book_id, chapter_number, note_text, note_type, " +
+            "is_draft, created_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{noteText}, " +
+            "#{noteType}, #{isDraft}, NOW())")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    void insert(Note note);
+
+    @Update("UPDATE notes SET " +
+            "note_text = #{noteText}, " +
+            "note_type = #{noteType}, " +
+            "is_draft = #{isDraft}, " +
+            "updated_at = NOW() " +
+            "WHERE id = #{id}")
+    void update(Note note);
+
+    @Delete("DELETE FROM notes WHERE id = #{id}")
+    void delete(@Param("id") Long id);
+
+    @Select("SELECT * FROM notes " +
+            "WHERE user_id = #{userId} " +
+            "ORDER BY created_at DESC LIMIT #{limit}")
+    List<Note> findRecentByUser(
+            @Param("userId") Long userId,
+            @Param("limit") int limit);
+
+    @Select("SELECT COUNT(*) FROM notes " +
+            "WHERE user_id = #{userId} AND book_id = #{bookId}")
+    Integer countByUserAndBook(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
 }

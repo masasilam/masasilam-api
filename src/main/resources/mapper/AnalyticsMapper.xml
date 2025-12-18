@@ -2,6 +2,229 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.naskah.demo.mapper.AnalyticsMapper">
 
+    <!-- Get book overview metrics -->
+    <select id="getBookOverviewMetrics" resultType="java.util.HashMap">
+        SELECT
+        COUNT(DISTINCT ral.user_id) as total_readers,
+        COUNT(DISTINCT CASE WHEN ral.started_at >= NOW() - INTERVAL '30 days'
+        THEN ral.user_id END) as active_readers,
+        COUNT(DISTINCT CASE WHEN ral.started_at >= #{startDate}
+        THEN ral.user_id END) as new_readers,
+        AVG(CASE WHEN cp.is_completed THEN 100.0 ELSE 0 END) as avg_completion_rate,
+        AVG(ral.duration_seconds) / 60 as avg_reading_time,
+        AVG(cr.rating) as avg_rating,
+        COUNT(DISTINCT cr.id) as total_ratings,
+        COUNT(DISTINCT crv.id) as total_reviews
+        FROM reading_activity_log ral
+        LEFT JOIN chapter_progress cp ON ral.user_id = cp.user_id AND ral.book_id = cp.book_id
+        LEFT JOIN chapter_ratings cr ON ral.book_id = cr.book_id
+        LEFT JOIN chapter_reviews crv ON ral.book_id = crv.book_id
+        WHERE ral.book_id = #{bookId}
+        AND (#{startDate} IS NULL OR ral.started_at >= #{startDate})
+        AND (#{endDate} IS NULL OR ral.started_at &lt;= #{endDate})
+    </select>
+
+    <!-- Get readers by device -->
+    <select id="getReadersByDevice" resultType="java.util.HashMap">
+        SELECT
+        device_type,
+        COUNT(DISTINCT user_id) as count
+        FROM reading_activity_log
+        WHERE book_id = #{bookId}
+        AND (#{startDate} IS NULL OR started_at >= #{startDate})
+        AND (#{endDate} IS NULL OR started_at &lt;= #{endDate})
+        GROUP BY device_type
+    </select>
+
+    <!-- Get reading hour distribution -->
+    <select id="getReadingHourDistribution" resultType="java.util.HashMap">
+        SELECT
+        EXTRACT(HOUR FROM started_at)::INTEGER as hour,
+        COUNT(*) as count
+        FROM reading_activity_log
+        WHERE book_id = #{bookId}
+        AND (#{startDate} IS NULL OR started_at >= #{startDate})
+        AND (#{endDate} IS NULL OR started_at &lt;= #{endDate})
+        GROUP BY hour
+        ORDER BY hour
+    </select>
+
+    <!-- Get reading patterns -->
+    <select id="getReadingPatterns" resultType="java.util.HashMap">
+        SELECT
+        AVG(rs.total_duration_seconds) / 60.0 as avg_session_duration,
+        AVG(ral.reading_speed_wpm) as avg_reading_speed,
+        AVG(rs.chapters_read) as avg_chapters_per_session
+        FROM reading_sessions rs
+        LEFT JOIN reading_activity_log ral ON rs.session_id = ral.session_id
+        WHERE rs.book_id = #{bookId}
+        AND (#{startDate} IS NULL OR rs.started_at >= #{startDate})
+        AND (#{endDate} IS NULL OR rs.started_at &lt;= #{endDate})
+    </select>
+
+    <!-- Get engagement rates -->
+    <select id="getEngagementRates" resultType="java.util.HashMap">
+        SELECT
+        (COUNT(DISTINCT CASE WHEN b.id IS NOT NULL OR h.id IS NOT NULL OR n.id IS NOT NULL
+        THEN ral.user_id END)::DECIMAL / NULLIF(COUNT(DISTINCT ral.user_id), 0) * 100) as annotation_rate,
+        (COUNT(DISTINCT CASE WHEN cr.id IS NOT NULL THEN cr.user_id END)::DECIMAL /
+        NULLIF(COUNT(DISTINCT ral.user_id), 0) * 100) as rating_rate,
+        (COUNT(DISTINCT CASE WHEN crv.id IS NOT NULL THEN crv.user_id END)::DECIMAL /
+        NULLIF(COUNT(DISTINCT ral.user_id), 0) * 100) as review_rate
+        FROM reading_activity_log ral
+        LEFT JOIN bookmarks b ON ral.user_id = b.user_id AND ral.book_id = b.book_id
+        LEFT JOIN highlights h ON ral.user_id = h.user_id AND ral.book_id = h.book_id
+        LEFT JOIN notes n ON ral.user_id = n.user_id AND ral.book_id = n.book_id
+        LEFT JOIN chapter_ratings cr ON ral.user_id = cr.user_id AND ral.book_id = cr.book_id
+        LEFT JOIN chapter_reviews crv ON ral.user_id = crv.user_id AND ral.book_id = crv.book_id
+        WHERE ral.book_id = #{bookId}
+        AND (#{startDate} IS NULL OR ral.started_at >= #{startDate})
+        AND (#{endDate} IS NULL OR ral.started_at &lt;= #{endDate})
+    </select>
+
+    <!-- Get annotation counts -->
+    <select id="getAnnotationCounts" resultType="java.util.HashMap">
+        SELECT
+        (COUNT(DISTINCT b.id) + COUNT(DISTINCT h.id) + COUNT(DISTINCT n.id)) as total_annotations,
+        COUNT(DISTINCT b.id) as total_bookmarks,
+        COUNT(DISTINCT h.id) as total_highlights,
+        COUNT(DISTINCT n.id) as total_notes
+        FROM books bk
+        LEFT JOIN bookmarks b ON bk.id = b.book_id
+        LEFT JOIN highlights h ON bk.id = h.book_id
+        LEFT JOIN notes n ON bk.id = n.book_id
+        WHERE bk.id = #{bookId}
+    </select>
+
+    <!-- Get top engaged chapters -->
+    <select id="getTopEngagedChapters" resultType="java.util.HashMap">
+        SELECT
+        bc.chapter_number,
+        bc.title as chapter_title,
+        (COUNT(DISTINCT b.id) + COUNT(DISTINCT h.id) + COUNT(DISTINCT n.id)) as annotation_count,
+        ((COUNT(DISTINCT b.id) * 1.0 + COUNT(DISTINCT h.id) * 1.5 + COUNT(DISTINCT n.id) * 2.0) /
+        NULLIF(COUNT(DISTINCT ral.user_id), 0)) as engagement_score,
+        COUNT(DISTINCT ral.user_id) as unique_readers
+        FROM book_chapters bc
+        LEFT JOIN bookmarks b ON bc.book_id = b.book_id AND bc.chapter_number = b.page
+        LEFT JOIN highlights h ON bc.book_id = h.book_id AND bc.chapter_number = h.page
+        LEFT JOIN notes n ON bc.book_id = n.book_id AND bc.chapter_number = n.page
+        LEFT JOIN reading_activity_log ral ON bc.book_id = ral.book_id AND bc.chapter_number = ral.chapter_number
+        WHERE bc.book_id = #{bookId}
+        GROUP BY bc.chapter_number, bc.title
+        ORDER BY engagement_score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- Get most highlighted passages -->
+    <select id="getMostHighlightedPassages" resultType="java.util.HashMap">
+        SELECT
+        h.id,
+        bc.chapter_number,
+        bc.title as chapter_title,
+        h.highlighted_text as passage,
+        h.start_position::INTEGER as start_position,
+        h.end_position::INTEGER as end_position,
+        COUNT(*) OVER (PARTITION BY h.highlighted_text) as highlight_count,
+        (COUNT(*) OVER (PARTITION BY h.highlighted_text)::DECIMAL /
+        NULLIF(COUNT(DISTINCT ral.user_id), 0) * 100) as popularity_score,
+        ARRAY_AGG(DISTINCT h.color) as common_colors
+        FROM highlights h
+        JOIN book_chapters bc ON h.book_id = bc.book_id AND h.page = bc.chapter_number
+        LEFT JOIN reading_activity_log ral ON h.book_id = ral.book_id AND h.page = ral.chapter_number
+        WHERE h.book_id = #{bookId}
+        GROUP BY h.id, bc.chapter_number, bc.title, h.highlighted_text, h.start_position, h.end_position
+        ORDER BY highlight_count DESC, popularity_score DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- Get drop off points -->
+    <select id="getDropOffPoints" resultType="java.util.HashMap">
+        SELECT
+        bc.chapter_number,
+        bc.title as chapter_title,
+        COUNT(DISTINCT CASE WHEN ral.chapter_number = bc.chapter_number
+        THEN ral.user_id END) as readers_started,
+        COUNT(DISTINCT CASE WHEN cp.chapter_number = bc.chapter_number AND cp.is_completed
+        THEN cp.user_id END) as readers_completed,
+        (1 - (COUNT(DISTINCT CASE WHEN cp.chapter_number = bc.chapter_number AND cp.is_completed
+        THEN cp.user_id END)::DECIMAL /
+        NULLIF(COUNT(DISTINCT CASE WHEN ral.chapter_number = bc.chapter_number
+        THEN ral.user_id END), 0))) * 100 as drop_off_rate,
+        AVG(CASE WHEN ral.chapter_number = bc.chapter_number
+        THEN ral.scroll_depth_percentage END) as average_scroll_depth
+        FROM book_chapters bc
+        LEFT JOIN reading_activity_log ral ON bc.book_id = ral.book_id
+        LEFT JOIN chapter_progress cp ON bc.book_id = cp.book_id
+        WHERE bc.book_id = #{bookId}
+        GROUP BY bc.chapter_number, bc.title
+        HAVING COUNT(DISTINCT CASE WHEN ral.chapter_number = bc.chapter_number
+        THEN ral.user_id END) > 0
+        ORDER BY drop_off_rate DESC
+    </select>
+
+    <!-- Get most skipped chapters -->
+    <select id="getMostSkippedChapters" resultType="java.util.HashMap">
+        SELECT
+        bc.chapter_number,
+        bc.title as chapter_title,
+        (COUNT(CASE WHEN ral.is_skip THEN 1 END)::DECIMAL /
+        NULLIF(COUNT(*), 0) * 100) as skip_rate,
+        COUNT(CASE WHEN ral.is_skip THEN 1 END) as times_skipped,
+        COUNT(DISTINCT ral.user_id) as total_readers
+        FROM book_chapters bc
+        LEFT JOIN reading_activity_log ral ON bc.book_id = ral.book_id AND bc.chapter_number = ral.chapter_number
+        WHERE bc.book_id = #{bookId}
+        GROUP BY bc.chapter_number, bc.title
+        HAVING COUNT(*) > 0
+        ORDER BY skip_rate DESC
+        LIMIT 10
+    </select>
+
+    <!-- Get chapter statistics -->
+    <select id="getChapterStats" resultType="java.util.HashMap">
+        SELECT
+        COUNT(DISTINCT ral.user_id) as total_readers,
+        COUNT(DISTINCT ral.user_id) as unique_readers,
+        AVG(ral.duration_seconds) as avg_reading_time,
+        AVG(ral.scroll_depth_percentage) as avg_scroll_depth,
+        (COUNT(CASE WHEN cp.is_completed THEN 1 END)::DECIMAL /
+        NULLIF(COUNT(DISTINCT ral.user_id), 0) * 100) as completion_rate,
+        (COUNT(CASE WHEN ral.is_skip THEN 1 END)::DECIMAL /
+        NULLIF(COUNT(*), 0) * 100) as skip_rate,
+        (COUNT(CASE WHEN ral.is_reread THEN 1 END)::DECIMAL /
+        NULLIF(COUNT(*), 0) * 100) as reread_rate,
+        AVG(cr.rating) as avg_rating,
+        COUNT(DISTINCT cr.id) as total_ratings,
+        COUNT(DISTINCT b.id) as total_bookmarks,
+        COUNT(DISTINCT h.id) as total_highlights,
+        COUNT(DISTINCT n.id) as total_notes,
+        COUNT(DISTINCT crv.id) as total_comments
+        FROM reading_activity_log ral
+        LEFT JOIN chapter_progress cp ON ral.user_id = cp.user_id AND ral.book_id = cp.book_id AND ral.chapter_number = cp.chapter_number
+        LEFT JOIN chapter_ratings cr ON ral.book_id = cr.book_id AND ral.chapter_number = cr.chapter_number
+        LEFT JOIN bookmarks b ON ral.book_id = b.book_id AND ral.chapter_number = b.page
+        LEFT JOIN highlights h ON ral.book_id = h.book_id AND ral.chapter_number = h.page
+        LEFT JOIN notes n ON ral.book_id = n.book_id AND ral.chapter_number = n.page
+        LEFT JOIN chapter_reviews crv ON ral.book_id = crv.book_id AND ral.chapter_number = crv.chapter_number
+        WHERE ral.book_id = #{bookId}
+        AND ral.chapter_number = #{chapterNumber}
+    </select>
+
+    <!-- Get top highlights for chapter -->
+    <select id="getTopHighlightsForChapter" resultType="java.util.HashMap">
+        SELECT
+        h.highlighted_text as text,
+        COUNT(*) as highlight_count,
+        AVG(h.start_position::INTEGER) as position
+        FROM highlights h
+        WHERE h.book_id = #{bookId}
+        AND h.page = #{chapterNumber}
+        GROUP BY h.highlighted_text
+        ORDER BY highlight_count DESC
+        LIMIT 5
+    </select>
+
     <!-- Update highlight heatmap -->
     <update id="updateHighlightHeatmap">
         INSERT INTO reading_heatmap (book_id, chapter_number, highlight_count, date)
@@ -31,18 +254,5 @@
         read_count = reading_heatmap.read_count + #{count},
         updated_at = CURRENT_TIMESTAMP
     </update>
-
-    <!-- Get chapter statistics -->
-    <select id="getChapterStats" resultType="java.util.HashMap">
-        SELECT
-        COALESCE(SUM(read_count), 0) as reader_count,
-        COALESCE(AVG(completion_rate), 0) as completion_rate,
-        COALESCE(AVG(avg_reading_time), 0) as avg_reading_time,
-        COALESCE(SUM(highlight_count), 0) as highlight_count,
-        COALESCE(SUM(note_count), 0) as note_count,
-        COALESCE(SUM(comment_count), 0) as comment_count
-        FROM reading_heatmap
-        WHERE book_id = #{bookId} AND chapter_number = #{chapterNumber}
-    </select>
 
 </mapper>

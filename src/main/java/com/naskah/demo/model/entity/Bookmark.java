@@ -8,7 +8,7 @@ public class Bookmark {
     private Long id;
     private Long userId;
     private Long bookId;
-    private Integer page;
+    private Integer chapterNumber;
     private String position;
     private String title;
     private String description;

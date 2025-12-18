@@ -28,4 +28,18 @@
             #{updatedAt},
         </trim>
     </insert>
+
+    <select id="findBySlug" resultType="Contributor">
+        SELECT
+        id,
+        name,
+        slug,
+        role,
+        website_url,
+        created_at,
+        updated_at
+        FROM contributors
+        WHERE slug = #{slug}
+        LIMIT 1
+    </select>
 </mapper>

@@ -172,6 +172,7 @@ public class BookServiceImpl implements BookService {
             book.setDescription(finalDescription);
             book.setCoverImageUrl(coverResult.getCloudUrl());
             book.setFileUrl(bookResult.getCloudUrl());
+            book.setSource(epubMeta.getSource());
             book.setFileFormat(metadata.getFileFormat());
             book.setFileSize(metadata.getFileSize());
             book.setTotalPages(metadata.getTotalPages());
@@ -185,9 +186,15 @@ public class BookServiceImpl implements BookService {
             book.setIsFeatured(false);
             book.setPublishedAt(epubMeta.getPublishedAt() != null ? epubMeta.getPublishedAt().atStartOfDay() : null);
             book.setCategory(finalCategory);
-            book.setCreatedAt(LocalDateTime.now());
-            book.setUpdatedAt(LocalDateTime.now());
-
+            if (epubMeta.getUpdatedAt() != null) {
+                book.setCreatedAt(epubMeta.getUpdatedAt());
+                book.setUpdatedAt(epubMeta.getUpdatedAt());
+                log.info("Using EPUB updated_at: {}", epubMeta.getUpdatedAt());
+            } else {
+                book.setCreatedAt(LocalDateTime.now());
+                book.setUpdatedAt(LocalDateTime.now());
+                log.info("Using current timestamp (no dcterms:modified in EPUB)");
+            }
             bookMapper.insertBook(book);
             log.info("Book created with ID: {} and slug: {}", book.getId(), book.getSlug());
 
@@ -268,6 +275,9 @@ public class BookServiceImpl implements BookService {
             // =============== AUTO-CREATE CONTRIBUTORS ===============
             if (epubMeta.getContributors() != null && !epubMeta.getContributors().isEmpty()) {
                 for (ContributorMetadata contribMeta : epubMeta.getContributors()) {
+                    log.info("🔍 Processing contributor from EPUB: {} with role: {}",
+                            contribMeta.getName(), contribMeta.getRole());
+
                     Contributor contributor = contributorMapper.findByNameAndRole(
                             contribMeta.getName(),
                             contribMeta.getRole()
@@ -276,30 +286,53 @@ public class BookServiceImpl implements BookService {
                     if (contributor == null) {
                         contributor = new Contributor();
                         contributor.setName(contribMeta.getName());
-                        contributor.setSlug(FileUtil.sanitizeFilename(contribMeta.getName()));
                         contributor.setRole(contribMeta.getRole());
                         contributor.setWebsiteUrl(null);
                         contributor.setCreatedAt(LocalDateTime.now());
                         contributor.setUpdatedAt(LocalDateTime.now());
 
+                        String contribBaseSlug = FileUtil.sanitizeFilename(contribMeta.getName());
+                        String contribFinalSlug = contribBaseSlug;
+
+                        Contributor existingBySlug = contributorMapper.findBySlug(contribFinalSlug);
+                        if (existingBySlug != null) {
+                            contribFinalSlug = contribBaseSlug + "-" + contribMeta.getRole().toLowerCase();
+
+                            existingBySlug = contributorMapper.findBySlug(contribFinalSlug);
+                            if (existingBySlug != null) {
+                                contribFinalSlug = contribBaseSlug + "-" + System.currentTimeMillis();
+                            }
+                        }
+
+                        contributor.setSlug(contribFinalSlug);
+
                         contributorMapper.insertContributor(contributor);
 
-                        log.info("Auto-created contributor: {} ({})",
+                        log.info("✅ Auto-created contributor: {} ({}) with slug: {}",
+                                contributor.getName(), contributor.getRole(), contributor.getSlug());
+                    } else {
+                        log.info("✅ Using existing contributor: {} ({})",
                                 contributor.getName(), contributor.getRole());
                     }
+
+                    // ✅ CRITICAL FIX: Always use the role from contribMeta (source of truth)
+                    String roleToInsert = contribMeta.getRole();
 
                     bookMapper.insertBookContributor(
                             book.getId(),
                             contributor.getId(),
-                            contributor.getRole()
+                            roleToInsert
                     );
+
+                    log.info("✅ Inserted book_contributor: bookId={}, contributorId={}, role={}",
+                            book.getId(), contributor.getId(), roleToInsert);
                 }
             }
 
             // =============== GET COMPLETE BOOK RESPONSE ===============
             BookResponse data = bookMapper.getBookDetailBySlug(book.getSlug());
 
-            log.info("Book successfully created with full automation: {}", finalTitle);
+            log.info("✅ Book successfully created with full automation: {}", finalTitle);
 
             return new DataResponse<>(
                     SUCCESS,
@@ -330,33 +363,63 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,
-                                                             String searchTitle, Long seriesId, Long genreId, Long subGenreId) {
+    public DatatableResponse<BookResponse> getPaginatedBooks(
+            int page,
+            int limit,
+            String sortField,
+            String sortOrder,
+            BookSearchCriteria criteria) {
         try {
+            // Validate and map sort fields
             Map<String, String> allowedSortFields = new HashMap<>();
-            allowedSortFields.put("updateAt", "UPDATE_AT");
-            allowedSortFields.put("title", "TITLE");
-            allowedSortFields.put("publishedAt", "PUBLISHED_AT");
-            allowedSortFields.put("author", "AUTHOR_NAME");
-            allowedSortFields.put("estimatedReadTime", "ESTIMATED_READ_TIME");
-            allowedSortFields.put("totalWord", "TOTAL_WORD");
-            allowedSortFields.put("averageRating", "AVERAGE_RATING");
-            allowedSortFields.put("viewCount", "VIEW_COUNT");
-            allowedSortFields.put("readCount", "READ_COUNT");
+            allowedSortFields.put("updateAt", "b.updated_at");
+            allowedSortFields.put("title", "b.title");
+            allowedSortFields.put("publishedAt", "b.published_at");
+            allowedSortFields.put("estimatedReadTime", "b.estimated_read_time");
+            allowedSortFields.put("totalWord", "b.total_word");
+            allowedSortFields.put("averageRating", "average_rating");
+            allowedSortFields.put("viewCount", "b.view_count");
+            allowedSortFields.put("readCount", "b.read_count");
+            allowedSortFields.put("downloadCount", "b.download_count");
+            allowedSortFields.put("fileSize", "b.file_size");
+            allowedSortFields.put("totalPages", "b.total_pages");
 
-            String sortColumn = allowedSortFields.getOrDefault(sortField, "UPDATE_AT");
-            String sortType = Objects.equals(sortOrder, "DESC") ? "DESC" : "ASC";
+            // Get sort column, default to updated_at if not found
+            String sortColumn = allowedSortFields.getOrDefault(sortField, "b.updated_at");
+
+            // Validate sort order
+            String sortType = "DESC".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
+
+            // Calculate offset
             int offset = (page - 1) * limit;
 
-            List<BookResponse> pageResult = bookMapper.getBookListWithFilters(
-                    searchTitle, seriesId, genreId, subGenreId, offset, limit, sortColumn, sortType);
+            // Log search criteria
+            log.info("Fetching books with criteria: {}", criteria);
+            log.info("Sort by: {} {}, Page: {}, Limit: {}", sortColumn, sortType, page, limit);
 
-            PageDataResponse<BookResponse> data = new PageDataResponse<>(page, limit, pageResult.size(), pageResult);
-            return new DatatableResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
+            // Get filtered results
+            List<BookResponse> pageResult = bookMapper.getBookListWithAdvancedFilters(
+                    criteria, offset, limit, sortColumn, sortType);
+
+            // Get total count for pagination
+            int totalCount = bookMapper.countBooksWithAdvancedFilters(criteria);
+
+            log.info("Found {} books, returning page {} with {} items",
+                    totalCount, page, pageResult.size());
+
+            // Build paginated response
+            PageDataResponse<BookResponse> data = new PageDataResponse<>(
+                    page, limit, totalCount, pageResult);
+
+            return new DatatableResponse<>(
+                    SUCCESS,
+                    ResponseMessage.DATA_FETCHED,
+                    HttpStatus.OK.value(),
+                    data);
 
         } catch (Exception e) {
-            log.error("Error fetching paginated books with filters", e);
-            throw e;
+            log.error("Error fetching paginated books with advanced filters", e);
+            throw new RuntimeException("Failed to fetch books: " + e.getMessage(), e);
         }
     }
 

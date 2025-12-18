@@ -42,7 +42,7 @@ public class EntityResponseMapper {
         BookmarkResponse response = new BookmarkResponse();
         response.setId(bookmark.getId());
         response.setBookId(bookmark.getBookId());
-        response.setPage(bookmark.getPage());
+        response.setPage(bookmark.getChapterNumber());
         response.setPosition(bookmark.getPosition());
         response.setTitle(bookmark.getTitle());
         response.setDescription(bookmark.getDescription());
@@ -57,7 +57,7 @@ public class EntityResponseMapper {
         HighlightResponse response = new HighlightResponse();
         response.setId(highlight.getId());
         response.setBookId(highlight.getBookId());
-        response.setPage(highlight.getPage());
+        response.setPage(highlight.getChapterNumber());
         response.setStartPosition(highlight.getStartPosition());
         response.setEndPosition(highlight.getEndPosition());
         response.setHighlightedText(highlight.getHighlightedText());
@@ -74,7 +74,7 @@ public class EntityResponseMapper {
         NoteResponse response = new NoteResponse();
         response.setId(note.getId());
         response.setBookId(note.getBookId());
-        response.setPage(note.getPage());
+        response.setPage(note.getChapterNumber());
         response.setPosition(note.getPosition());
         response.setTitle(note.getTitle());
         response.setContent(note.getContent());

@@ -45,4 +45,6 @@ public interface ContributorMapper {
             "</where>" +
             "</script>")
     int countAll(@Param("role") String role, @Param("search") String search);
+
+    Contributor findBySlug(@Param("slug") String slug);
 }

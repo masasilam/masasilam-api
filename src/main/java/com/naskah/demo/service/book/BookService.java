@@ -1,5 +1,6 @@
 package com.naskah.demo.service.book;
 
+import com.naskah.demo.model.dto.BookSearchCriteria;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
@@ -15,8 +16,6 @@ public interface BookService {
     DataResponse<BookResponse> createBook(BookRequest request);
     DataResponse<BookResponse> getBookDetailBySlug(String slug);
     ResponseEntity<byte[]> downloadBookAsBytes(String slug);
-    DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder,
-                                                      String searchTitle, Long seriesId, Long genreId, Long subGenreId);
     DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException;
     DefaultResponse delete(Long id) throws IOException;
 
@@ -31,6 +30,8 @@ public interface BookService {
 
     // Contributor operations
     DatatableResponse<ContributorResponse> getAllContributors(int page, int limit, String role, String search);
+
+    DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder, BookSearchCriteria criteria);
 
 //    // ============ RATING OPERATIONS ============
 //    DataResponse<ReactionResponse> addOrUpdateRating(String slug, RatingRequest request);
