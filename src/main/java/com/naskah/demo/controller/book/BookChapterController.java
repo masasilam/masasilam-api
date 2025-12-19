@@ -29,7 +29,7 @@ import java.util.List;
  */
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("api/books/{slug}/chapters")
+@RequestMapping("/api/books/{slug}/chapters")
 @RequiredArgsConstructor
 public class BookChapterController {
 

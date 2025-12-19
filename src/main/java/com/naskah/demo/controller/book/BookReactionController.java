@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("api/books/{slug}")
+@RequestMapping("/api/books/{slug}")
 @RequiredArgsConstructor
 public class BookReactionController {
     private final BookReactionService reactionService;
