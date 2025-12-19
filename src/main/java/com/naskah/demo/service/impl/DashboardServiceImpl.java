@@ -53,10 +53,10 @@ public class DashboardServiceImpl implements DashboardService {
             response.setOverviewStats(buildOverviewStats(user.getId()));
 
             // 2. Books In Progress
-            response.setBooksInProgress(getBooksInProgress(user.getId(), 5));
+            response.setBooksInProgress(getBooksInProgress(user.getId()));
 
             // 3. Recently Read
-            response.setRecentlyRead(getRecentlyRead(user.getId(), 5));
+            response.setRecentlyRead(getRecentlyRead(user.getId()));
 
             // 4. Reading Pattern
             response.setReadingPattern(buildReadingPatternSummary(user.getId()));
@@ -68,12 +68,11 @@ public class DashboardServiceImpl implements DashboardService {
             response.setQuickLinks(buildQuickAccessLinks(user.getId()));
 
             // 7. Recent Achievements
-            response.setRecentAchievements(getRecentAchievements(user.getId(), 3));
+            response.setRecentAchievements(getRecentAchievements(user.getId()));
 
             log.info("Dashboard data retrieved for user {}", user.getId());
 
-            return new DataResponse<>(SUCCESS, "Dashboard retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Dashboard retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting dashboard: {}", e.getMessage(), e);
@@ -86,31 +85,23 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     @Override
-    public DatatableResponse<BookLibraryItemResponse> getUserLibrary(
-            String filter, int page, int limit, String sortBy) {
+    public DatatableResponse<BookLibraryItemResponse> getUserLibrary(String filter, int page, int limit, String sortBy) {
         try {
             User user = getCurrentUser();
-
             int offset = (page - 1) * limit;
 
-            // Get all books user has interacted with
             List<Long> bookIds = getInteractedBookIds(user.getId(), filter);
-
             List<BookLibraryItemResponse> items = bookIds.stream()
                     .skip(offset)
                     .limit(limit)
                     .map(bookId -> buildLibraryItem(user.getId(), bookId))
                     .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .sorted(getComparator(sortBy))
+                    .toList();
 
-            // Sort
-            sortLibraryItems(items, sortBy);
+            PageDataResponse<BookLibraryItemResponse> pageData = new PageDataResponse<>(page, limit, bookIds.size(), items);
 
-            PageDataResponse<BookLibraryItemResponse> pageData =
-                    new PageDataResponse<>(page, limit, bookIds.size(), items);
-
-            return new DatatableResponse<>(SUCCESS, "Library retrieved",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Library retrieved", HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting library: {}", e.getMessage(), e);
@@ -139,7 +130,7 @@ public class DashboardServiceImpl implements DashboardService {
                     user.getId(), since, offset, limit);
             activities.addAll(sessions.stream()
                     .map(this::mapSessionToActivity)
-                    .collect(Collectors.toList()));
+                    .toList());
 
             // 2. Annotations
             activities.addAll(getAnnotationActivities(user.getId(), since));
@@ -155,11 +146,9 @@ public class DashboardServiceImpl implements DashboardService {
             int end = Math.min(start + limit, activities.size());
             List<ReadingActivityResponse> paged = activities.subList(start, end);
 
-            PageDataResponse<ReadingActivityResponse> pageData =
-                    new PageDataResponse<>(page, limit, activities.size(), paged);
+            PageDataResponse<ReadingActivityResponse> pageData = new PageDataResponse<>(page, limit, activities.size(), paged);
 
-            return new DatatableResponse<>(SUCCESS, "History retrieved",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "History retrieved", HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting history: {}", e.getMessage(), e);
@@ -188,8 +177,7 @@ public class DashboardServiceImpl implements DashboardService {
             response.setWeeklyStats(buildWeeklyStats(user.getId(), since));
 
             // 3. Aggregate stats
-            Map<String, Object> aggregates = activityMapper.getUserActivitySummary(
-                    user.getId(), since, LocalDateTime.now());
+            Map<String, Object> aggregates = activityMapper.getUserActivitySummary(user.getId(), since, LocalDateTime.now());
 
             response.setTotalBooksRead(getIntValue(aggregates.get("books_read")));
             response.setTotalChaptersRead(getIntValue(aggregates.get("chapters_read")));
@@ -211,8 +199,7 @@ public class DashboardServiceImpl implements DashboardService {
             // 6. Peak times
             response.setPeakReadingTimes(buildPeakTimes(user.getId(), since));
 
-            return new DataResponse<>(SUCCESS, "Statistics retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Statistics retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting statistics: {}", e.getMessage(), e);
@@ -238,7 +225,7 @@ public class DashboardServiceImpl implements DashboardService {
                 List<Bookmark> bookmarks = bookmarkMapper.findByUser(user.getId());
                 items.addAll(bookmarks.stream()
                         .map(this::mapBookmarkToAnnotation)
-                        .collect(Collectors.toList()));
+                        .toList());
                 totalCount += bookmarks.size();
             }
 
@@ -246,7 +233,7 @@ public class DashboardServiceImpl implements DashboardService {
                 List<Highlight> highlights = highlightMapper.findByUser(user.getId());
                 items.addAll(highlights.stream()
                         .map(this::mapHighlightToAnnotation)
-                        .collect(Collectors.toList()));
+                        .toList());
                 totalCount += highlights.size();
             }
 
@@ -254,7 +241,7 @@ public class DashboardServiceImpl implements DashboardService {
                 List<Note> notes = noteMapper.findByUser(user.getId());
                 items.addAll(notes.stream()
                         .map(this::mapNoteToAnnotation)
-                        .collect(Collectors.toList()));
+                        .toList());
                 totalCount += notes.size();
             }
 
@@ -266,11 +253,9 @@ public class DashboardServiceImpl implements DashboardService {
             int end = Math.min(start + limit, items.size());
             List<AnnotationItemResponse> paged = items.subList(start, end);
 
-            PageDataResponse<AnnotationItemResponse> pageData =
-                    new PageDataResponse<>(page, limit, totalCount, paged);
+            PageDataResponse<AnnotationItemResponse> pageData = new PageDataResponse<>(page, limit, totalCount, paged);
 
-            return new DatatableResponse<>(SUCCESS, "Annotations retrieved",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Annotations retrieved", HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting annotations: {}", e.getMessage(), e);
@@ -289,20 +274,17 @@ public class DashboardServiceImpl implements DashboardService {
             User user = getCurrentUser();
 
             int offset = (page - 1) * limit;
-            List<BookReview> reviews = bookReviewMapper.findByUser(
-                    user.getId(), offset, limit);
+            List<BookReview> reviews = bookReviewMapper.findByUser(user.getId(), offset, limit);
 
             List<UserReviewItemResponse> items = reviews.stream()
                     .map(this::mapToUserReviewItem)
-                    .collect(Collectors.toList());
+                    .toList();
 
             int totalCount = bookReviewMapper.countByUser(user.getId());
 
-            PageDataResponse<UserReviewItemResponse> pageData =
-                    new PageDataResponse<>(page, limit, totalCount, items);
+            PageDataResponse<UserReviewItemResponse> pageData = new PageDataResponse<>(page, limit, totalCount, items);
 
-            return new DatatableResponse<>(SUCCESS, "Reviews retrieved",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Reviews retrieved", HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting reviews: {}", e.getMessage(), e);
@@ -319,24 +301,11 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             User user = getCurrentUser();
 
-            ReadingGoalsResponse response = new ReadingGoalsResponse();
-            response.setActiveGoals(new ArrayList<>());
-            response.setCompletedGoals(new ArrayList<>());
-
-            ReadingGoalsResponse.GoalsSummary summary =
-                    new ReadingGoalsResponse.GoalsSummary();
-            summary.setTotalGoals(0);
-            summary.setActiveGoals(0);
-            summary.setCompletedGoals(0);
-            summary.setOverallProgress(0.0);
-            summary.setOnTrack(true);
-
-            response.setSummary(summary);
+            final ReadingGoalsResponse response = getReadingGoalsResponse();
 
             // TODO: Implement when reading_goals table is created
 
-            return new DataResponse<>(SUCCESS, "Goals retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Goals retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting goals: {}", e.getMessage(), e);
@@ -344,13 +313,28 @@ public class DashboardServiceImpl implements DashboardService {
         }
     }
 
+    private static ReadingGoalsResponse getReadingGoalsResponse() {
+        ReadingGoalsResponse response = new ReadingGoalsResponse();
+        response.setActiveGoals(new ArrayList<>());
+        response.setCompletedGoals(new ArrayList<>());
+
+        ReadingGoalsResponse.GoalsSummary summary = new ReadingGoalsResponse.GoalsSummary();
+        summary.setTotalGoals(0);
+        summary.setActiveGoals(0);
+        summary.setCompletedGoals(0);
+        summary.setOverallProgress(0.0);
+        summary.setOnTrack(true);
+
+        response.setSummary(summary);
+        return response;
+    }
+
     // ═══════════════════════════════════════════════════════════
     // RECOMMENDATIONS
     // ═══════════════════════════════════════════════════════════
 
     @Override
-    public DataResponse<List<BookRecommendationResponse>> getPersonalizedRecommendations(
-            int limit) {
+    public DataResponse<List<BookRecommendationResponse>> getPersonalizedRecommendations(int limit) {
         try {
             User user = getCurrentUser();
 
@@ -358,8 +342,7 @@ public class DashboardServiceImpl implements DashboardService {
             List<String> favoriteGenres = getUserFavoriteGenres(user.getId(), 3);
 
             // Get highly rated books in those genres that user hasn't read
-            List<BookRecommendationResponse> recommendations =
-                    bookMapper.getRecommendations(user.getId(), favoriteGenres, limit);
+            List<BookRecommendationResponse> recommendations = bookMapper.getRecommendations(user.getId(), favoriteGenres, limit);
 
             // Calculate match scores
             recommendations.forEach(rec -> {
@@ -367,8 +350,7 @@ public class DashboardServiceImpl implements DashboardService {
                 rec.setMatchingFactors(identifyMatchingFactors(user.getId(), rec));
             });
 
-            return new DataResponse<>(SUCCESS, "Recommendations retrieved",
-                    HttpStatus.OK.value(), recommendations);
+            return new DataResponse<>(SUCCESS, "Recommendations retrieved", HttpStatus.OK.value(), recommendations);
 
         } catch (Exception e) {
             log.error("Error getting recommendations: {}", e.getMessage(), e);
@@ -409,12 +391,10 @@ public class DashboardServiceImpl implements DashboardService {
 
             // Has activity today
             LocalDateTime todayStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS);
-            Boolean hasActivity = activityMapper.hasActivitySince(
-                    user.getId(), todayStart);
+            Boolean hasActivity = activityMapper.hasActivitySince(user.getId(), todayStart);
             response.setHasActivityToday(hasActivity);
 
-            return new DataResponse<>(SUCCESS, "Quick stats retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Quick stats retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting quick stats: {}", e.getMessage(), e);
@@ -427,8 +407,7 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     @Override
-    public DataResponse<ReadingCalendarResponse> getReadingCalendar(
-            Integer year, Integer month) {
+    public DataResponse<ReadingCalendarResponse> getReadingCalendar(Integer year, Integer month) {
         try {
             User user = getCurrentUser();
 
@@ -449,16 +428,14 @@ public class DashboardServiceImpl implements DashboardService {
             for (LocalDate date = startDate; !date.isAfter(endDate);
                  date = date.plusDays(1)) {
 
-                ReadingCalendarResponse.CalendarDay day = buildCalendarDay(
-                        user.getId(), date);
+                ReadingCalendarResponse.CalendarDay day = buildCalendarDay(user.getId(), date);
                 days.add(day);
             }
 
             response.setDays(days);
 
             // Calculate stats
-            ReadingCalendarResponse.CalendarStats stats =
-                    new ReadingCalendarResponse.CalendarStats();
+            ReadingCalendarResponse.CalendarStats stats = new ReadingCalendarResponse.CalendarStats();
 
             long daysWithActivity = days.stream()
                     .filter(ReadingCalendarResponse.CalendarDay::getHasActivity)
@@ -466,20 +443,17 @@ public class DashboardServiceImpl implements DashboardService {
 
             stats.setDaysWithActivity((int) daysWithActivity);
             stats.setTotalDays(days.size());
-            stats.setActivityPercentage(
-                    (daysWithActivity * 100.0) / days.size());
+            stats.setActivityPercentage((daysWithActivity * 100.0) / days.size());
             stats.setTotalMinutes(days.stream()
                     .mapToInt(ReadingCalendarResponse.CalendarDay::getMinutesRead)
                     .sum());
 
             // Calculate longest streak in this period
-            stats.setLongestStreakInPeriod(
-                    calculateStreakInPeriod(days));
+            stats.setLongestStreakInPeriod(calculateStreakInPeriod(days));
 
             response.setStats(stats);
 
-            return new DataResponse<>(SUCCESS, "Calendar retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Calendar retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting calendar: {}", e.getMessage(), e);
@@ -505,8 +479,8 @@ public class DashboardServiceImpl implements DashboardService {
 
             // Sort by unlocked status and date
             achievements.sort((a, b) -> {
-                if (a.getIsUnlocked() != b.getIsUnlocked()) {
-                    return a.getIsUnlocked() ? -1 : 1;
+                if (!Objects.equals(a.getIsUnlocked(), b.getIsUnlocked())) {
+                    return Boolean.TRUE.equals(a.getIsUnlocked()) ? -1 : 1;
                 }
                 if (a.getUnlockedAt() != null && b.getUnlockedAt() != null) {
                     return b.getUnlockedAt().compareTo(a.getUnlockedAt());
@@ -514,8 +488,7 @@ public class DashboardServiceImpl implements DashboardService {
                 return 0;
             });
 
-            return new DataResponse<>(SUCCESS, "Achievements retrieved",
-                    HttpStatus.OK.value(), achievements);
+            return new DataResponse<>(SUCCESS, "Achievements retrieved", HttpStatus.OK.value(), achievements);
 
         } catch (Exception e) {
             log.error("Error getting achievements: {}", e.getMessage(), e);
@@ -545,11 +518,9 @@ public class DashboardServiceImpl implements DashboardService {
             // 2. Queue async job
             // 3. Return job ID for status polling
 
-            log.info("Export requested for user {} in format {}",
-                    user.getId(), format);
+            log.info("Export requested for user {} in format {}", user.getId(), format);
 
-            return new DataResponse<>(SUCCESS, "Export job created",
-                    HttpStatus.ACCEPTED.value(), response);
+            return new DataResponse<>(SUCCESS, "Export job created", HttpStatus.ACCEPTED.value(), response);
 
         } catch (Exception e) {
             log.error("Error creating export: {}", e.getMessage(), e);
@@ -562,8 +533,7 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     private UserReadingDashboardResponse.OverviewStats buildOverviewStats(Long userId) {
-        UserReadingDashboardResponse.OverviewStats stats =
-                new UserReadingDashboardResponse.OverviewStats();
+        UserReadingDashboardResponse.OverviewStats stats = new UserReadingDashboardResponse.OverviewStats();
 
         // Total books (unique books user has interacted with)
         List<Long> bookIds = getInteractedBookIds(userId, "all");
@@ -605,13 +575,11 @@ public class DashboardServiceImpl implements DashboardService {
         return stats;
     }
 
-    private List<UserReadingDashboardResponse.BookInProgressItem> getBooksInProgress(
-            Long userId, int limit) {
-
+    private List<UserReadingDashboardResponse.BookInProgressItem> getBooksInProgress(Long userId) {
         List<Long> bookIds = getInteractedBookIds(userId, "reading");
 
         return bookIds.stream()
-                .limit(limit)
+                .limit(5)
                 .map(bookId -> {
                     Book book = bookMapper.findById(bookId);
                     if (book == null) return null;
@@ -631,8 +599,7 @@ public class DashboardServiceImpl implements DashboardService {
                     }
 
                     // Get progress
-                    List<ChapterProgress> progress =
-                            chapterProgressMapper.findAllByUserAndBook(userId, book.getId());
+                    List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, book.getId());
 
                     int completed = (int) progress.stream()
                             .filter(ChapterProgress::getIsCompleted)
@@ -659,23 +626,19 @@ public class DashboardServiceImpl implements DashboardService {
                     return item;
                 })
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    private List<UserReadingDashboardResponse.RecentlyReadItem> getRecentlyRead(
-            Long userId, int limit) {
-
+    private List<UserReadingDashboardResponse.RecentlyReadItem> getRecentlyRead(Long userId) {
         // Get recent sessions
-        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(
-                userId, 0, limit);
+        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(userId, 0, 5);
 
         return sessions.stream()
                 .map(session -> {
                     Book book = bookMapper.findById(session.getBookId());
                     if (book == null) return null;
 
-                    UserReadingDashboardResponse.RecentlyReadItem item =
-                            new UserReadingDashboardResponse.RecentlyReadItem();
+                    UserReadingDashboardResponse.RecentlyReadItem item = new UserReadingDashboardResponse.RecentlyReadItem();
 
                     item.setBookId(book.getId());
                     item.setBookTitle(book.getTitle());
@@ -685,11 +648,10 @@ public class DashboardServiceImpl implements DashboardService {
                     // Get author
                     List<Author> authors = bookMapper.getBookAuthors(book.getId());
                     if (!authors.isEmpty()) {
-                        item.setAuthorName(authors.get(0).getName());
+                        item.setAuthorName(authors.getFirst().getName());
                     }
 
-                    item.setLastReadAt(session.getEndedAt() != null ?
-                            session.getEndedAt() : session.getStartedAt());
+                    item.setLastReadAt(session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt());
 
                     // Determine activity type
                     if (session.getStartChapter().equals(session.getEndChapter())) {
@@ -705,23 +667,19 @@ public class DashboardServiceImpl implements DashboardService {
                     return item;
                 })
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    private UserReadingDashboardResponse.ReadingPatternSummary buildReadingPatternSummary(
-            Long userId) {
-
-        UserReadingDashboardResponse.ReadingPatternSummary summary =
-                new UserReadingDashboardResponse.ReadingPatternSummary();
+    private UserReadingDashboardResponse.ReadingPatternSummary buildReadingPatternSummary(Long userId) {
+        UserReadingDashboardResponse.ReadingPatternSummary summary = new UserReadingDashboardResponse.ReadingPatternSummary();
 
         // Get aggregated pattern from all books
         List<UserReadingPattern> patterns = patternMapper.findAllUserPatterns(userId);
 
         if (!patterns.isEmpty()) {
             // Calculate averages
-            Integer avgHour = (int) patterns.stream()
-                    .mapToInt(p -> p.getPreferredReadingHour() != null ?
-                            p.getPreferredReadingHour() : 12)
+            int avgHour = (int) patterns.stream()
+                    .mapToInt(p -> p.getPreferredReadingHour() != null ? p.getPreferredReadingHour() : 12)
                     .average()
                     .orElse(12);
 
@@ -729,22 +687,19 @@ public class DashboardServiceImpl implements DashboardService {
             summary.setPreferredDay("Weekday"); // Simplified
 
             Integer avgSession = (int) patterns.stream()
-                    .mapToInt(p -> p.getAverageSessionDurationMinutes() != null ?
-                            p.getAverageSessionDurationMinutes() : 0)
+                    .mapToInt(p -> p.getAverageSessionDurationMinutes() != null ? p.getAverageSessionDurationMinutes() : 0)
                     .average()
                     .orElse(0);
             summary.setAverageSessionMinutes(avgSession);
 
             Integer avgSpeed = (int) patterns.stream()
-                    .mapToInt(p -> p.getAverageReadingSpeedWpm() != null ?
-                            p.getAverageReadingSpeedWpm() : 200)
+                    .mapToInt(p -> p.getAverageReadingSpeedWpm() != null ? p.getAverageReadingSpeedWpm() : 200)
                     .average()
                     .orElse(200);
             summary.setAverageReadingSpeedWpm(avgSpeed);
 
-            Double avgCompletionSpeed = patterns.stream()
-                    .mapToDouble(p -> p.getCompletionSpeedChaptersPerDay() != null ?
-                            p.getCompletionSpeedChaptersPerDay() : 1.0)
+            double avgCompletionSpeed = patterns.stream()
+                    .mapToDouble(p -> p.getCompletionSpeedChaptersPerDay() != null ? p.getCompletionSpeedChaptersPerDay() : 1.0)
                     .average()
                     .orElse(1.0);
             summary.setReadingPace(getPaceLabel(avgCompletionSpeed));
@@ -764,17 +719,8 @@ public class DashboardServiceImpl implements DashboardService {
         return summary;
     }
 
-// ═══════════════════════════════════════════════════════════
-// CONTINUATION OF ReadingDashboardServiceImpl
-// ═══════════════════════════════════════════════════════════
-
-    // ... continued from buildAnnotationsSummary method
-
-    private UserReadingDashboardResponse.AnnotationsSummary buildAnnotationsSummary(
-            Long userId) {
-
-        UserReadingDashboardResponse.AnnotationsSummary summary =
-                new UserReadingDashboardResponse.AnnotationsSummary();
+    private UserReadingDashboardResponse.AnnotationsSummary buildAnnotationsSummary(Long userId) {
+        UserReadingDashboardResponse.AnnotationsSummary summary = new UserReadingDashboardResponse.AnnotationsSummary();
 
         // Counts
         summary.setTotalBookmarks(bookmarkMapper.countByUser(userId));
@@ -797,14 +743,13 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Sort by date and take top 5
         recent.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-        summary.setRecentAnnotations(recent.stream().limit(5).collect(Collectors.toList()));
+        summary.setRecentAnnotations(recent.stream().limit(5).toList());
 
         return summary;
     }
 
     private UserReadingDashboardResponse.QuickAccessLinks buildQuickAccessLinks(Long userId) {
-        UserReadingDashboardResponse.QuickAccessLinks links =
-                new UserReadingDashboardResponse.QuickAccessLinks();
+        UserReadingDashboardResponse.QuickAccessLinks links = new UserReadingDashboardResponse.QuickAccessLinks();
 
         // Count pending/unread items
         links.setPendingBookmarks(bookmarkMapper.countByUser(userId));
@@ -819,11 +764,8 @@ public class DashboardServiceImpl implements DashboardService {
         return links;
     }
 
-    private List<UserReadingDashboardResponse.RecentAchievement> getRecentAchievements(
-            Long userId, int limit) {
-
-        List<UserReadingDashboardResponse.RecentAchievement> achievements =
-                new ArrayList<>();
+    private List<UserReadingDashboardResponse.RecentAchievement> getRecentAchievements(Long userId) {
+        List<UserReadingDashboardResponse.RecentAchievement> achievements = new ArrayList<>();
 
         // Calculate recent achievements
         List<AchievementResponse> all = new ArrayList<>();
@@ -834,9 +776,9 @@ public class DashboardServiceImpl implements DashboardService {
         return all.stream()
                 .filter(AchievementResponse::getIsUnlocked)
                 .sorted((a, b) -> b.getUnlockedAt().compareTo(a.getUnlockedAt()))
-                .limit(limit)
+                .limit(3)
                 .map(this::mapToRecentAchievement)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -877,7 +819,7 @@ public class DashboardServiceImpl implements DashboardService {
             List<Long> bookmarkedIds = bookmarks.stream()
                     .map(Bookmark::getBookId)
                     .distinct()
-                    .collect(Collectors.toList());
+                    .toList();
             filtered.retainAll(bookmarkedIds);
         }
 
@@ -889,8 +831,6 @@ public class DashboardServiceImpl implements DashboardService {
         if (book == null) return null;
 
         BookLibraryItemResponse item = new BookLibraryItemResponse();
-
-        // Info dasar buku
         item.setBookId(book.getId());
         item.setBookTitle(book.getTitle());
         item.setBookSlug(book.getSlug());
@@ -898,15 +838,11 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Author
         List<Author> authors = bookMapper.getBookAuthors(book.getId());
-        if (!authors.isEmpty()) {
-            item.setAuthorName(authors.get(0).getName());
-        }
+        item.setAuthorName(authors.getFirst().getName());
 
         // Genre
         List<Genre> genres = bookMapper.getBookGenres(book.getId());
-        if (!genres.isEmpty()) {
-            item.setGenre(genres.get(0).getName());
-        }
+        item.setGenre(genres.getFirst().getName());
 
         // Progress membaca
         List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, book.getId());
@@ -945,12 +881,9 @@ public class DashboardServiceImpl implements DashboardService {
         BookReview review = bookReviewMapper.findByUserAndBook(userId, bookId);
         item.setHasReview(review != null);
 
-        // Timestamps - PERBAIKAN DISINI
         if (!progress.isEmpty()) {
-            // First read - gunakan createdAt atau lastReadAt yang paling awal
             item.setFirstReadAt(progress.stream()
                     .map(p -> {
-                        // Prioritas: lastReadAt, kemudian createdAt
                         if (p.getLastReadAt() != null) {
                             return p.getLastReadAt();
                         }
@@ -960,14 +893,11 @@ public class DashboardServiceImpl implements DashboardService {
                     .min(Comparator.naturalOrder())
                     .orElse(null));
 
-            // Last read - cari lastReadAt yang paling baru
             item.setLastReadAt(progress.stream()
                     .map(ChapterProgress::getLastReadAt)
                     .filter(Objects::nonNull)
                     .max(Comparator.naturalOrder())
                     .orElse(null));
-
-            // Completed at - cari waktu ketika chapter selesai (lastReadAt dari chapter yang completed)
             if (completed >= book.getTotalPages()) {
                 item.setCompletedAt(progress.stream()
                         .filter(p -> p.getIsCompleted() != null && p.getIsCompleted())
@@ -978,70 +908,65 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
 
-        // Total waktu membaca (dalam menit)
         List<ReadingSession> sessions = sessionMapper.findByUserAndBook(userId, bookId);
         int totalMinutes = sessions.stream()
                 .mapToInt(s -> {
                     if (s.getTotalDurationSeconds() != null) {
-                        return s.getTotalDurationSeconds() / 60;  // Konversi detik ke menit
+                        return s.getTotalDurationSeconds() / 60;
                     }
                     return 0;
                 })
                 .sum();
         item.setTotalReadingTimeMinutes(totalMinutes);
 
-        // Hitung total waktu membaca dari chapter progress (alternatif)
         int totalReadingTimeFromProgress = progress.stream()
-                .mapToInt(p -> p.getReadingTimeSeconds() != null ?
-                        p.getReadingTimeSeconds() / 60 : 0)
+                .mapToInt(p -> p.getReadingTimeSeconds() != null ? p.getReadingTimeSeconds() / 60 : 0)
                 .sum();
 
-        // Gunakan yang terbesar antara session time dan progress time
         item.setTotalReadingTimeMinutes(Math.max(totalMinutes, totalReadingTimeFromProgress));
 
-        // Estimated remaining time
         int remainingChapters = book.getTotalPages() - (int) completed;
 
-        // Hitung rata-rata waktu per chapter dari data aktual
-        int avgTimePerChapter = 0;
-        if (completed > 0 && totalReadingTimeFromProgress > 0) {
-            // Gunakan rata-rata waktu aktual per chapter
-            avgTimePerChapter = totalReadingTimeFromProgress / (int) completed;
-        } else if (book.getTotalPages() > 0 && book.getEstimatedReadTime() > 0) {
-            // Fallback ke estimated time dari buku
-            avgTimePerChapter = book.getEstimatedReadTime() / book.getTotalPages();
-        }
+        final int avgTimePerChapter = getAvgTimePerChapter(completed, totalReadingTimeFromProgress, book);
 
         item.setEstimatedTimeRemaining(remainingChapters * avgTimePerChapter);
 
         return item;
     }
 
-    private void sortLibraryItems(List<BookLibraryItemResponse> items, String sortBy) {
+    private static int getAvgTimePerChapter(long completed, int totalReadingTimeFromProgress, Book book) {
+        int avgTimePerChapter = 0;
+        if (completed > 0 && totalReadingTimeFromProgress > 0) {
+            avgTimePerChapter = totalReadingTimeFromProgress / (int) completed;
+        } else if (book.getTotalPages() > 0 && book.getEstimatedReadTime() > 0) {
+            avgTimePerChapter = book.getEstimatedReadTime() / book.getTotalPages();
+        }
+        return avgTimePerChapter;
+    }
+
+    private Comparator<BookLibraryItemResponse> getComparator(String sortBy) {
         switch (sortBy) {
             case "last_read":
-                items.sort((a, b) -> {
-                    if (a.getLastReadAt() == null) return 1;
-                    if (b.getLastReadAt() == null) return -1;
-                    return b.getLastReadAt().compareTo(a.getLastReadAt());
-                });
-                break;
+                return Comparator.comparing(
+                        BookLibraryItemResponse::getLastReadAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                );
             case "progress":
-                items.sort((a, b) -> Double.compare(
-                        b.getProgressPercentage(), a.getProgressPercentage()));
-                break;
+                return Comparator.comparingDouble(
+                        BookLibraryItemResponse::getProgressPercentage
+                ).reversed();
             case "title":
-                items.sort(Comparator.comparing(BookLibraryItemResponse::getBookTitle));
-                break;
+                return Comparator.comparing(
+                        BookLibraryItemResponse::getBookTitle,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                );
             case "rating":
-                items.sort((a, b) -> {
-                    if (a.getMyRating() == null) return 1;
-                    if (b.getMyRating() == null) return -1;
-                    return Double.compare(b.getMyRating(), a.getMyRating());
-                });
-                break;
+                return Comparator.comparing(
+                        BookLibraryItemResponse::getMyRating,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                );
             default:
-                break;
+                return (a, b) -> 0;
         }
     }
 
@@ -1067,19 +992,14 @@ public class DashboardServiceImpl implements DashboardService {
         activity.setChapterNumber(session.getEndChapter());
 
         // Hitung durasi
-        int minutes = session.getTotalDurationSeconds() != null ?
-                session.getTotalDurationSeconds() / 60 : 0;
+        int minutes = session.getTotalDurationSeconds() != null ? session.getTotalDurationSeconds() / 60 : 0;
 
-        activity.setDescription(String.format(
-                "Membaca selama %d menit",
-                minutes));
+        activity.setDescription(String.format("Membaca selama %d menit", minutes));
 
         return activity;
     }
 
-    private List<ReadingActivityResponse> getAnnotationActivities(
-            Long userId, LocalDateTime since) {
-
+    private List<ReadingActivityResponse> getAnnotationActivities(Long userId, LocalDateTime since) {
         List<ReadingActivityResponse> activities = new ArrayList<>();
 
         // Bookmarks
@@ -1097,9 +1017,7 @@ public class DashboardServiceImpl implements DashboardService {
         return activities;
     }
 
-    private List<ReadingActivityResponse> getReviewActivities(
-            Long userId, LocalDateTime since) {
-
+    private List<ReadingActivityResponse> getReviewActivities(Long userId, LocalDateTime since) {
         List<ReadingActivityResponse> activities = new ArrayList<>();
 
         // Ratings
@@ -1210,9 +1128,7 @@ public class DashboardServiceImpl implements DashboardService {
     // STATISTICS HELPERS
     // ═══════════════════════════════════════════════════════════
 
-    private List<ReadingStatisticsResponse.DailyReadingData> buildDailyStats(
-            Long userId, LocalDateTime since, int days) {
-
+    private List<ReadingStatisticsResponse.DailyReadingData> buildDailyStats(Long userId, LocalDateTime since, int days) {
         List<ReadingStatisticsResponse.DailyReadingData> dailyStats = new ArrayList<>();
 
         LocalDate startDate = since.toLocalDate();
@@ -1260,9 +1176,7 @@ public class DashboardServiceImpl implements DashboardService {
         return dailyStats;
     }
 
-    private List<ReadingStatisticsResponse.WeeklyReadingData> buildWeeklyStats(
-            Long userId, LocalDateTime since) {
-
+    private List<ReadingStatisticsResponse.WeeklyReadingData> buildWeeklyStats(Long userId, LocalDateTime since) {
         List<ReadingStatisticsResponse.WeeklyReadingData> weeklyStats = new ArrayList<>();
 
         LocalDate startDate = since.toLocalDate();
@@ -1273,17 +1187,13 @@ public class DashboardServiceImpl implements DashboardService {
         while (!weekStart.isAfter(today)) {
             LocalDate weekEnd = weekStart.plusDays(6);
 
-            ReadingStatisticsResponse.WeeklyReadingData data =
-                    new ReadingStatisticsResponse.WeeklyReadingData();
+            ReadingStatisticsResponse.WeeklyReadingData data = new ReadingStatisticsResponse.WeeklyReadingData();
 
             data.setWeekStart(weekStart.toString());
             data.setWeekEnd(weekEnd.toString());
 
             // Ambil sesi untuk minggu ini
-            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(
-                    userId,
-                    weekStart.atStartOfDay(),
-                    weekEnd.plusDays(1).atStartOfDay());
+            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(userId, weekStart.atStartOfDay(), weekEnd.plusDays(1).atStartOfDay());
 
             // Hitung total menit membaca
             int totalMinutes = sessions.stream()
@@ -1303,10 +1213,7 @@ public class DashboardServiceImpl implements DashboardService {
             data.setAverageDailyMinutes(totalMinutes / daysInWeek);
 
             // Hitung buku yang selesai dibaca minggu ini
-            int booksCompleted = chapterProgressMapper.countBooksCompletedBetween(
-                    userId,
-                    weekStart.atStartOfDay(),
-                    weekEnd.plusDays(1).atStartOfDay());
+            int booksCompleted = chapterProgressMapper.countBooksCompletedBetween(userId, weekStart.atStartOfDay(), weekEnd.plusDays(1).atStartOfDay());
             data.setBooksCompleted(booksCompleted);
 
             weeklyStats.add(data);
@@ -1316,23 +1223,17 @@ public class DashboardServiceImpl implements DashboardService {
         return weeklyStats;
     }
 
-    private ReadingStatisticsResponse.TrendData calculateTimeTrend(
-            Long userId, int period) {
-
-        ReadingStatisticsResponse.TrendData trend =
-                new ReadingStatisticsResponse.TrendData();
+    private ReadingStatisticsResponse.TrendData calculateTimeTrend(Long userId, int period) {
+        ReadingStatisticsResponse.TrendData trend = new ReadingStatisticsResponse.TrendData();
 
         LocalDateTime halfPoint = LocalDateTime.now().minusDays(period / 2);
         LocalDateTime start = LocalDateTime.now().minusDays(period);
 
-        Integer firstHalfMinutes = activityMapper.getTotalMinutesBetween(
-                userId, start, halfPoint);
-        Integer secondHalfMinutes = activityMapper.getTotalMinutesBetween(
-                userId, halfPoint, LocalDateTime.now());
+        Integer firstHalfMinutes = activityMapper.getTotalMinutesBetween(userId, start, halfPoint);
+        Integer secondHalfMinutes = activityMapper.getTotalMinutesBetween(userId, halfPoint, LocalDateTime.now());
 
         if (firstHalfMinutes > 0) {
-            double change = ((secondHalfMinutes - firstHalfMinutes) * 100.0)
-                    / firstHalfMinutes;
+            double change = ((secondHalfMinutes - firstHalfMinutes) * 100.0) / firstHalfMinutes;
             trend.setChangePercentage(change);
 
             if (change > 10) {
@@ -1354,19 +1255,14 @@ public class DashboardServiceImpl implements DashboardService {
         return trend;
     }
 
-    private ReadingStatisticsResponse.TrendData calculateCompletionTrend(
-            Long userId, int period) {
-
-        ReadingStatisticsResponse.TrendData trend =
-                new ReadingStatisticsResponse.TrendData();
+    private ReadingStatisticsResponse.TrendData calculateCompletionTrend(Long userId, int period) {
+        ReadingStatisticsResponse.TrendData trend = new ReadingStatisticsResponse.TrendData();
 
         LocalDateTime halfPoint = LocalDateTime.now().minusDays(period / 2);
         LocalDateTime start = LocalDateTime.now().minusDays(period);
 
-        int firstHalf = chapterProgressMapper.countBooksCompletedBetween(
-                userId, start, halfPoint);
-        int secondHalf = chapterProgressMapper.countBooksCompletedBetween(
-                userId, halfPoint, LocalDateTime.now());
+        int firstHalf = chapterProgressMapper.countBooksCompletedBetween(userId, start, halfPoint);
+        int secondHalf = chapterProgressMapper.countBooksCompletedBetween(userId, halfPoint, LocalDateTime.now());
 
         if (firstHalf > 0) {
             double change = ((secondHalf - firstHalf) * 100.0) / firstHalf;
@@ -1398,13 +1294,11 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime start = LocalDateTime.now().minusDays(period);
 
         // Get speed for first half
-        Map<String, Object> firstHalf = activityMapper.getUserActivitySummary(
-                userId, start, halfPoint);
+        Map<String, Object> firstHalf = activityMapper.getUserActivitySummary(userId, start, halfPoint);
         double firstHalfSpeed = getDoubleValue(firstHalf.get("avg_speed"));
 
         // Get speed for second half
-        Map<String, Object> secondHalf = activityMapper.getUserActivitySummary(
-                userId, halfPoint, LocalDateTime.now());
+        Map<String, Object> secondHalf = activityMapper.getUserActivitySummary(userId, halfPoint, LocalDateTime.now());
         double secondHalfSpeed = getDoubleValue(secondHalf.get("avg_speed"));
 
         if (firstHalfSpeed > 0) {
@@ -1430,14 +1324,11 @@ public class DashboardServiceImpl implements DashboardService {
         return trend;
     }
 
-    private List<ReadingStatisticsResponse.GenreStats> buildGenreBreakdown(
-            Long userId, LocalDateTime since) {
-
+    private List<ReadingStatisticsResponse.GenreStats> buildGenreBreakdown(Long userId, LocalDateTime since) {
         Map<String, ReadingStatisticsResponse.GenreStats> genreMap = new HashMap<>();
 
         // Ambil semua sesi membaca sejak tanggal tertentu
-        List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(
-                userId, since, 0, Integer.MAX_VALUE);
+        List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(userId, since, 0, Integer.MAX_VALUE);
 
         // Set untuk melacak buku yang sudah dihitung (hindari duplikasi)
         Set<Long> countedBooks = new HashSet<>();
@@ -1454,12 +1345,11 @@ public class DashboardServiceImpl implements DashboardService {
                 if (genres.isEmpty()) continue;
 
                 // Ambil genre pertama (atau bisa diubah untuk menangani multiple genres)
-                String genreName = genres.get(0).getName();
+                String genreName = genres.getFirst().getName();
 
                 ReadingStatisticsResponse.GenreStats stats = genreMap.computeIfAbsent(
                         genreName, k -> {
-                            ReadingStatisticsResponse.GenreStats s =
-                                    new ReadingStatisticsResponse.GenreStats();
+                            ReadingStatisticsResponse.GenreStats s = new ReadingStatisticsResponse.GenreStats();
                             s.setGenreName(genreName);
                             s.setBooksRead(0);
                             s.setMinutesSpent(0);
@@ -1476,12 +1366,11 @@ public class DashboardServiceImpl implements DashboardService {
             if (bookForSession != null) {
                 List<Genre> genres = bookMapper.getBookGenres(bookForSession.getId());
                 if (!genres.isEmpty()) {
-                    genreName = genres.get(0).getName();
+                    genreName = genres.getFirst().getName();
 
                     ReadingStatisticsResponse.GenreStats stats = genreMap.get(genreName);
                     if (stats != null) {
-                        int minutesSpent = (session.getTotalDurationSeconds() != null) ?
-                                session.getTotalDurationSeconds() / 60 : 0;
+                        int minutesSpent = (session.getTotalDurationSeconds() != null) ? session.getTotalDurationSeconds() / 60 : 0;
                         stats.setMinutesSpent(stats.getMinutesSpent() + minutesSpent);
                     }
                 }
@@ -1508,7 +1397,7 @@ public class DashboardServiceImpl implements DashboardService {
         // Urutkan berdasarkan persentase (dari terbesar)
         return genreMap.values().stream()
                 .sorted((g1, g2) -> Double.compare(g2.getPercentage(), g1.getPercentage()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Double calculateAverageRatingForGenre(Long userId, String genreName, LocalDateTime since) {
@@ -1543,26 +1432,11 @@ public class DashboardServiceImpl implements DashboardService {
         }
     }
 
-    private List<ReadingStatisticsResponse.TimeSlotStats> buildPeakTimes(
-            Long userId, LocalDateTime since) {
-
-        Map<Integer, ReadingStatisticsResponse.TimeSlotStats> timeMap = new HashMap<>();
-
-        // Inisialisasi semua jam (0-23)
-        for (int hour = 0; hour < 24; hour++) {
-            ReadingStatisticsResponse.TimeSlotStats stats =
-                    new ReadingStatisticsResponse.TimeSlotStats();
-            stats.setHour(hour);
-            stats.setLabel(getTimeOfDayLabel(hour));
-            stats.setSessionsCount(0);
-            stats.setMinutesRead(0);
-            stats.setPercentage(0.0); // Inisialisasi default
-            timeMap.put(hour, stats);
-        }
+    private List<ReadingStatisticsResponse.TimeSlotStats> buildPeakTimes(Long userId, LocalDateTime since) {
+        final Map<Integer, ReadingStatisticsResponse.TimeSlotStats> timeMap = getIntegerTimeSlotStatsMap();
 
         // Ambil semua sesi dan kelompokkan berdasarkan jam
-        List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(
-                userId, since, 0, Integer.MAX_VALUE);
+        List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(userId, since, 0, Integer.MAX_VALUE);
 
         for (ReadingSession session : sessions) {
             // Cek null untuk startedAt
@@ -1603,7 +1477,23 @@ public class DashboardServiceImpl implements DashboardService {
         // Urutkan berdasarkan jam (0-23)
         return timeMap.values().stream()
                 .sorted(Comparator.comparingInt(ReadingStatisticsResponse.TimeSlotStats::getHour))
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    private Map<Integer, ReadingStatisticsResponse.TimeSlotStats> getIntegerTimeSlotStatsMap() {
+        Map<Integer, ReadingStatisticsResponse.TimeSlotStats> timeMap = new HashMap<>();
+
+        // Inisialisasi semua jam (0-23)
+        for (int hour = 0; hour < 24; hour++) {
+            ReadingStatisticsResponse.TimeSlotStats stats = new ReadingStatisticsResponse.TimeSlotStats();
+            stats.setHour(hour);
+            stats.setLabel(getTimeOfDayLabel(hour));
+            stats.setSessionsCount(0);
+            stats.setMinutesRead(0);
+            stats.setPercentage(0.0); // Inisialisasi default
+            timeMap.put(hour, stats);
+        }
+        return timeMap;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1633,12 +1523,6 @@ public class DashboardServiceImpl implements DashboardService {
 
         return item;
     }
-
-// ═══════════════════════════════════════════════════════════
-// HELPER METHODS CONTINUATION - Part 2
-// ═══════════════════════════════════════════════════════════
-
-    // Continuation from mapHighlightToAnnotation...
 
     private AnnotationItemResponse mapHighlightToAnnotation(Highlight highlight) {
         AnnotationItemResponse item = new AnnotationItemResponse();
@@ -1691,9 +1575,6 @@ public class DashboardServiceImpl implements DashboardService {
 
     private void sortAnnotations(List<AnnotationItemResponse> items, String sortBy) {
         switch (sortBy) {
-            case "recent":
-                items.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-                break;
             case "book":
                 items.sort(Comparator.comparing(AnnotationItemResponse::getBookTitle));
                 break;
@@ -1719,8 +1600,7 @@ public class DashboardServiceImpl implements DashboardService {
         item.setReviewContent(review.getContent());
 
         // Get rating
-        BookRating rating = bookRatingMapper.findByUserAndBook(
-                review.getUserId(), review.getBookId());
+        BookRating rating = bookRatingMapper.findByUserAndBook(review.getUserId(), review.getBookId());
         item.setRating(rating != null ? rating.getRating() : null);
 
         // Engagement counts (placeholder - would need review_feedback table)
@@ -1746,12 +1626,11 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     private List<String> getUserFavoriteGenres(Long userId, int limit) {
-        List<Map<String, Object>> genreData = genreMapper.getUserFavoriteGenres(
-                userId, limit);
+        List<Map<String, Object>> genreData = genreMapper.getUserFavoriteGenres(userId, limit);
 
         return genreData.stream()
                 .map(m -> (String) m.get("name"))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private Double calculateMatchScore(Long userId, BookRecommendationResponse rec) {
@@ -1780,9 +1659,7 @@ public class DashboardServiceImpl implements DashboardService {
         return score;
     }
 
-    private List<String> identifyMatchingFactors(Long userId,
-                                                 BookRecommendationResponse rec) {
-
+    private List<String> identifyMatchingFactors(Long userId, BookRecommendationResponse rec) {
         List<String> factors = new ArrayList<>();
 
         List<String> userGenres = getUserFavoriteGenres(userId, 5);
@@ -1805,9 +1682,7 @@ public class DashboardServiceImpl implements DashboardService {
     // CALENDAR HELPERS
     // ═══════════════════════════════════════════════════════════
 
-    private ReadingCalendarResponse.CalendarDay buildCalendarDay(
-            Long userId, LocalDate date) {
-
+    private ReadingCalendarResponse.CalendarDay buildCalendarDay(Long userId, LocalDate date) {
         ReadingCalendarResponse.CalendarDay day = new ReadingCalendarResponse.CalendarDay();
 
         day.setDate(date.toString());
@@ -1816,8 +1691,7 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
 
         // Ambil sesi untuk hari ini
-        List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(
-                userId, dayStart, dayEnd);
+        List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(userId, dayStart, dayEnd);
 
         // Hitung total menit membaca
         int totalMinutes = sessions.stream()
@@ -1920,14 +1794,13 @@ public class DashboardServiceImpl implements DashboardService {
         return day;
     }
 
-    private Integer calculateStreakInPeriod(
-            List<ReadingCalendarResponse.CalendarDay> days) {
+    private Integer calculateStreakInPeriod(List<ReadingCalendarResponse.CalendarDay> days) {
 
         int maxStreak = 0;
         int currentStreak = 0;
 
         for (ReadingCalendarResponse.CalendarDay day : days) {
-            if (day.getHasActivity()) {
+            if (Boolean.TRUE.equals(day.getHasActivity())) {
                 currentStreak++;
                 maxStreak = Math.max(maxStreak, currentStreak);
             } else {
@@ -2042,10 +1915,7 @@ public class DashboardServiceImpl implements DashboardService {
         return achievements;
     }
 
-    private AchievementResponse createAchievement(
-            String id, String category, String title, String description,
-            String tier, int target, int current, int points) {
-
+    private AchievementResponse createAchievement(String id, String category, String title, String description, String tier, int target, int current, int points) {
         AchievementResponse achievement = new AchievementResponse();
 
         achievement.setAchievementId(id);
@@ -2065,21 +1935,16 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // Badge URL
-        achievement.setBadgeUrl(
-                String.format("/badges/%s_%s.png", id, tier));
+        achievement.setBadgeUrl(String.format("/badges/%s_%s.png", id, tier));
 
         // Rarity (simplified)
-        achievement.setRarityPercentage(
-                tier.equals("bronze") ? 60 : tier.equals("silver") ? 30 : 10);
+        achievement.setRarityPercentage(tier.equals("bronze") ? 60 : tier.equals("silver") ? 30 : 10);
 
         return achievement;
     }
 
-    private UserReadingDashboardResponse.RecentAchievement mapToRecentAchievement(
-            AchievementResponse achievement) {
-
-        UserReadingDashboardResponse.RecentAchievement recent =
-                new UserReadingDashboardResponse.RecentAchievement();
+    private UserReadingDashboardResponse.RecentAchievement mapToRecentAchievement(AchievementResponse achievement) {
+        UserReadingDashboardResponse.RecentAchievement recent = new UserReadingDashboardResponse.RecentAchievement();
 
         recent.setAchievementId(achievement.getAchievementId());
         recent.setTitle(achievement.getTitle());
@@ -2094,11 +1959,8 @@ public class DashboardServiceImpl implements DashboardService {
     // MAPPING TO RECENT ANNOTATIONS
     // ═══════════════════════════════════════════════════════════
 
-    private UserReadingDashboardResponse.RecentAnnotation mapBookmarkToRecentAnnotation(
-            Bookmark bookmark) {
-
-        UserReadingDashboardResponse.RecentAnnotation annotation =
-                new UserReadingDashboardResponse.RecentAnnotation();
+    private UserReadingDashboardResponse.RecentAnnotation mapBookmarkToRecentAnnotation(Bookmark bookmark) {
+        UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("bookmark");
         annotation.setContent(bookmark.getDescription());
@@ -2114,11 +1976,9 @@ public class DashboardServiceImpl implements DashboardService {
         return annotation;
     }
 
-    private UserReadingDashboardResponse.RecentAnnotation mapHighlightToRecentAnnotation(
-            Highlight highlight) {
+    private UserReadingDashboardResponse.RecentAnnotation mapHighlightToRecentAnnotation(Highlight highlight) {
 
-        UserReadingDashboardResponse.RecentAnnotation annotation =
-                new UserReadingDashboardResponse.RecentAnnotation();
+        UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("highlight");
         annotation.setContent(highlight.getHighlightedText());
@@ -2134,11 +1994,8 @@ public class DashboardServiceImpl implements DashboardService {
         return annotation;
     }
 
-    private UserReadingDashboardResponse.RecentAnnotation mapNoteToRecentAnnotation(
-            Note note) {
-
-        UserReadingDashboardResponse.RecentAnnotation annotation =
-                new UserReadingDashboardResponse.RecentAnnotation();
+    private UserReadingDashboardResponse.RecentAnnotation mapNoteToRecentAnnotation(Note note) {
+        UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("note");
         annotation.setContent(note.getContent());
@@ -2166,11 +2023,11 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime todayStart = today.atStartOfDay();
         Boolean hasToday = activityMapper.hasActivitySince(userId, todayStart);
 
-        if (!hasToday) {
+        if (Boolean.FALSE.equals(hasToday)) {
             // Check yesterday
             LocalDateTime yesterdayStart = today.minusDays(1).atStartOfDay();
             Boolean hasYesterday = activityMapper.hasActivitySince(userId, yesterdayStart);
-            if (!hasYesterday) {
+            if (Boolean.FALSE.equals(hasYesterday)) {
                 return 0; // Streak broken
             }
         }
@@ -2200,15 +2057,13 @@ public class DashboardServiceImpl implements DashboardService {
 
     private Integer calculateLongestStreak(Long userId) {
         // Simplified - would need more efficient query in production
-        List<ReadingSession> allSessions = sessionMapper.findUserSessionsSince(
-                userId, LocalDateTime.now().minusYears(2), 0, Integer.MAX_VALUE);
+        List<ReadingSession> allSessions = sessionMapper.findUserSessionsSince(userId, LocalDateTime.now().minusYears(2), 0, Integer.MAX_VALUE);
 
         if (allSessions.isEmpty()) return 0;
 
         // Group by date
         Map<LocalDate, Boolean> activityMap = new HashMap<>();
-        allSessions.forEach(session ->
-                activityMap.put(session.getStartedAt().toLocalDate(), true));
+        allSessions.forEach(session -> activityMap.put(session.getStartedAt().toLocalDate(), true));
 
         // Find longest streak
         int maxStreak = 0;
@@ -2238,8 +2093,7 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     private boolean isBookInProgress(Long userId, Long bookId) {
-        List<ChapterProgress> progress =
-                chapterProgressMapper.findAllByUserAndBook(userId, bookId);
+        List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, bookId);
 
         if (progress.isEmpty()) return false;
 
@@ -2257,8 +2111,7 @@ public class DashboardServiceImpl implements DashboardService {
         Book book = bookMapper.findById(bookId);
         if (book == null) return false;
 
-        List<ChapterProgress> progress =
-                chapterProgressMapper.findAllByUserAndBook(userId, bookId);
+        List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, bookId);
 
         long completed = progress.stream()
                 .filter(ChapterProgress::getIsCompleted)
@@ -2301,11 +2154,13 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Double getDoubleValue(Object value) {
-        if (value == null) return 0.0;
-        if (value instanceof Double) return (Double) value;
-        if (value instanceof Integer) return ((Integer) value).doubleValue();
-        if (value instanceof Long) return ((Long) value).doubleValue();
-        return 0.0;
+        return switch (value) {
+            case null -> 0.0;
+            case Double v -> v;
+            case Integer i -> i.doubleValue();
+            case Long l -> l.doubleValue();
+            default -> 0.0;
+        };
     }
 
     // ═══════════════════════════════════════════════════════════

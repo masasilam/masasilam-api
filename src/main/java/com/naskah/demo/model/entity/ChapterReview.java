@@ -10,7 +10,7 @@ public class ChapterReview {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
-    private String comment;
+    private String content;
     private Long parentId; // For replies
     private Integer likeCount;
     private Boolean isSpoiler; // Mark as spoiler

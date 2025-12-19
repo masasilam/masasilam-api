@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -145,8 +144,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             }
 
             BookRatingResponse response = mapToBookRatingResponse(rating, user);
-            return new DataResponse<>(SUCCESS, "Book rating retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Book rating retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting user book rating for: {}", slug, e);
@@ -176,8 +174,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             }
 
             bookRatingMapper.delete(rating.getId());
-            return new DataResponse<>(SUCCESS, "Book rating deleted successfully",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Book rating deleted successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error deleting book rating for: {}", slug, e);
@@ -200,21 +197,17 @@ public class BookReactionServiceImpl implements BookReactionService {
             Long currentUserId = getCurrentUserId();
 
             int offset = (page - 1) * limit;
-            List<BookReview> reviews = bookReviewMapper.findByBookWithPagination(
-                    book.getId(), offset, limit, sortBy);
+            List<BookReview> reviews = bookReviewMapper.findByBookWithPagination(book.getId(), offset, limit, sortBy);
 
             List<BookReviewResponse> responses = reviews.stream()
                     .map(review -> mapToBookReviewResponse(review, currentUserId))
-                    .collect(Collectors.toList());
+                    .toList();
 
             int totalReviews = bookReviewMapper.countByBook(book.getId());
-            int totalPages = (int) Math.ceil((double) totalReviews / limit);
 
-            PageDataResponse<BookReviewResponse> pageData = new PageDataResponse<>(
-                    page, limit, totalReviews, responses);
+            PageDataResponse<BookReviewResponse> pageData = new PageDataResponse<>(page, limit, totalReviews, responses);
 
-            return new DatatableResponse<>(SUCCESS, "Book reviews retrieved successfully",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Book reviews retrieved successfully", HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting book reviews for: {}", slug, e);
@@ -244,8 +237,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             }
 
             BookReviewResponse response = mapToBookReviewResponse(review, user.getId());
-            return new DataResponse<>(SUCCESS, "Book review retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Book review retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting user book review for: {}", slug, e);
@@ -271,8 +263,7 @@ public class BookReactionServiceImpl implements BookReactionService {
 
             BookReview existingReview = bookReviewMapper.findByUserAndBook(user.getId(), book.getId());
             if (existingReview != null) {
-                throw new IllegalArgumentException(
-                        "You already have a review for this book. Use update endpoint to modify it.");
+                throw new IllegalArgumentException("You already have a review for this book. Use update endpoint to modify it.");
             }
 
             BookReview review = new BookReview();
@@ -289,8 +280,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             bookReviewMapper.insert(review);
 
             BookReviewResponse response = mapToBookReviewResponse(review, user.getId());
-            return new DataResponse<>(SUCCESS, "Book review created successfully",
-                    HttpStatus.CREATED.value(), response);
+            return new DataResponse<>(SUCCESS, "Book review created successfully", HttpStatus.CREATED.value(), response);
 
         } catch (Exception e) {
             log.error("Error creating book review for: {}", slug, e);
@@ -325,8 +315,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             bookReviewMapper.update(review);
 
             BookReviewResponse response = mapToBookReviewResponse(review, user.getId());
-            return new DataResponse<>(SUCCESS, "Book review updated successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Book review updated successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error updating book review for: {}", slug, e);
@@ -357,8 +346,7 @@ public class BookReactionServiceImpl implements BookReactionService {
 
             bookReviewMapper.softDelete(review.getId());
 
-            return new DataResponse<>(SUCCESS, "Book review deleted successfully",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Book review deleted successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error deleting book review for: {}", slug, e);
@@ -411,8 +399,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             bookReviewReplyMapper.insert(reply);
 
             BookReviewReplyResponse response = mapToBookReviewReplyResponse(reply, user.getId());
-            return new DataResponse<>(SUCCESS, "Reply added successfully",
-                    HttpStatus.CREATED.value(), response);
+            return new DataResponse<>(SUCCESS, "Reply added successfully", HttpStatus.CREATED.value(), response);
 
         } catch (Exception e) {
             log.error("Error adding reply to book review: {}", reviewId, e);
@@ -450,8 +437,7 @@ public class BookReactionServiceImpl implements BookReactionService {
             bookReviewReplyMapper.update(reply);
 
             BookReviewReplyResponse response = mapToBookReviewReplyResponse(reply, user.getId());
-            return new DataResponse<>(SUCCESS, "Reply updated successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Reply updated successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error updating book review reply: {}", replyId, e);
@@ -485,8 +471,7 @@ public class BookReactionServiceImpl implements BookReactionService {
 
             bookReviewReplyMapper.softDelete(replyId);
 
-            return new DataResponse<>(SUCCESS, "Reply deleted successfully",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Reply deleted successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error deleting book review reply: {}", replyId, e);
@@ -500,8 +485,7 @@ public class BookReactionServiceImpl implements BookReactionService {
 
     @Override
     @Transactional
-    public DataResponse<Void> addOrUpdateBookReviewFeedback(
-            String slug, Long reviewId, FeedbackRequest request) {
+    public DataResponse<Void> addOrUpdateBookReviewFeedback(String slug, Long reviewId, FeedbackRequest request) {
         try {
             String username = headerHolder.getUsername();
             if (username == null || username.isEmpty()) {
@@ -524,8 +508,7 @@ public class BookReactionServiceImpl implements BookReactionService {
                 throw new IllegalArgumentException("Cannot give feedback to your own review");
             }
 
-            BookReviewFeedback existingFeedback = bookReviewFeedbackMapper.findByUserAndReview(
-                    user.getId(), reviewId);
+            BookReviewFeedback existingFeedback = bookReviewFeedbackMapper.findByUserAndReview(user.getId(), reviewId);
 
             String message;
 
@@ -568,16 +551,14 @@ public class BookReactionServiceImpl implements BookReactionService {
                 throw new DataNotFoundException();
             }
 
-            BookReviewFeedback feedback = bookReviewFeedbackMapper.findByUserAndReview(
-                    user.getId(), reviewId);
+            BookReviewFeedback feedback = bookReviewFeedbackMapper.findByUserAndReview(user.getId(), reviewId);
             if (feedback == null) {
                 throw new DataNotFoundException();
             }
 
             bookReviewFeedbackMapper.delete(feedback.getId());
 
-            return new DataResponse<>(SUCCESS, "Feedback deleted successfully",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Feedback deleted successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error deleting book review feedback: {}", reviewId, e);
@@ -590,17 +571,14 @@ public class BookReactionServiceImpl implements BookReactionService {
     // ============================================
 
     private Long getCurrentUserId() {
-        try {
-            String username = headerHolder.getUsername();
-            if (username != null) {
-                User user = userMapper.findUserByUsername(username);
-                if (user != null) {
-                    return user.getId();
-                }
+        String username = headerHolder.getUsername();
+        if (username != null) {
+            User user = userMapper.findUserByUsername(username);
+            if (user != null) {
+                return user.getId();
             }
-        } catch (Exception e) {
-            // Guest user
         }
+
         return null;
     }
 
@@ -637,10 +615,8 @@ public class BookReactionServiceImpl implements BookReactionService {
         response.setIsOwner(currentUserId != null && currentUserId.equals(review.getUserId()));
 
         if (currentUserId != null) {
-            BookReviewFeedback userFeedback = bookReviewFeedbackMapper.findByUserAndReview(
-                    currentUserId, review.getId());
-            response.setCurrentUserFeedback(
-                    userFeedback != null ? userFeedback.getIsHelpful() : null);
+            BookReviewFeedback userFeedback = bookReviewFeedbackMapper.findByUserAndReview(currentUserId, review.getId());
+            response.setCurrentUserFeedback(userFeedback != null ? userFeedback.getIsHelpful() : null);
         } else {
             response.setCurrentUserFeedback(null);
         }
@@ -648,14 +624,13 @@ public class BookReactionServiceImpl implements BookReactionService {
         List<BookReviewReply> replies = bookReviewReplyMapper.findByReviewId(review.getId());
         List<BookReviewReplyResponse> replyResponses = replies.stream()
                 .map(reply -> mapToBookReviewReplyResponse(reply, currentUserId))
-                .collect(Collectors.toList());
+                .toList();
         response.setReplies(replyResponses);
 
         return response;
     }
 
-    private BookReviewReplyResponse mapToBookReviewReplyResponse(
-            BookReviewReply reply, Long currentUserId) {
+    private BookReviewReplyResponse mapToBookReviewReplyResponse(BookReviewReply reply, Long currentUserId) {
         User replyUser = userMapper.findUserById(reply.getUserId());
 
         BookReviewReplyResponse response = new BookReviewReplyResponse();

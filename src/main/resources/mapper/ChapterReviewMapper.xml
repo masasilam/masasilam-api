@@ -45,8 +45,8 @@
 
     <!-- Insert new review -->
     <insert id="insertChapterReview" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO chapter_reviews (user_id, book_id, chapter_number, comment, parent_id, is_spoiler, like_count, created_at, updated_at)
-        VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{comment}, #{parentId}, #{isSpoiler},
+        INSERT INTO chapter_reviews (user_id, book_id, chapter_number, content, parent_id, is_spoiler, like_count, created_at, updated_at)
+        VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{content}, #{parentId}, #{isSpoiler},
         COALESCE(#{likeCount}, 0), #{createdAt}, #{updatedAt})
     </insert>
 

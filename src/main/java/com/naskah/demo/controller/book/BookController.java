@@ -20,19 +20,19 @@ import java.util.List;
 
 /**
  * BookController - Handle basic book CRUD operations + metadata
- *
+ * <p>
  * CRUD Endpoints:
  * - POST   /api/books                 - Create book
  * - GET    /api/books/{slug}          - Get book detail
  * - GET    /api/books                 - Get books (paginated, filtered)
  * - PUT    /api/books                 - Update book
  * - DELETE /api/books/{id}            - Delete book
- *
+ * <p>
  * Metadata Endpoints:
  * - GET    /api/books/genres          - Get all genres
  * - GET    /api/books/authors         - Get all authors
  * - GET    /api/books/contributors    - Get all contributors
- *
+ * <p>
  * Other Endpoints:
  * - GET    /api/books/{slug}/download        - Download book file
  * - GET    /api/books/{slug}/my-annotations  - Get user's annotations
@@ -57,6 +57,7 @@ public class BookController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<BookResponse>> createBook(@Valid @ModelAttribute BookRequest request) {
         DataResponse<BookResponse> response = bookService.createBook(request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -66,42 +67,41 @@ public class BookController {
     @GetMapping("/{slug}")
     public ResponseEntity<DataResponse<BookResponse>> getBookDetail(@PathVariable String slug) {
         DataResponse<BookResponse> response = bookService.getBookDetailBySlug(slug);
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(
-            @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "12") @Min(1) int limit,
-            @RequestParam(defaultValue = "updateAt") String sortField,
-            @RequestParam(defaultValue = "DESC") String sortOrder,
-            @RequestParam(required = false) String searchTitle,
-            @RequestParam(required = false) String searchInBook,
-            @RequestParam(required = false) String authorName,
-            @RequestParam(required = false) String contributor,
-            @RequestParam(required = false) String genre,
-            @RequestParam(required = false) Integer minPages,
-            @RequestParam(required = false) Integer maxPages,
-            @RequestParam(required = false) Long minFileSize,
-            @RequestParam(required = false) Long maxFileSize,
-            @RequestParam(required = false) Integer publicationYearFrom,
-            @RequestParam(required = false) Integer publicationYearTo,
-            @RequestParam(required = false) String difficultyLevel,
-            @RequestParam(required = false) String fileFormat,
-            @RequestParam(required = false) Boolean isFeatured,
-            @RequestParam(required = false) Integer languageId,
-            @RequestParam(required = false) Double minRating,
-            @RequestParam(required = false) Integer minViewCount,
-            @RequestParam(required = false) Integer minReadCount) {
-
+    public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                                                             @RequestParam(defaultValue = "12") @Min(1) int limit,
+                                                                             @RequestParam(defaultValue = "updateAt") String sortField,
+                                                                             @RequestParam(defaultValue = "DESC") String sortOrder,
+                                                                             @RequestParam(required = false) String searchTitle,
+                                                                             @RequestParam(required = false) String searchInBook,
+                                                                             @RequestParam(required = false) String authorName,
+                                                                             @RequestParam(required = false) String contributor,
+                                                                             @RequestParam(required = false) String genre,
+                                                                             @RequestParam(required = false) Integer minChapters,
+                                                                             @RequestParam(required = false) Integer maxChapters,
+                                                                             @RequestParam(required = false) Long minFileSize,
+                                                                             @RequestParam(required = false) Long maxFileSize,
+                                                                             @RequestParam(required = false) Integer publicationYearFrom,
+                                                                             @RequestParam(required = false) Integer publicationYearTo,
+                                                                             @RequestParam(required = false) String difficultyLevel,
+                                                                             @RequestParam(required = false) String fileFormat,
+                                                                             @RequestParam(required = false) Boolean isFeatured,
+                                                                             @RequestParam(required = false) Integer languageId,
+                                                                             @RequestParam(required = false) Double minRating,
+                                                                             @RequestParam(required = false) Integer minViewCount,
+                                                                             @RequestParam(required = false) Integer minReadCount) {
         BookSearchCriteria criteria = BookSearchCriteria.builder()
                 .searchTitle(searchTitle)
                 .searchInBook(searchInBook)
                 .authorName(authorName)
                 .contributor(contributor)
-                .genre(genre)  // Changed to genre
-                .minPages(minPages)
-                .maxPages(maxPages)
+                .genre(genre)
+                .minPages(minChapters)
+                .maxPages(maxChapters)
                 .minFileSize(minFileSize)
                 .maxFileSize(maxFileSize)
                 .publicationYearFrom(publicationYearFrom)
@@ -115,8 +115,7 @@ public class BookController {
                 .minReadCount(minReadCount)
                 .build();
 
-        DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(
-                page, limit, sortField, sortOrder, criteria);
+        DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(page, limit, sortField, sortOrder, criteria);
 
         return ResponseEntity.ok(response);
     }
@@ -125,11 +124,10 @@ public class BookController {
      * Update existing book
      */
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<DataResponse<Book>> updateBook(
-            @RequestParam Long id,
-            @RequestPart("ebook") @Valid Book book,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+    public ResponseEntity<DataResponse<Book>> updateBook(@RequestParam Long id, @RequestPart("ebook") @Valid Book book,
+                                                         @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
         DataResponse<Book> response = bookService.update(id, book, file);
+
         return ResponseEntity.ok(response);
     }
 
@@ -139,6 +137,7 @@ public class BookController {
     @DeleteMapping("/{id}")
     public ResponseEntity<DefaultResponse> deleteBook(@PathVariable Long id) throws IOException {
         DefaultResponse response = bookService.delete(id);
+
         return ResponseEntity.ok(response);
     }
 
@@ -160,9 +159,9 @@ public class BookController {
      * Returns list of genres sorted by name
      */
     @GetMapping("/genres")
-    public ResponseEntity<DataResponse<List<GenreResponse>>> getAllGenres(
-            @RequestParam(defaultValue = "false") boolean includeBookCount) {
+    public ResponseEntity<DataResponse<List<GenreResponse>>> getAllGenres(@RequestParam(defaultValue = "false") boolean includeBookCount) {
         DataResponse<List<GenreResponse>> response = bookService.getAllGenres(includeBookCount);
+
         return ResponseEntity.ok(response);
     }
 
@@ -176,13 +175,12 @@ public class BookController {
      * @param sortBy - Sort by: name, bookCount, createdAt (default: name)
      */
     @GetMapping("/authors")
-    public ResponseEntity<DatatableResponse<AuthorResponse>> getAllAuthors(
-            @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "20") @Min(1) int limit,
-            @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "name") String sortBy) {
-        DatatableResponse<AuthorResponse> response = bookService.getAllAuthors(
-                page, limit, search, sortBy);
+    public ResponseEntity<DatatableResponse<AuthorResponse>> getAllAuthors(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                                                           @RequestParam(defaultValue = "20") @Min(1) int limit,
+                                                                           @RequestParam(required = false) String search,
+                                                                           @RequestParam(defaultValue = "name") String sortBy) {
+        DatatableResponse<AuthorResponse> response = bookService.getAllAuthors(page, limit, search, sortBy);
+
         return ResponseEntity.ok(response);
     }
 
@@ -196,13 +194,12 @@ public class BookController {
      * @param search - Search by contributor name (optional)
      */
     @GetMapping("/contributors")
-    public ResponseEntity<DatatableResponse<ContributorResponse>> getAllContributors(
-            @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "20") @Min(1) int limit,
-            @RequestParam(required = false) String role,
-            @RequestParam(required = false) String search) {
-        DatatableResponse<ContributorResponse> response = bookService.getAllContributors(
-                page, limit, role, search);
+    public ResponseEntity<DatatableResponse<ContributorResponse>> getAllContributors(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                                                                     @RequestParam(defaultValue = "20") @Min(1) int limit,
+                                                                                     @RequestParam(required = false) String role,
+                                                                                     @RequestParam(required = false) String search) {
+        DatatableResponse<ContributorResponse> response = bookService.getAllContributors(page, limit, role, search);
+
         return ResponseEntity.ok(response);
     }
 
@@ -217,6 +214,7 @@ public class BookController {
     @GetMapping("/{slug}/my-annotations")
     public ResponseEntity<DataResponse<ChapterAnnotationsResponse>> getMyBookAnnotations(@PathVariable String slug) {
         DataResponse<ChapterAnnotationsResponse> response = chapterService.getMyChapterAnnotations(slug);
+
         return ResponseEntity.ok(response);
     }
 }

@@ -40,7 +40,7 @@
     </insert>
 
     <insert id="insertBookAuthor">
-        INSERT INTO authors (book_id, author_id)
+        INSERT INTO book_authors (book_id, author_id)
         VALUES (#{bookId}, #{authorId})
     </insert>
 

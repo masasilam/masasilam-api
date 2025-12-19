@@ -18,6 +18,7 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -31,7 +32,7 @@ public class EpubServiceImpl implements EpubService {
     private final BookChapterMapper chapterMapper;
 
     @Override
-    public EpubProcessResult processEpubFile(MultipartFile epubFile, Book book) throws Exception {
+    public EpubProcessResult processEpubFile(MultipartFile epubFile, Book book) throws IOException {
         log.info("Processing EPUB for book: {} (ID: {})", book.getTitle(), book.getId());
 
         EpubProcessResult result = new EpubProcessResult();
@@ -77,7 +78,7 @@ public class EpubServiceImpl implements EpubService {
 
         } catch (Exception e) {
             log.error("Failed to process EPUB: {}", e.getMessage(), e);
-            throw new Exception("Failed to process EPUB file", e);
+            throw e;
         }
     }
 
