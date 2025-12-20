@@ -474,47 +474,93 @@
     </sql>
 
     <select id="getBookListWithAdvancedFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
-        SELECT DISTINCT
+        SELECT
         b.id,
         b.title,
         b.slug,
         b.subtitle,
-        b.cover_image_url,
-        b.file_format,
-        b.file_size,
-        b.total_pages,
-        b.total_word,
-        b.estimated_read_time,
-        b.difficulty_level,
-        b.view_count,
-        b.read_count,
-        b.download_count,
-        b.is_featured,
-        b.published_at,
-        b.updated_at,
+        b.edition,
+        b.cover_image_url AS coverImageUrl,
+        b.publisher,
+        b.publication_year AS publicationYear,
+        b.file_url AS fileUrl,
+        b.file_format AS fileFormat,
+        b.file_size AS fileSize,
+        b.total_pages AS totalPages,
+        b.description,
+        b.estimated_read_time AS estimatedReadTime,
+        l.name AS language,
+        b.total_word AS totalWord,
+        b.difficulty_level AS difficultyLevel,
+        b.view_count AS viewCount,
+        b.read_count AS readCount,
+        b.download_count AS downloadCount,
+        b.series_id AS seriesId,
+        b.series_order AS seriesOrder,
+        b.source,
+        cs.name AS copyrightStatus,
+        b.published_at AS publishedAt,
+        b.category,
+        b.created_at AS createdAt,
+        b.updated_at AS updatedAt,
+        b.is_active AS isActive,
+        b.is_featured AS isFeatured,
+        -- Authors
         (
         SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
         FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id
-        ) AS authors,
+        ) AS authorNames,
+        -- Author Slugs
+        (
+        SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
+        FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id
+        ) AS authorSlugs,
+        -- Contributors
+        (
+        SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
+        FROM book_contributors bc
+        JOIN contributors c ON bc.contributor_id = c.id
+        WHERE bc.book_id = b.id
+        ) AS contributors,
+        -- Genres
         (
         SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
         FROM book_genres bg
         JOIN genres g ON bg.genre_id = g.id
         WHERE bg.book_id = b.id
         ) AS genres,
-        (
-        SELECT COALESCE(AVG(r.rating), 0)
-        FROM book_ratings r
-        WHERE r.book_id = b.id
-        ) AS average_rating,
-        (
-        SELECT COUNT(*)
-        FROM book_ratings r
-        WHERE r.book_id = b.id
-        ) AS rating_count
+        -- Ratings and Reactions
+        COALESCE(rs.total_ratings, 0) AS totalRatings,
+        COALESCE(rs.total_angry, 0) AS totalAngry,
+        COALESCE(rs.total_likes, 0) AS totalLikes,
+        COALESCE(rs.total_loves, 0) AS totalLoves,
+        COALESCE(rs.total_dislikes, 0) AS totalDislikes,
+        COALESCE(rs.total_sad, 0) AS totalSad,
+        COALESCE(rs.total_comments, 0) AS totalComments,
+        COALESCE(rs.average_rating, 0.0) AS averageRating,
+        COALESCE(rs.total_reactions, 0) AS totalReactions
         FROM books b
+        JOIN languages l ON b.language_id = l.id
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN (
+        SELECT
+        book_id,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) AS total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) AS total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) AS total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
+        FROM reactions
+        GROUP BY book_id
+        ) rs ON b.id = rs.book_id
         <include refid="advancedSearchConditions"/>
         ORDER BY ${sortColumn} ${sortType}
         LIMIT #{limit} OFFSET #{offset}
