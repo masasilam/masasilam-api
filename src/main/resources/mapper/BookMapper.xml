@@ -375,48 +375,50 @@
                 AND (
                 LOWER(b.title) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
                 OR LOWER(b.description) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
-                OR LOWER(b.summary) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
-                OR EXISTS (
-                SELECT 1
-                FROM book_chapters bc
-                WHERE bc.book_id = b.id
-                AND LOWER(bc.content) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
-                )
                 )
             </if>
 
             <if test="criteria.authorName != null and criteria.authorName != ''">
                 AND EXISTS (
-                SELECT 1
-                FROM book_authors ba
+                SELECT 1 FROM book_authors ba
                 JOIN authors a ON ba.author_id = a.id
                 WHERE ba.book_id = b.id
-                AND LOWER(a.name) LIKE CONCAT('%', LOWER(#{criteria.authorName}), '%')
+                AND (
+                LOWER(a.slug) = LOWER(#{criteria.authorName})
+                OR LOWER(a.name) LIKE CONCAT('%', LOWER(#{criteria.authorName}), '%')
+                OR LOWER(REGEXP_REPLACE(a.name, '\W', '', 'g'))
+                LIKE CONCAT('%', REGEXP_REPLACE(LOWER(#{criteria.authorName}), '\W', '', 'g'), '%')
                 )
-            </if>
-
-            <if test="criteria.contributor != null and criteria.contributor != ''">
-                AND EXISTS (
-                SELECT 1
-                FROM book_contributors bc
-                JOIN contributors c ON bc.contributor_id = c.id
-                WHERE bc.book_id = b.id
-                AND LOWER(c.name) LIKE CONCAT('%', LOWER(#{criteria.contributor}), '%')
                 )
             </if>
 
             <if test="criteria.genre != null and criteria.genre != ''">
                 AND EXISTS (
-                SELECT 1
-                FROM book_genres bg
+                SELECT 1 FROM book_genres bg
                 JOIN genres g ON bg.genre_id = g.id
                 WHERE bg.book_id = b.id
-                AND LOWER(g.name) LIKE CONCAT('%', LOWER(#{criteria.genre}), '%')
+                AND (
+                LOWER(g.slug) = LOWER(#{criteria.genre})
+                OR LOWER(g.name) LIKE CONCAT('%', LOWER(#{criteria.genre}), '%')
+                )
+                )
+            </if>
+
+            <if test="criteria.contributor != null and criteria.contributor != ''">
+                AND EXISTS (
+                SELECT 1 FROM book_contributors bc
+                JOIN contributors c ON bc.contributor_id = c.id
+                WHERE bc.book_id = b.id
+                AND (
+                LOWER(c.name) LIKE CONCAT('%', LOWER(#{criteria.contributor}), '%')
+                OR LOWER(REGEXP_REPLACE(c.name, '[^a-z0-9]', '', 'g'))
+                LIKE CONCAT('%', REGEXP_REPLACE(LOWER(#{criteria.contributor}), '[^a-z0-9]', '', 'g'), '%')
+                )
                 )
             </if>
 
             <if test="criteria.minPages != null">
-                AND b.total_pages &gt;= #{criteria.minPages}
+                AND b.total_pages >= #{criteria.minPages}
             </if>
 
             <if test="criteria.maxPages != null">
@@ -424,7 +426,7 @@
             </if>
 
             <if test="criteria.minFileSize != null">
-                AND b.file_size &gt;= #{criteria.minFileSize}
+                AND b.file_size >= #{criteria.minFileSize}
             </if>
 
             <if test="criteria.maxFileSize != null">
@@ -432,7 +434,7 @@
             </if>
 
             <if test="criteria.publicationYearFrom != null">
-                AND b.publication_year &gt;= #{criteria.publicationYearFrom}
+                AND b.publication_year >= #{criteria.publicationYearFrom}
             </if>
 
             <if test="criteria.publicationYearTo != null">
@@ -440,7 +442,7 @@
             </if>
 
             <if test="criteria.difficultyLevel != null and criteria.difficultyLevel != ''">
-                AND b.difficulty_level = #{criteria.difficultyLevel}
+                AND UPPER(b.difficulty_level) = UPPER(#{criteria.difficultyLevel})
             </if>
 
             <if test="criteria.fileFormat != null and criteria.fileFormat != ''">
@@ -456,23 +458,27 @@
             </if>
 
             <if test="criteria.minRating != null">
-                AND (
-                SELECT COALESCE(AVG(r.rating), 0)
-                FROM book_ratings r
-                WHERE r.book_id = b.id
-                ) &gt;= #{criteria.minRating}
+                AND EXISTS (
+                SELECT 1 FROM (
+                SELECT book_id, AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS avg_rating
+                FROM reactions
+                WHERE book_id = b.id
+                GROUP BY book_id
+                ) r WHERE r.avg_rating >= #{criteria.minRating}
+                )
             </if>
 
             <if test="criteria.minViewCount != null">
-                AND b.view_count &gt;= #{criteria.minViewCount}
+                AND b.view_count >= #{criteria.minViewCount}
             </if>
 
             <if test="criteria.minReadCount != null">
-                AND b.read_count &gt;= #{criteria.minReadCount}
+                AND b.read_count >= #{criteria.minReadCount}
             </if>
         </where>
     </sql>
 
+    <!-- Get paginated books with advanced filters -->
     <select id="getBookListWithAdvancedFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
         SELECT
         b.id,
@@ -505,35 +511,30 @@
         b.updated_at AS updatedAt,
         b.is_active AS isActive,
         b.is_featured AS isFeatured,
-        -- Authors
         (
         SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
         FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id
         ) AS authorNames,
-        -- Author Slugs
         (
         SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
         FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id
         ) AS authorSlugs,
-        -- Contributors
         (
         SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
         FROM book_contributors bc
         JOIN contributors c ON bc.contributor_id = c.id
         WHERE bc.book_id = b.id
         ) AS contributors,
-        -- Genres
         (
         SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
         FROM book_genres bg
         JOIN genres g ON bg.genre_id = g.id
         WHERE bg.book_id = b.id
         ) AS genres,
-        -- Ratings and Reactions
         COALESCE(rs.total_ratings, 0) AS totalRatings,
         COALESCE(rs.total_angry, 0) AS totalAngry,
         COALESCE(rs.total_likes, 0) AS totalLikes,
@@ -566,9 +567,19 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- Count books with advanced filters -->
     <select id="countBooksWithAdvancedFilters" resultType="int">
         SELECT COUNT(DISTINCT b.id)
         FROM books b
+        JOIN languages l ON b.language_id = l.id
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN (
+        SELECT
+        book_id,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
+        FROM reactions
+        GROUP BY book_id
+        ) rs ON b.id = rs.book_id
         <include refid="advancedSearchConditions"/>
     </select>
 
