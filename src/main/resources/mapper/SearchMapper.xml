@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.naskah.demo.mapper.SearchMapper">
+
+    <!-- Full-text search dengan detail lengkap dan full slug path -->
+    <select id="searchInBook" resultType="map">
+        WITH RECURSIVE chapter_path AS (
+        -- Base case: chapters tanpa parent
+        SELECT
+        id,
+        slug,
+        CAST(slug AS VARCHAR(1000)) as full_slug,
+        parent_chapter_id,
+        chapter_level
+        FROM book_chapters
+        WHERE parent_chapter_id IS NULL
+
+        UNION ALL
+
+        -- Recursive case: build full path
+        SELECT
+        c.id,
+        c.slug,
+        CAST(
+        CASE
+        WHEN cp.full_slug IS NOT NULL
+        THEN cp.full_slug || '/' || c.slug
+        ELSE c.slug
+        END
+        AS VARCHAR(1000)) as full_slug,
+        c.parent_chapter_id,
+        c.chapter_level
+        FROM book_chapters c
+        INNER JOIN chapter_path cp ON c.parent_chapter_id = cp.id
+        )
+        SELECT
+        c.id as chapter_id,
+        c.chapter_number,
+        c.title as chapter_title,
+        cp.full_slug as chapter_slug,
+        c.chapter_level,
+        c.content,
+        parent.slug as parent_slug,
+        ts_headline('indonesian', c.content,
+        plainto_tsquery('indonesian', #{query}),
+        'MaxWords=50, MinWords=25, MaxFragments=3, StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;') as highlighted_content,
+        ts_rank(c.search_vector, plainto_tsquery('indonesian', #{query})) as relevance_score,
+        (SELECT COUNT(*)
+        FROM regexp_matches(LOWER(c.content), LOWER(#{query}), 'g')) as match_count
+        FROM book_chapters c
+        LEFT JOIN book_chapters parent ON c.parent_chapter_id = parent.id
+        LEFT JOIN chapter_path cp ON c.id = cp.id
+        WHERE c.book_id = #{bookId}
+        AND c.search_vector @@ plainto_tsquery('indonesian', #{query})
+        ORDER BY relevance_score DESC, c.chapter_number ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Count total search results -->
+    <select id="countSearchResults" resultType="int">
+        SELECT COUNT(*)
+        FROM book_chapters c
+        WHERE c.book_id = #{bookId}
+        AND c.search_vector @@ plainto_tsquery('indonesian', #{query})
+    </select>
+
+    <!-- Fallback LIKE search jika full-text search gagal -->
+    <select id="searchInBookSimple" resultType="map">
+        WITH RECURSIVE chapter_path AS (
+        -- Base case: chapters tanpa parent
+        SELECT
+        id,
+        slug,
+        CAST(slug AS VARCHAR(1000)) as full_slug,
+        parent_chapter_id,
+        chapter_level
+        FROM book_chapters
+        WHERE parent_chapter_id IS NULL
+
+        UNION ALL
+
+        -- Recursive case: build full path
+        SELECT
+        c.id,
+        c.slug,
+        CAST(
+        CASE
+        WHEN cp.full_slug IS NOT NULL
+        THEN cp.full_slug || '/' || c.slug
+        ELSE c.slug
+        END
+        AS VARCHAR(1000)) as full_slug,
+        c.parent_chapter_id,
+        c.chapter_level
+        FROM book_chapters c
+        INNER JOIN chapter_path cp ON c.parent_chapter_id = cp.id
+        )
+        SELECT
+        c.id as chapter_id,
+        c.chapter_number,
+        c.title as chapter_title,
+        cp.full_slug as chapter_slug,
+        c.chapter_level,
+        c.content,
+        parent.slug as parent_slug,
+        SUBSTRING(c.content FROM GREATEST(1, POSITION(LOWER(#{query}) IN LOWER(c.content)) - 50) FOR 200) as highlighted_content,
+        0.5 as relevance_score,
+        (SELECT COUNT(*)
+        FROM regexp_matches(LOWER(c.content), LOWER(#{query}), 'g')) as match_count
+        FROM book_chapters c
+        LEFT JOIN book_chapters parent ON c.parent_chapter_id = parent.id
+        LEFT JOIN chapter_path cp ON c.id = cp.id
+        WHERE c.book_id = #{bookId}
+        AND (
+        LOWER(c.title) LIKE LOWER(CONCAT('%', #{query}, '%'))
+        OR LOWER(c.content) LIKE LOWER(CONCAT('%', #{query}, '%'))
+        )
+        ORDER BY
+        CASE
+        WHEN LOWER(c.title) LIKE LOWER(CONCAT('%', #{query}, '%')) THEN 1
+        ELSE 2
+        END,
+        c.chapter_number ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- Count simple search results -->
+    <select id="countSearchResultsSimple" resultType="int">
+        SELECT COUNT(*)
+        FROM book_chapters c
+        WHERE c.book_id = #{bookId}
+        AND (
+        LOWER(c.title) LIKE LOWER(CONCAT('%', #{query}, '%'))
+        OR LOWER(c.content) LIKE LOWER(CONCAT('%', #{query}, '%'))
+        )
+    </select>
+
+    <!-- Insert search history -->
+    <insert id="insertSearchHistory" parameterType="com.naskah.demo.model.entity.SearchHistory"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO search_history (
+        user_id,
+        book_id,
+        query,
+        results_count,
+        search_type,
+        filters,
+        clicked_result_id,
+        clicked_at,
+        created_at
+        ) VALUES (
+        #{userId},
+        #{bookId},
+        #{query},
+        #{resultsCount},
+        #{searchType},
+        #{filters},
+        #{clickedResultId},
+        #{clickedAt},
+        #{createdAt}
+        )
+    </insert>
+
+    <!-- Update search history when user clicks a result -->
+    <update id="updateSearchHistoryClick">
+        UPDATE search_history
+        SET clicked_result_id = #{clickedResultId},
+        clicked_at = #{clickedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

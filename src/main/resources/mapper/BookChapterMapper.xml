@@ -182,10 +182,18 @@
     </select>
 
     <select id="getChapterSlug" resultType="java.lang.String">
-        SELECT slug
-        FROM book_chapters
-        WHERE book_id = #{bookId}
-        AND chapter_number = #{chapterNumber}
+        SELECT
+        CASE
+        WHEN p.slug IS NOT NULL AND p.slug != '' AND p.slug != '-' THEN
+        CONCAT(p.slug, '/', c.slug)
+        ELSE
+        c.slug
+        END as full_slug
+        FROM book_chapters c
+        LEFT JOIN book_chapters p ON c.parent_chapter_id = p.id
+        WHERE c.book_id = #{bookId}
+        AND c.chapter_number = #{chapterNumber}
+        LIMIT 1
     </select>
 
 </mapper>

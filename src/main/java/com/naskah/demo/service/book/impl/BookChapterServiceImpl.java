@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -971,15 +973,35 @@ public class BookChapterServiceImpl implements BookChapterService {
             validateBook(book, slug);
 
             int offset = (request.getPage() - 1) * request.getLimit();
-            String tsQuery = prepareSearchQuery(request.getQuery());
+            String searchQuery = request.getQuery().trim();
 
-            List<Map<String, Object>> results = searchMapper.searchInBook(
-                    book.getId(), tsQuery, offset, request.getLimit());
+            if (searchQuery.isEmpty()) {
+                throw new IllegalArgumentException("Search query cannot be empty");
+            }
 
-            int totalResults = searchMapper.countSearchResults(book.getId(), tsQuery);
+            List<Map<String, Object>> results;
+            int totalResults;
+
+            try {
+                // Primary: Full-text search
+                results = searchMapper.searchInBook(
+                        book.getId(), searchQuery, offset, request.getLimit());
+                totalResults = searchMapper.countSearchResults(book.getId(), searchQuery);
+
+                log.info("Full-text search returned {} results for query: '{}'",
+                        totalResults, searchQuery);
+            } catch (Exception e) {
+                log.warn("Full-text search failed, falling back to LIKE search: {}",
+                        e.getMessage());
+                // Fallback: Simple LIKE search
+                results = searchMapper.searchInBookSimple(
+                        book.getId(), searchQuery, offset, request.getLimit());
+                totalResults = searchMapper.countSearchResultsSimple(
+                        book.getId(), searchQuery);
+            }
 
             List<ChapterSearchResultResponse> searchResults = results.stream()
-                    .map(this::mapToSearchResult)
+                    .map(r -> mapToSearchResult(r, searchQuery))
                     .collect(Collectors.toList());
 
             SearchInBookResponse response = new SearchInBookResponse();
@@ -992,31 +1014,191 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setResults(searchResults);
 
             // Save search history
-            Long userId = getCurrentUserIdOrNull();
-            if (userId != null) {
-                SearchHistory history = new SearchHistory();
-                history.setUserId(userId);
-                history.setBookId(book.getId());
-                history.setQuery(request.getQuery());
-                history.setResultsCount(totalResults);
-                history.setSearchType("in_book");
-                history.setCreatedAt(LocalDateTime.now());
-                searchMapper.insertSearchHistory(history);
-            }
+            saveSearchHistory(getCurrentUserIdOrNull(), book.getId(),
+                    request.getQuery(), totalResults);
 
             return new DataResponse<>(SUCCESS, "Search completed",
                     HttpStatus.OK.value(), response);
 
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid search request: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Error searching in book: {}", e.getMessage(), e);
-            throw e;
+            throw new RuntimeException("Failed to search in book", e);
         }
     }
 
-    private String prepareSearchQuery(String query) {
-        // Convert user query to tsquery format
-        // Replace spaces with & for AND operation
-        return String.join(" & ", query.trim().split("\\s+"));
+    /**
+     * Map database result ke ChapterSearchResultResponse DTO
+     */
+    private ChapterSearchResultResponse mapToSearchResult(Map<String, Object> result, String query) {
+
+        ChapterSearchResultResponse response = new ChapterSearchResultResponse();
+
+        // Basic chapter info
+        response.setChapterId(getLongValue(result, "chapter_id"));
+        response.setChapterNumber(getIntValue(result, "chapter_number"));
+        response.setChapterTitle((String) result.get("chapter_title"));
+        response.setChapterSlug((String) result.get("chapter_slug"));
+        response.setChapterLevel(getIntValue(result, "chapter_level"));
+        response.setParentSlug((String) result.get("parent_slug"));
+
+        // Search relevance
+        response.setRelevanceScore(getFloatValue(result, "relevance_score"));
+        response.setMatchCount(getIntValue(result, "match_count"));
+
+        // Extract matches from highlighted content
+        String highlightedContent = (String) result.get("highlighted_content");
+        String content = (String) result.get("content");
+
+        List<SearchMatch> matches = extractSearchMatches(highlightedContent, content, query);
+        response.setMatches(matches);
+
+        return response;
+    }
+
+    /**
+     * Extract individual search matches dengan context
+     */
+    private List<SearchMatch> extractSearchMatches(String highlightedContent, String fullContent, String query) {
+
+        List<SearchMatch> matches = new ArrayList<>();
+
+        if (highlightedContent == null || highlightedContent.isEmpty()) {
+            return matches;
+        }
+
+        // Parse highlighted content untuk extract matches
+        // Format: "text <mark>matched</mark> more text"
+        Pattern pattern = Pattern.compile("<mark>(.*?)</mark>",
+                Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(highlightedContent);
+
+        while (matcher.find() && matches.size() < 5) {
+            String matchedText = matcher.group(1);
+
+            // Find position in original content
+            int position = fullContent.toLowerCase()
+                    .indexOf(matchedText.toLowerCase());
+
+            if (position >= 0) {
+                SearchMatch match = new SearchMatch();
+                match.setMatchText(matchedText);
+                match.setPosition(position);
+
+                // Extract context
+                int contextStart = Math.max(0, position - 50);
+                int contextEnd = Math.min(fullContent.length(), position + matchedText.length() + 50);
+
+                match.setContextBefore(
+                        fullContent.substring(contextStart, position).trim()
+                );
+                match.setContextAfter(
+                        fullContent.substring(position + matchedText.length(), contextEnd).trim()
+                );
+
+                // Create snippet with context
+                String snippet = (contextStart > 0 ? "..." : "") +
+                        match.getContextBefore() + " " +
+                        "<mark>" + matchedText + "</mark>" + " " +
+                        match.getContextAfter() +
+                        (contextEnd < fullContent.length() ? "..." : "");
+                match.setSnippet(snippet.trim());
+
+                matches.add(match);
+            }
+        }
+
+        // If no matches found from highlighting, create one from content
+        if (matches.isEmpty() && fullContent != null) {
+            SearchMatch match = createSimpleMatch(fullContent, query);
+            if (match != null) {
+                matches.add(match);
+            }
+        }
+
+        return matches;
+    }
+
+    /**
+     * Create simple match when highlighting tidak tersedia
+     */
+    private SearchMatch createSimpleMatch(String content, String query) {
+        int position = content.toLowerCase().indexOf(query.toLowerCase());
+
+        if (position < 0) {
+            return null;
+        }
+
+        SearchMatch match = new SearchMatch();
+        match.setMatchText(content.substring(position,
+                Math.min(position + query.length(), content.length())));
+        match.setPosition(position);
+
+        int contextStart = Math.max(0, position - 50);
+        int contextEnd = Math.min(content.length(), position + query.length() + 50);
+
+        match.setContextBefore(content.substring(contextStart, position).trim());
+        match.setContextAfter(content.substring(
+                position + query.length(), contextEnd).trim());
+
+        String snippet = (contextStart > 0 ? "..." : "") +
+                match.getContextBefore() + " " +
+                "<mark>" + match.getMatchText() + "</mark>" + " " +
+                match.getContextAfter() +
+                (contextEnd < content.length() ? "..." : "");
+        match.setSnippet(snippet.trim());
+
+        return match;
+    }
+
+    /**
+     * Helper methods untuk type conversion
+     */
+    private Long getLongValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Number) return ((Number) value).longValue();
+        return null;
+    }
+
+    private Integer getIntValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return null;
+    }
+
+    private Float getFloatValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return 0.0f;
+        if (value instanceof Float) return (Float) value;
+        if (value instanceof Number) return ((Number) value).floatValue();
+        return 0.0f;
+    }
+
+    /**
+     * Save search history
+     */
+    private void saveSearchHistory(Long userId, Long bookId,
+                                   String query, int resultsCount) {
+        if (userId != null) {
+            try {
+                SearchHistory history = new SearchHistory();
+                history.setUserId(userId);
+                history.setBookId(bookId);
+                history.setQuery(query);
+                history.setResultsCount(resultsCount);
+                history.setSearchType("in_book");
+                history.setCreatedAt(LocalDateTime.now());
+                searchMapper.insertSearchHistory(history);
+            } catch (Exception e) {
+                log.warn("Failed to save search history: {}", e.getMessage());
+            }
+        }
     }
 
     @Override
