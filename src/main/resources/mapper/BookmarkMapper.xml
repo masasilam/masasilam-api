@@ -6,17 +6,4 @@
         SELECT * FROM bookmarks WHERE id = #{id}
     </select>
 
-    <select id="findByUserBookAndPage" resultType="com.naskah.demo.model.entity.Bookmark">
-        SELECT
-        id, user_id, book_id, page, position, title,
-        description, color, created_at
-        FROM bookmarks
-        WHERE user_id = #{userId}
-        AND book_id = #{bookId}
-        <if test="page != null">
-            AND page = #{page}
-        </if>
-        ORDER BY created_at DESC
-    </select>
-
 </mapper>

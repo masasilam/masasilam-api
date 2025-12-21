@@ -219,50 +219,76 @@ public class BookServiceImpl implements BookService {
     }
 
     private void contributorProcessing(CompleteEpubMetadata epubMeta, Book book) {
-        if (epubMeta.getContributors() != null && !epubMeta.getContributors().isEmpty()) {
-            for (ContributorMetadata contribMeta : epubMeta.getContributors()) {
-                log.info("Processing contributor from EPUB: {} with role: {}", contribMeta.getName(), contribMeta.getRole());
+        log.info("=== CONTRIBUTOR PROCESSING START ===");
+        log.info("Contributors from EPUB metadata: {}", epubMeta.getContributors());
 
-                Contributor contributor = contributorMapper.findByNameAndRole(contribMeta.getName(), contribMeta.getRole());
+        if (epubMeta.getContributors() == null) {
+            log.warn("Contributors metadata is NULL");
+            return;
+        }
 
-                if (contributor == null) {
-                    contributor = new Contributor();
-                    contributor.setName(contribMeta.getName());
-                    contributor.setRole(contribMeta.getRole());
-                    contributor.setWebsiteUrl(null);
-                    contributor.setCreatedAt(LocalDateTime.now());
-                    contributor.setUpdatedAt(LocalDateTime.now());
+        if (epubMeta.getContributors().isEmpty()) {
+            log.warn("Contributors metadata is EMPTY (size=0)");
+            return;
+        }
 
-                    String contribBaseSlug = FileUtil.sanitizeFilename(contribMeta.getName());
-                    String contribFinalSlug = contribBaseSlug;
+        log.info("Found {} contributors to process", epubMeta.getContributors().size());
 
-                    Contributor existingBySlug = contributorMapper.findBySlug(contribFinalSlug);
-                    if (existingBySlug != null) {
-                        contribFinalSlug = contribBaseSlug + "-" + contribMeta.getRole().toLowerCase();
-                    }
+        for (ContributorMetadata contribMeta : epubMeta.getContributors()) {
+            log.info("Processing contributor from EPUB: name='{}', role='{}'",
+                    contribMeta.getName(), contribMeta.getRole());
 
-                    contributor.setSlug(contribFinalSlug);
+            Contributor contributor = contributorMapper.findByNameAndRole(contribMeta.getName(), contribMeta.getRole());
 
-                    contributorMapper.insertContributor(contributor);
+            if (contributor == null) {
+                log.info("Contributor not found in DB, creating new: {} ({})", contribMeta.getName(), contribMeta.getRole());
 
-                    log.info("Auto-created contributor: {} ({}) with slug: {}", contributor.getName(), contributor.getRole(), contributor.getSlug());
-                } else {
-                    log.info("Using existing contributor: {} ({})", contributor.getName(), contributor.getRole());
+                contributor = new Contributor();
+                contributor.setName(contribMeta.getName());
+                contributor.setRole(contribMeta.getRole());
+                contributor.setWebsiteUrl(null);
+                contributor.setCreatedAt(LocalDateTime.now());
+                contributor.setUpdatedAt(LocalDateTime.now());
+
+                String contribBaseSlug = FileUtil.sanitizeFilename(contribMeta.getName());
+                String contribFinalSlug = contribBaseSlug;
+
+                Contributor existingBySlug = contributorMapper.findBySlug(contribFinalSlug);
+                if (existingBySlug != null) {
+                    contribFinalSlug = contribBaseSlug + "-" + contribMeta.getRole().toLowerCase().replace(" ", "-");
+                    log.info("Slug collision detected, using: {}", contribFinalSlug);
                 }
 
-                String roleToInsert = contribMeta.getRole();
+                contributor.setSlug(contribFinalSlug);
 
-                bookMapper.insertBookContributor(book.getId(), contributor.getId(), roleToInsert);
+                contributorMapper.insertContributor(contributor);
 
-                log.info("Inserted book_contributor: bookId={}, contributorId={}, role={}", book.getId(), contributor.getId(), roleToInsert);
+                log.info("Contributor created with ID: {}", contributor.getId());
+                log.info("Auto-created contributor: {} ({}) with slug: {}",
+                        contributor.getName(), contributor.getRole(), contributor.getSlug());
+            } else {
+                log.info("Using existing contributor from DB: {} (ID: {})", contributor.getName(), contributor.getId());
             }
+
+            String roleToInsert = contribMeta.getRole();
+
+            bookMapper.insertBookContributor(book.getId(), contributor.getId(), roleToInsert);
+
+            log.info("Inserted book_contributor: bookId={}, contributorId={}, role={}",
+                    book.getId(), contributor.getId(), roleToInsert);
         }
+
+        log.info("=== CONTRIBUTOR PROCESSING END ===");
     }
 
     @Override
+    @Transactional
     public DataResponse<BookResponse> getBookDetailBySlug(String slug) {
         try {
+            bookMapper.incrementViewCountBySlug(slug);
+
             BookResponse data = bookMapper.getBookDetailBySlug(slug);
+
             if (data != null) {
                 return new DataResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
             } else {

@@ -9,11 +9,11 @@ public class Highlight {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
+    private String chapterTitle;
+    private String chapterSlug;
     private String startPosition;
     private String endPosition;
     private String highlightedText;
-    private String color;
-    private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -21,7 +21,6 @@ public class EntityResponseMapper {
         response.setDuration(audio.getDuration());
         response.setFileSize(audio.getFileSize());
         response.setFormat(audio.getFormat());
-        // Note: chapterTitle is not available in ChapterAudio entity, will need to be set separately
         return response;
     }
 
@@ -32,7 +31,6 @@ public class EntityResponseMapper {
         response.setChapterNumber(chapter.getChapterNumber());
         response.setTitle(chapter.getTitle());
         response.setWordCount(chapter.getWordCount());
-        // Note: estimatedReadTime, hasAudio, isCompleted need to be set separately
         return response;
     }
 
@@ -42,12 +40,12 @@ public class EntityResponseMapper {
         BookmarkResponse response = new BookmarkResponse();
         response.setId(bookmark.getId());
         response.setBookId(bookmark.getBookId());
-        response.setPage(bookmark.getChapterNumber());
+        response.setChapterNumber(bookmark.getChapterNumber());  // GANTI: page -> chapterNumber
+        response.setChapterTitle(bookmark.getChapterTitle());    // TAMBAH
+        response.setChapterSlug(bookmark.getChapterSlug());      // TAMBAH
         response.setPosition(bookmark.getPosition());
-        response.setTitle(bookmark.getTitle());
-        response.setDescription(bookmark.getDescription());
-        response.setColor(bookmark.getColor());
         response.setCreatedAt(bookmark.getCreatedAt());
+        // HAPUS: title, description, color
         return response;
     }
 
@@ -57,14 +55,15 @@ public class EntityResponseMapper {
         HighlightResponse response = new HighlightResponse();
         response.setId(highlight.getId());
         response.setBookId(highlight.getBookId());
-        response.setPage(highlight.getChapterNumber());
+        response.setChapterNumber(highlight.getChapterNumber());
+        response.setChapterTitle(highlight.getChapterTitle());
+        response.setChapterSlug(highlight.getChapterSlug());
         response.setStartPosition(highlight.getStartPosition());
         response.setEndPosition(highlight.getEndPosition());
         response.setHighlightedText(highlight.getHighlightedText());
-        response.setColor(highlight.getColor());
-        response.setNote(highlight.getNote());
         response.setCreatedAt(highlight.getCreatedAt());
         response.setUpdatedAt(highlight.getUpdatedAt());
+        // HAPUS: color, note
         return response;
     }
 
@@ -74,15 +73,14 @@ public class EntityResponseMapper {
         NoteResponse response = new NoteResponse();
         response.setId(note.getId());
         response.setBookId(note.getBookId());
-        response.setPage(note.getChapterNumber());
+        response.setChapterNumber(note.getChapterNumber());      // GANTI: page -> chapterNumber
+        response.setChapterTitle(note.getChapterTitle());        // TAMBAH
+        response.setChapterSlug(note.getChapterSlug());          // TAMBAH
         response.setPosition(note.getPosition());
-        response.setTitle(note.getTitle());
         response.setContent(note.getContent());
-        response.setColor(note.getColor());
-        response.setIsPrivate(note.getIsPrivate());
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
-        // Note: tags and commentCount need to be set separately as they're not in Note entity
+        // HAPUS: title, color, isPrivate
         return response;
     }
 

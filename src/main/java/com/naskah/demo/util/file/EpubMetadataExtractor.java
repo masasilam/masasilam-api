@@ -199,21 +199,27 @@ public class EpubMetadataExtractor {
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(new ByteArrayInputStream(opfData));
 
-            NodeList contributorNodes = doc.getElementsByTagNameNS("http://purl.org/dc/elements/1.1/", CONTRIBUTOR);
+            NodeList contributorNodes = doc.getElementsByTagNameNS("http://purl.org/dc/elements/1.1/", "contributor");
+
+            log.info("Found {} dc:contributor nodes in OPF", contributorNodes.getLength());
 
             for (int i = 0; i < contributorNodes.getLength(); i++) {
                 Element contributorElement = (Element) contributorNodes.item(i);
                 String contributorName = contributorElement.getTextContent().trim();
                 String contributorId = contributorElement.getAttribute("id");
 
+                log.info("Processing contributor node #{}: name='{}', id='{}'", i+1, contributorName, contributorId);
+
                 if (contributorName.isEmpty()) {
+                    log.warn("Contributor name is empty, skipping");
                     continue;
                 }
 
-                String role = CONTRIBUTOR;
+                String role = "Contributor";
 
                 if (!contributorId.isEmpty()) {
                     NodeList metaNodes = doc.getElementsByTagName("meta");
+                    log.info("Searching for role in {} meta nodes for contributor id: {}", metaNodes.getLength(), contributorId);
 
                     for (int j = 0; j < metaNodes.getLength(); j++) {
                         Element meta = (Element) metaNodes.item(j);
@@ -227,6 +233,8 @@ public class EpubMetadataExtractor {
                             break;
                         }
                     }
+                } else {
+                    log.warn("Contributor '{}' has no id attribute, using default role", contributorName);
                 }
 
                 ContributorMetadata contribMeta = new ContributorMetadata();
@@ -234,10 +242,18 @@ public class EpubMetadataExtractor {
                 contribMeta.setRole(role);
                 contributors.add(contribMeta);
 
-                log.info("Extracted contributor: {} ({})", contributorName, role);
+                log.info("Successfully extracted contributor: {} ({})", contributorName, role);
             }
+
+            if (contributors.isEmpty()) {
+                log.warn("No contributors found in OPF, trying fallback method");
+                return extractContributorsFallback(book.getMetadata());
+            }
+
+            log.info("Total contributors extracted from OPF: {}", contributors.size());
+
         } catch (Exception e) {
-            log.error("Failed to extract contributors from OPF: {}", e.getMessage());
+            log.error("Failed to extract contributors from OPF: {}", e.getMessage(), e);
             return extractContributorsFallback(book.getMetadata());
         }
 

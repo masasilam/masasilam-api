@@ -9,11 +9,10 @@ public class Note {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
+    private String chapterTitle;
+    private String chapterSlug;
     private String position;
-    private String title;
     private String content;
-    private String color;
-    private Boolean isPrivate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -4,9 +4,6 @@ import lombok.Data;
 
 @Data
 public class ChapterNoteRequest {
-    private Integer position;
-    private String title;
+    private String position;
     private String content;
-    private String color;
-    private Boolean isPrivate;
 }

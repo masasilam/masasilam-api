@@ -9,9 +9,8 @@ public class Bookmark {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
+    private String chapterTitle;
+    private String chapterSlug;
     private String position;
-    private String title;
-    private String description;
-    private String color;
     private LocalDateTime createdAt;
 }

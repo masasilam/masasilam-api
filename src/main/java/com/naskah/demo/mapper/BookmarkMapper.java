@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface BookmarkMapper {
 
-    @Insert("INSERT INTO bookmarks (user_id, book_id, page, position, title, description, color, created_at) " +
-            "VALUES (#{userId}, #{bookId}, #{page}, #{position}, #{title}, #{description}, #{color}, #{createdAt})")
+    @Insert("INSERT INTO bookmarks (user_id, book_id, chapter_number, chapter_title, chapter_slug, position, created_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{position}, #{createdAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertBookmark(Bookmark bookmark);
 
@@ -42,12 +42,6 @@ public interface BookmarkMapper {
             @Param("userId") Long userId,
             @Param("since") LocalDateTime since);
 
-    @Select("SELECT * FROM bookmarks " +
-            "WHERE user_id = #{userId} AND book_id = #{bookId} " +
-            "ORDER BY chapter_number, created_at")
-    List<Bookmark> findByUserAndBook(
-            @Param("userId") Long userId,
-            @Param("bookId") Long bookId);
 
     @Select("SELECT COUNT(*) FROM bookmarks WHERE user_id = #{userId}")
     Integer countByUser(@Param("userId") Long userId);
@@ -95,4 +89,15 @@ public interface BookmarkMapper {
     Integer countByUserAndBook(
             @Param("userId") Long userId,
             @Param("bookId") Long bookId);
+
+    @Select("SELECT * FROM bookmarks WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "ORDER BY chapter_number, created_at DESC")
+    List<Bookmark> findByUserAndBook(@Param("userId") Long userId,
+                                     @Param("bookId") Long bookId);
+
+    @Select("SELECT * FROM bookmarks WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "AND chapter_number = #{chapterNumber} ORDER BY created_at DESC")
+    List<Bookmark> findByUserBookAndChapter(@Param("userId") Long userId,
+                                            @Param("bookId") Long bookId,
+                                            @Param("chapterNumber") Integer chapterNumber);
 }

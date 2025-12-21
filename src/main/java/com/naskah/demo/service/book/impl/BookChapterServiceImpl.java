@@ -209,17 +209,14 @@ public class BookChapterServiceImpl implements BookChapterService {
             bookmark.setUserId(user.getId());
             bookmark.setBookId(book.getId());
             bookmark.setChapterNumber(chapterNumber);
-            bookmark.setPosition(String.valueOf(request.getPosition()));
-            bookmark.setTitle(request.getTitle());
-            bookmark.setDescription(request.getDescription());
-            bookmark.setColor(request.getColor() != null ? request.getColor() : "#de96be");
+            bookmark.setChapterTitle(chapterMapper.getChapterTitle(book.getId(), chapterNumber));
+            bookmark.setChapterSlug(chapterMapper.getChapterSlug(book.getId(), chapterNumber));
+            bookmark.setPosition(request.getPosition());
             bookmark.setCreatedAt(LocalDateTime.now());
 
             bookmarkMapper.insertBookmark(bookmark);
 
             BookmarkResponse response = entityMapper.toBookmarkResponse(bookmark);
-
-            log.info("Bookmark added by user {} to chapter {} of book {}", user.getId(), chapterNumber, slug);
 
             return new DataResponse<>(SUCCESS, "Bookmark added successfully", HttpStatus.CREATED.value(), response);
 
@@ -241,11 +238,11 @@ public class BookChapterServiceImpl implements BookChapterService {
             highlight.setUserId(user.getId());
             highlight.setBookId(book.getId());
             highlight.setChapterNumber(chapterNumber);
-            highlight.setStartPosition(String.valueOf(request.getStartPosition()));
-            highlight.setEndPosition(String.valueOf(request.getEndPosition()));
+            highlight.setChapterTitle(chapterMapper.getChapterTitle(book.getId(), chapterNumber));
+            highlight.setChapterSlug(chapterMapper.getChapterSlug(book.getId(), chapterNumber));
+            highlight.setStartPosition(request.getStartPosition());
+            highlight.setEndPosition(request.getEndPosition());
             highlight.setHighlightedText(request.getHighlightedText());
-            highlight.setColor(request.getColor());
-            highlight.setNote(request.getNote());
             highlight.setCreatedAt(LocalDateTime.now());
             highlight.setUpdatedAt(LocalDateTime.now());
 
@@ -276,11 +273,10 @@ public class BookChapterServiceImpl implements BookChapterService {
             note.setUserId(user.getId());
             note.setBookId(book.getId());
             note.setChapterNumber(chapterNumber);
-            note.setPosition(String.valueOf(request.getPosition()));
-            note.setTitle(request.getTitle());
+            note.setChapterTitle(chapterMapper.getChapterTitle(book.getId(), chapterNumber));
+            note.setChapterSlug(chapterMapper.getChapterSlug(book.getId(), chapterNumber));
+            note.setPosition(request.getPosition());
             note.setContent(request.getContent());
-            note.setColor(request.getColor() != null ? request.getColor() : "#FFEB3B");
-            note.setIsPrivate(request.getIsPrivate());
             note.setCreatedAt(LocalDateTime.now());
             note.setUpdatedAt(LocalDateTime.now());
 
@@ -701,6 +697,12 @@ public class BookChapterServiceImpl implements BookChapterService {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book, slug);
+
+            int existingSessions = bookMapper.countUserReadSessions(book.getId(), user.getId());
+            if (existingSessions == 0) {
+                bookMapper.incrementReadCount(book.getId());
+                log.info("First time read: User {} started reading book {} (ID: {})", user.getId(), slug, book.getId());
+            }
 
             // Create or update session
             ReadingSession session = sessionMapper.findBySessionId(request.getSessionId());
@@ -1524,75 +1526,45 @@ public class BookChapterServiceImpl implements BookChapterService {
     // HELPER METHODS - Annotations
     // ============================================
 
-    private List<BookmarkResponse> getUserChapterBookmarks(
-            Long userId, Long bookId, Integer chapterNumber) {
+    private List<BookmarkResponse> getUserChapterBookmarks(Long userId, Long bookId, Integer chapterNumber) {
+        List<Bookmark> bookmarks;
 
-        List<Bookmark> bookmarks = bookmarkMapper.findByUserBookAndPage(
-                userId, bookId, chapterNumber);
-
-        Set<Integer> chapterNumbers = bookmarks.stream()
-                .map(Bookmark::getChapterNumber)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<Integer, ChapterNavigationInfo> chapterInfoMap =
-                getChapterInfoMap(bookId, chapterNumbers);
+        if (chapterNumber != null) {
+            bookmarks = bookmarkMapper.findByUserBookAndChapter(userId, bookId, chapterNumber);
+        } else {
+            bookmarks = bookmarkMapper.findByUserAndBook(userId, bookId);
+        }
 
         return bookmarks.stream()
-                .map(bookmark -> {
-                    BookmarkResponse response = entityMapper.toBookmarkResponse(bookmark);
-                    ChapterNavigationInfo chapterInfo = chapterInfoMap.get(bookmark.getChapterNumber());
-                    response.setChapter(chapterInfo);
-                    return response;
-                })
+                .map(entityMapper::toBookmarkResponse)
                 .collect(Collectors.toList());
     }
 
-    private List<HighlightResponse> getUserChapterHighlights(
-            Long userId, Long bookId, Integer chapterNumber) {
+    private List<HighlightResponse> getUserChapterHighlights(Long userId, Long bookId, Integer chapterNumber) {
+        List<Highlight> highlights;
 
-        List<Highlight> highlights = highlightMapper.findByUserBookAndPage(
-                userId, bookId, chapterNumber);
-
-        Set<Integer> chapterNumbers = highlights.stream()
-                .map(Highlight::getChapterNumber)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<Integer, ChapterNavigationInfo> chapterInfoMap =
-                getChapterInfoMap(bookId, chapterNumbers);
+        if (chapterNumber != null) {
+            highlights = highlightMapper.findByUserBookAndChapter(userId, bookId, chapterNumber);
+        } else {
+            highlights = highlightMapper.findByUserAndBook(userId, bookId);
+        }
 
         return highlights.stream()
-                .map(highlight -> {
-                    HighlightResponse response = entityMapper.toHighlightResponse(highlight);
-                    ChapterNavigationInfo chapterInfo = chapterInfoMap.get(highlight.getChapterNumber());
-                    response.setChapter(chapterInfo);
-                    return response;
-                })
+                .map(entityMapper::toHighlightResponse)
                 .collect(Collectors.toList());
     }
 
-    private List<NoteResponse> getUserChapterNotes(
-            Long userId, Long bookId, Integer chapterNumber) {
+    private List<NoteResponse> getUserChapterNotes(Long userId, Long bookId, Integer chapterNumber) {
+        List<Note> notes;
 
-        List<Note> notes = noteMapper.findByUserBookAndPage(
-                userId, bookId, chapterNumber);
-
-        Set<Integer> chapterNumbers = notes.stream()
-                .map(Note::getChapterNumber)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<Integer, ChapterNavigationInfo> chapterInfoMap =
-                getChapterInfoMap(bookId, chapterNumbers);
+        if (chapterNumber != null) {
+            notes = noteMapper.findByUserBookAndChapter(userId, bookId, chapterNumber);
+        } else {
+            notes = noteMapper.findByUserAndBook(userId, bookId);
+        }
 
         return notes.stream()
-                .map(note -> {
-                    NoteResponse response = entityMapper.toNoteResponse(note);
-                    ChapterNavigationInfo chapterInfo = chapterInfoMap.get(note.getChapterNumber());
-                    response.setChapter(chapterInfo);
-                    return response;
-                })
+                .map(entityMapper::toNoteResponse)
                 .collect(Collectors.toList());
     }
 
@@ -1760,8 +1732,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setHighlights(getUserChapterHighlights(user.getId(), book.getId(), null));
             response.setNotes(getUserChapterNotes(user.getId(), book.getId(), null));
 
-            return new DataResponse<>(SUCCESS, "Annotations retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Annotations retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting chapter annotations: {}", e.getMessage(), e);
@@ -1969,7 +1940,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .map(dt -> dt.toLocalDate().atStartOfDay())
                 .distinct()
                 .sorted()
-                .collect(Collectors.toList());
+                .toList();
 
         int maxStreak = 1;
         int currentStreak = 1;
@@ -2011,57 +1982,20 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     private List<BookmarkResponse> getBookmarksList(Long userId, Long bookId) {
-        return bookmarkMapper.findByUserBookAndPage(userId, bookId, null).stream()
-                .map(b -> {
-                    BookmarkResponse r = new BookmarkResponse();
-                    r.setId(b.getId());
-                    r.setBookId(b.getBookId());
-                    r.setPage(b.getChapterNumber());
-                    r.setPosition(b.getPosition());
-                    r.setTitle(b.getTitle());
-                    r.setDescription(b.getDescription());
-                    r.setColor(b.getColor());
-                    r.setCreatedAt(b.getCreatedAt());
-                    return r;
-                })
+        return bookmarkMapper.findByUserAndBook(userId, bookId).stream()
+                .map(entityMapper::toBookmarkResponse)
                 .collect(Collectors.toList());
     }
 
     private List<HighlightResponse> getHighlightsList(Long userId, Long bookId) {
-        return highlightMapper.findByUserBookAndPage(userId, bookId, null).stream()
-                .map(h -> {
-                    HighlightResponse r = new HighlightResponse();
-                    r.setId(h.getId());
-                    r.setBookId(h.getBookId());
-                    r.setPage(h.getChapterNumber());
-                    r.setStartPosition(h.getStartPosition());
-                    r.setEndPosition(h.getEndPosition());
-                    r.setHighlightedText(h.getHighlightedText());
-                    r.setColor(h.getColor());
-                    r.setNote(h.getNote());
-                    r.setCreatedAt(h.getCreatedAt());
-                    r.setUpdatedAt(h.getUpdatedAt());
-                    return r;
-                })
+        return highlightMapper.findByUserAndBook(userId, bookId).stream()
+                .map(entityMapper::toHighlightResponse)
                 .collect(Collectors.toList());
     }
 
     private List<NoteResponse> getNotesList(Long userId, Long bookId) {
-        return noteMapper.findByUserBookAndPage(userId, bookId, null).stream()
-                .map(n -> {
-                    NoteResponse r = new NoteResponse();
-                    r.setId(n.getId());
-                    r.setBookId(n.getBookId());
-                    r.setPage(n.getChapterNumber());
-                    r.setPosition(n.getPosition());
-                    r.setTitle(n.getTitle());
-                    r.setContent(n.getContent());
-                    r.setColor(n.getColor());
-                    r.setIsPrivate(n.getIsPrivate());
-                    r.setCreatedAt(n.getCreatedAt());
-                    r.setUpdatedAt(n.getUpdatedAt());
-                    return r;
-                })
+        return noteMapper.findByUserAndBook(userId, bookId).stream()
+                .map(entityMapper::toNoteResponse)
                 .collect(Collectors.toList());
     }
 

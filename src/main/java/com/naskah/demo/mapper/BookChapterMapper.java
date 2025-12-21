@@ -63,4 +63,7 @@ public interface BookChapterMapper {
     List<BookChapter> findChaptersByBookAndNumbers(@Param("bookId") Long bookId, @Param("chapterNumbers") Set<Integer> chapterNumbers);
 
     List<BookChapter> findChaptersByIds(@Param("ids") Set<Long> ids);
+
+    String getChapterTitle(@Param("bookId") Long bookId, @Param("chapterNumber") Integer chapterNumber);
+    String getChapterSlug(@Param("bookId") Long bookId, @Param("chapterNumber") Integer chapterNumber);
 }

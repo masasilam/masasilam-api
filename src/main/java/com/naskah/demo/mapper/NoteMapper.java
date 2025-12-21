@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface NoteMapper {
 
-    @Insert("INSERT INTO notes (user_id, book_id, page, position, title, content, color, is_private, created_at, updated_at) " +
-            "VALUES (#{userId}, #{bookId}, #{page}, #{position}, #{title}, #{content}, #{color}, #{isPrivate}, #{createdAt}, #{updatedAt})")
+    @Insert("INSERT INTO notes (user_id, book_id, chapter_number, chapter_title, chapter_slug, position, content, created_at, updated_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{position}, #{content}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertNote(Note note);
 
@@ -39,7 +39,11 @@ public interface NoteMapper {
     @Select("SELECT COUNT(*) FROM note_comments WHERE note_id = #{noteId}")
     Integer countCommentsByNoteId(@Param("noteId") Long noteId);
 
-    List<Note> findByUserBookAndPage(@Param("userId") Long userId, @Param("bookId") Long bookId, @Param("page") Integer page);
+    @Select("SELECT * FROM notes WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "AND chapter_number = #{chapterNumber} ORDER BY created_at DESC")
+    List<Note> findByUserBookAndChapter(@Param("userId") Long userId,
+                                        @Param("bookId") Long bookId,
+                                        @Param("chapterNumber") Integer chapterNumber);
 
     @Select("SELECT * FROM notes WHERE user_id = #{userId} " +
             "ORDER BY created_at DESC")
@@ -52,12 +56,10 @@ public interface NoteMapper {
             @Param("userId") Long userId,
             @Param("since") LocalDateTime since);
 
-    @Select("SELECT * FROM notes " +
-            "WHERE user_id = #{userId} AND book_id = #{bookId} " +
-            "ORDER BY chapter_number, created_at")
-    List<Note> findByUserAndBook(
-            @Param("userId") Long userId,
-            @Param("bookId") Long bookId);
+    @Select("SELECT * FROM notes WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "ORDER BY chapter_number, created_at DESC")
+    List<Note> findByUserAndBook(@Param("userId") Long userId,
+                                 @Param("bookId") Long bookId);
 
     @Select("SELECT COUNT(*) FROM notes WHERE user_id = #{userId}")
     Integer countByUser(@Param("userId") Long userId);

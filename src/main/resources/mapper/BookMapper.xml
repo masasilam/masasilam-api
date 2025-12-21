@@ -621,4 +621,19 @@
         FROM books
         WHERE id = #{id}
     </select>
+
+    <update id="incrementViewCountBySlug">
+        UPDATE books
+        SET view_count = view_count + 1,
+        updated_at = NOW()
+        WHERE slug = #{slug}
+    </update>
+
+    <select id="countUserReadSessions" resultType="int">
+        SELECT COUNT(*)
+        FROM reading_sessions
+        WHERE book_id = #{bookId}
+        AND user_id = #{userId}
+    </select>
+
 </mapper>

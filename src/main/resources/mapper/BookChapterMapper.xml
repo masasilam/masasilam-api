@@ -174,4 +174,18 @@
         </foreach>
     </select>
 
+    <select id="getChapterTitle" resultType="java.lang.String">
+        SELECT title
+        FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <select id="getChapterSlug" resultType="java.lang.String">
+        SELECT slug
+        FROM book_chapters
+        WHERE book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
 </mapper>

@@ -109,4 +109,8 @@ public interface BookMapper {
             @Param("userId") Long userId,
             @Param("genreName") String genreName,
             @Param("since") LocalDateTime since);
+
+    void incrementViewCountBySlug(@Param("slug") String slug);
+
+    int countUserReadSessions(@Param("bookId") Long bookId, @Param("userId") Long userId);
 }

@@ -49,10 +49,7 @@ public class BookChapterController {
      * ✅ Connected to Dashboard: Updates last_read_at, reading_sessions
      */
     @GetMapping("/**")
-    public ResponseEntity<DataResponse<ChapterReadingResponse>> readChapterByPath(
-            @PathVariable String slug,
-            HttpServletRequest request) {
-
+    public ResponseEntity<DataResponse<ChapterReadingResponse>> readChapterByPath(@PathVariable String slug, HttpServletRequest request) {
         String fullPath = request.getRequestURI();
         String basePath = "/api/books/" + slug + "/chapters/";
 
@@ -67,8 +64,7 @@ public class BookChapterController {
             throw new DataNotFoundException();
         }
 
-        DataResponse<ChapterReadingResponse> response =
-                chapterService.readChapterBySlugPath(slug, chapterPath);
+        DataResponse<ChapterReadingResponse> response = chapterService.readChapterBySlugPath(slug, chapterPath);
 
         return ResponseEntity.ok(response);
     }
@@ -79,10 +75,9 @@ public class BookChapterController {
      * ✅ Connected to Dashboard: Shows completion status
      */
     @GetMapping
-    public ResponseEntity<DataResponse<List<ChapterSummaryResponse>>> getAllChapters(
-            @PathVariable String slug) {
-        DataResponse<List<ChapterSummaryResponse>> response =
-                chapterService.getAllChaptersSummary(slug);
+    public ResponseEntity<DataResponse<List<ChapterSummaryResponse>>> getAllChapters(@PathVariable String slug) {
+        DataResponse<List<ChapterSummaryResponse>> response = chapterService.getAllChaptersSummary(slug);
+
         return ResponseEntity.ok(response);
     }
 
@@ -92,12 +87,10 @@ public class BookChapterController {
      * ✅ Connected to Dashboard: Updates library progress, completion stats
      */
     @PostMapping("/{chapterNumber}/progress")
-    public ResponseEntity<DataResponse<ChapterProgressResponse>> saveChapterProgress(
-            @PathVariable String slug,
-            @PathVariable Integer chapterNumber,
-            @Valid @RequestBody ChapterProgressRequest request) {
-        DataResponse<ChapterProgressResponse> response =
-                chapterService.saveChapterProgress(slug, chapterNumber, request);
+    public ResponseEntity<DataResponse<ChapterProgressResponse>> saveChapterProgress(@PathVariable String slug, @PathVariable Integer chapterNumber,
+                                                                                     @Valid @RequestBody ChapterProgressRequest request) {
+        DataResponse<ChapterProgressResponse> response = chapterService.saveChapterProgress(slug, chapterNumber, request);
+
         return ResponseEntity.ok(response);
     }
 
@@ -305,10 +298,9 @@ public class BookChapterController {
      * - Records session for statistics
      */
     @PostMapping("/reading/start")
-    public ResponseEntity<DataResponse<Void>> startReading(
-            @PathVariable String slug,
-            @Valid @RequestBody StartReadingRequest request) {
+    public ResponseEntity<DataResponse<Void>> startReading(@PathVariable String slug, @Valid @RequestBody StartReadingRequest request) {
         DataResponse<Void> response = chapterService.startReading(slug, request);
+
         return ResponseEntity.ok(response);
     }
 

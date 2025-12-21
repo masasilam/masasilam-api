@@ -1505,14 +1505,15 @@ public class DashboardServiceImpl implements DashboardService {
 
         item.setId(bookmark.getId());
         item.setType("bookmark");
-        item.setTitle("Bookmark");
-        item.setContent(bookmark.getDescription());
+        item.setContent(bookmark.getChapterTitle() != null ?
+                "Bookmark: " + bookmark.getChapterTitle() :
+                "Bookmark chapter " + bookmark.getChapterNumber());
         item.setBookId(bookmark.getBookId());
         item.setChapterNumber(bookmark.getChapterNumber());
+        item.setChapterTitle(bookmark.getChapterTitle());
         item.setPosition(bookmark.getPosition());
         item.setCreatedAt(bookmark.getCreatedAt());
         item.setUpdatedAt(bookmark.getCreatedAt());
-        item.setIsPrivate(true);
 
         Book book = bookMapper.findById(bookmark.getBookId());
         if (book != null) {
@@ -1529,15 +1530,13 @@ public class DashboardServiceImpl implements DashboardService {
 
         item.setId(highlight.getId());
         item.setType("highlight");
-        item.setTitle("Highlight");
         item.setContent(highlight.getHighlightedText());
-        item.setColor(highlight.getColor());
         item.setBookId(highlight.getBookId());
         item.setChapterNumber(highlight.getChapterNumber());
+        item.setChapterTitle(highlight.getChapterTitle());
         item.setPosition(highlight.getStartPosition());
         item.setCreatedAt(highlight.getCreatedAt());
         item.setUpdatedAt(highlight.getUpdatedAt());
-        item.setIsPrivate(false);
 
         Book book = bookMapper.findById(highlight.getBookId());
         if (book != null) {
@@ -1554,14 +1553,13 @@ public class DashboardServiceImpl implements DashboardService {
 
         item.setId(note.getId());
         item.setType("note");
-        item.setTitle(note.getTitle());
         item.setContent(note.getContent());
         item.setBookId(note.getBookId());
         item.setChapterNumber(note.getChapterNumber());
+        item.setChapterTitle(note.getChapterTitle());
         item.setPosition(note.getPosition());
         item.setCreatedAt(note.getCreatedAt());
         item.setUpdatedAt(note.getUpdatedAt());
-        item.setIsPrivate(note.getIsPrivate());
 
         Book book = bookMapper.findById(note.getBookId());
         if (book != null) {
@@ -1963,10 +1961,13 @@ public class DashboardServiceImpl implements DashboardService {
         UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("bookmark");
-        annotation.setContent(bookmark.getDescription());
+        annotation.setContent(bookmark.getChapterTitle() != null ?
+                "Bookmark: " + bookmark.getChapterTitle() :
+                "Bookmark chapter " + bookmark.getChapterNumber());
         annotation.setCreatedAt(bookmark.getCreatedAt());
         annotation.setChapterNumber(bookmark.getChapterNumber());
 
+        // Ambil info buku
         Book book = bookMapper.findById(bookmark.getBookId());
         if (book != null) {
             annotation.setBookTitle(book.getTitle());
@@ -1977,7 +1978,6 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private UserReadingDashboardResponse.RecentAnnotation mapHighlightToRecentAnnotation(Highlight highlight) {
-
         UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("highlight");
@@ -1985,6 +1985,7 @@ public class DashboardServiceImpl implements DashboardService {
         annotation.setCreatedAt(highlight.getCreatedAt());
         annotation.setChapterNumber(highlight.getChapterNumber());
 
+        // Ambil info buku
         Book book = bookMapper.findById(highlight.getBookId());
         if (book != null) {
             annotation.setBookTitle(book.getTitle());
@@ -2002,6 +2003,7 @@ public class DashboardServiceImpl implements DashboardService {
         annotation.setCreatedAt(note.getCreatedAt());
         annotation.setChapterNumber(note.getChapterNumber());
 
+        // Ambil info buku
         Book book = bookMapper.findById(note.getBookId());
         if (book != null) {
             annotation.setBookTitle(book.getTitle());

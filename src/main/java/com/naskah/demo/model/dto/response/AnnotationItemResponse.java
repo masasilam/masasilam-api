@@ -9,8 +9,6 @@ public class AnnotationItemResponse {
     private Long id;
     private String type;                    // "bookmark", "highlight", "note"
     private String content;
-    private String title;
-    private String color;
 
     // Book info
     private Long bookId;
@@ -26,5 +24,4 @@ public class AnnotationItemResponse {
     // Metadata
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Boolean isPrivate;
 }

@@ -7,13 +7,12 @@ import java.time.LocalDateTime;
 public class HighlightResponse {
     private Long id;
     private Long bookId;
-    private Integer page;
+    private Integer chapterNumber;
+    private String chapterTitle;
+    private String chapterSlug;
     private String startPosition;
     private String endPosition;
     private String highlightedText;
-    private String color;
-    private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private ChapterNavigationInfo chapter;
 }

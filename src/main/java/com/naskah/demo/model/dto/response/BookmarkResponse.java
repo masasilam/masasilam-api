@@ -7,11 +7,9 @@ import java.time.LocalDateTime;
 public class BookmarkResponse {
     private Long id;
     private Long bookId;
-    private Integer page;
+    private Integer chapterNumber;
+    private String chapterTitle;
+    private String chapterSlug;
     private String position;
-    private String title;
-    private String description;
-    private String color;
     private LocalDateTime createdAt;
-    private ChapterNavigationInfo chapter;
 }

@@ -7,7 +7,7 @@ public class BookmarkSuggestionResponse {
     private Integer page;
     private String title;
     private String description;
-    private String reason; // Why it's suggested
+    private String reason;
     private Double relevanceScore;
     private String suggestedColor;
 }

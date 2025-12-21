@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface HighlightMapper {
 
-    @Insert("INSERT INTO highlights (user_id, book_id, page, start_position, end_position, highlighted_text, color, note, created_at, updated_at) " +
-            "VALUES (#{userId}, #{bookId}, #{page}, #{startPosition}, #{endPosition}, #{highlightedText}, #{color}, #{note}, #{createdAt}, #{updatedAt})")
+    @Insert("INSERT INTO highlights (user_id, book_id, chapter_number, chapter_title, chapter_slug, start_position, end_position, highlighted_text, created_at, updated_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{startPosition}, #{endPosition}, #{highlightedText}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertHighlight(Highlight highlight);
 
@@ -65,12 +65,10 @@ public interface HighlightMapper {
             @Param("userId") Long userId,
             @Param("since") LocalDateTime since);
 
-    @Select("SELECT * FROM highlights " +
-            "WHERE user_id = #{userId} AND book_id = #{bookId} " +
-            "ORDER BY chapter_number, created_at")
-    List<Highlight> findByUserAndBook(
-            @Param("userId") Long userId,
-            @Param("bookId") Long bookId);
+    @Select("SELECT * FROM highlights WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "ORDER BY chapter_number, created_at DESC")
+    List<Highlight> findByUserAndBook(@Param("userId") Long userId,
+                                      @Param("bookId") Long bookId);
 
     @Select("SELECT COUNT(*) FROM highlights WHERE user_id = #{userId}")
     Integer countByUser(@Param("userId") Long userId);
@@ -119,4 +117,10 @@ public interface HighlightMapper {
     Integer countByUserAndBook(
             @Param("userId") Long userId,
             @Param("bookId") Long bookId);
+
+    @Select("SELECT * FROM highlights WHERE user_id = #{userId} AND book_id = #{bookId} " +
+            "AND chapter_number = #{chapterNumber} ORDER BY created_at DESC")
+    List<Highlight> findByUserBookAndChapter(@Param("userId") Long userId,
+                                             @Param("bookId") Long bookId,
+                                             @Param("chapterNumber") Integer chapterNumber);
 }
