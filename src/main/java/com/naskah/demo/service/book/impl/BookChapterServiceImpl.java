@@ -70,8 +70,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     @Override
     @Cacheable(value = "chapter-by-path", key = "#slug + ':' + #slugPath")
-    public DataResponse<ChapterReadingResponse> readChapterBySlugPath(
-            String bookSlug, String slugPath) {
+    public DataResponse<ChapterReadingResponse> readChapterBySlugPath(String bookSlug, String slugPath) {
         try {
             // Validate and get book
             Book book = bookMapper.findBookBySlug(bookSlug);
@@ -445,7 +444,8 @@ public class BookChapterServiceImpl implements BookChapterService {
     private int calculateReadTime(int wordCount) {
         return Math.max(1, wordCount / 200);
     }
-// ============================================
+
+    // ============================================
     // CHAPTER REVIEWS & SOCIAL
     // ============================================
 
@@ -617,8 +617,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     @Override
-    public DataResponse<ChapterRatingSummaryResponse> getChapterRatingSummary(
-            String slug, Integer chapterNumber) {
+    public DataResponse<ChapterRatingSummaryResponse> getChapterRatingSummary(String slug, Integer chapterNumber) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book, slug);
@@ -656,8 +655,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             // Get user's rating if authenticated
             Long userId = getCurrentUserIdOrNull();
             if (userId != null) {
-                ChapterRating userRating = ratingMapper.findRating(
-                        userId, book.getId(), chapterNumber);
+                ChapterRating userRating = ratingMapper.findRating(userId, book.getId(), chapterNumber);
                 response.setMyRating(userRating != null ? userRating.getRating() : null);
             }
 
@@ -678,8 +676,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             ratingMapper.deleteRating(user.getId(), book.getId(), chapterNumber);
 
-            log.info("User {} deleted rating for chapter {} of book {}",
-                    user.getId(), chapterNumber, slug);
+            log.info("User {} deleted rating for chapter {} of book {}", user.getId(), chapterNumber, slug);
 
             return new DataResponse<>(SUCCESS, "Rating deleted", HttpStatus.OK.value(), null);
         } catch (Exception e) {
@@ -786,17 +783,15 @@ public class BookChapterServiceImpl implements BookChapterService {
                 activityMapper.updateActivity(activity);
             }
 
-            // Update session
+            // 🔥 FIX: Update session dengan chapters_read
             updateReadingSession(request.getSessionId(), book.getId(), request.getChapterNumber());
 
             // Calculate patterns (async would be better)
             calculateUserReadingPattern(user.getId(), book.getId());
 
-            log.info("User {} ended reading chapter {} of book {}",
-                    user.getId(), request.getChapterNumber(), slug);
+            log.info("User {} ended reading chapter {} of book {}", user.getId(), request.getChapterNumber(), slug);
 
-            return new DataResponse<>(SUCCESS, "Reading ended",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Reading ended", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error ending reading: {}", e.getMessage(), e);
@@ -809,9 +804,16 @@ public class BookChapterServiceImpl implements BookChapterService {
         if (session != null) {
             session.setEndedAt(LocalDateTime.now());
             session.setEndChapter(endChapter);
-            session.setTotalDurationSeconds(
-                    (int) ChronoUnit.SECONDS.between(session.getStartedAt(), session.getEndedAt())
-            );
+
+            int totalDuration = (int) ChronoUnit.SECONDS.between(session.getStartedAt(), session.getEndedAt());
+            session.setTotalDurationSeconds(totalDuration);
+
+            // 🔥 TAMBAHKAN: Hitung chapters_read
+            if (session.getStartChapter() != null && endChapter != null) {
+                int chaptersRead = Math.abs(endChapter - session.getStartChapter()) + 1;
+                session.setChaptersRead(chaptersRead);
+            }
+
             session.setUpdatedAt(LocalDateTime.now());
             sessionMapper.updateSession(session);
         }
@@ -1397,8 +1399,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setNotes(getNotesList(user.getId(), book.getId()));
 
             // 3. Ratings
-            List<ChapterRating> userRatings = ratingMapper.findUserBookRatings(
-                    user.getId(), book.getId());
+            List<ChapterRating> userRatings = ratingMapper.findUserBookRatings(user.getId(), book.getId());
             response.setRatings(userRatings.stream()
                     .map(this::mapToRatingResponse)
                     .collect(Collectors.toList()));
@@ -1576,8 +1577,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         BookChapter currentChapter = null;
 
         for (String slug : slugParts) {
-            currentChapter = chapterMapper.findChapterBySlugAndParent(
-                    bookId, slug, currentParentId);
+            currentChapter = chapterMapper.findChapterBySlugAndParent(bookId, slug, currentParentId);
 
             if (currentChapter == null) {
                 return null;

@@ -121,11 +121,8 @@ public class DashboardController {
      * GET /api/dashboard/stats?period=30
      */
     @GetMapping("/stats")
-    public ResponseEntity<DataResponse<ReadingStatisticsResponse>> getReadingStatistics(
-            @RequestParam(defaultValue = "30") int period) {
-
-        DataResponse<ReadingStatisticsResponse> response =
-                dashboardService.getReadingStatistics(period);
+    public ResponseEntity<DataResponse<ReadingStatisticsResponse>> getReadingStatistics(@RequestParam(defaultValue = "30") int period) {
+        DataResponse<ReadingStatisticsResponse> response = dashboardService.getReadingStatistics(period);
 
         return ResponseEntity.ok(response);
     }
