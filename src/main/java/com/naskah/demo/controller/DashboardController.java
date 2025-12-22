@@ -46,8 +46,8 @@ public class DashboardController {
      */
     @GetMapping
     public ResponseEntity<DataResponse<UserReadingDashboardResponse>> getMainDashboard() {
-        DataResponse<UserReadingDashboardResponse> response =
-                dashboardService.getUserReadingDashboard();
+        DataResponse<UserReadingDashboardResponse> response = dashboardService.getUserReadingDashboard();
+
         return ResponseEntity.ok(response);
     }
 
@@ -72,14 +72,11 @@ public class DashboardController {
      * GET /api/dashboard/library?filter=reading&page=1&limit=12&sortBy=last_read
      */
     @GetMapping("/library")
-    public ResponseEntity<DatatableResponse<BookLibraryItemResponse>> getUserLibrary(
-            @RequestParam(defaultValue = "all") String filter,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "12") int limit,
-            @RequestParam(defaultValue = "last_read") String sortBy) {
-
-        DatatableResponse<BookLibraryItemResponse> response =
-                dashboardService.getUserLibrary(filter, page, limit, sortBy);
+    public ResponseEntity<DatatableResponse<BookLibraryItemResponse>> getUserLibrary(@RequestParam(defaultValue = "all") String filter,
+                                                                                     @RequestParam(defaultValue = "1") int page,
+                                                                                     @RequestParam(defaultValue = "12") int limit,
+                                                                                     @RequestParam(defaultValue = "last_read") String sortBy) {
+        DatatableResponse<BookLibraryItemResponse> response = dashboardService.getUserLibrary(filter, page, limit, sortBy);
 
         return ResponseEntity.ok(response);
     }
@@ -239,12 +236,9 @@ public class DashboardController {
      * GET /api/dashboard/calendar?year=2025&month=1
      */
     @GetMapping("/calendar")
-    public ResponseEntity<DataResponse<ReadingCalendarResponse>> getReadingCalendar(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month) {
-
-        DataResponse<ReadingCalendarResponse> response =
-                dashboardService.getReadingCalendar(year, month);
+    public ResponseEntity<DataResponse<ReadingCalendarResponse>> getReadingCalendar(@RequestParam(required = false) Integer year,
+                                                                                    @RequestParam(required = false) Integer month) {
+        DataResponse<ReadingCalendarResponse> response = dashboardService.getReadingCalendar(year, month);
 
         return ResponseEntity.ok(response);
     }
@@ -264,8 +258,7 @@ public class DashboardController {
      */
     @GetMapping("/achievements")
     public ResponseEntity<DataResponse<List<AchievementResponse>>> getAchievements() {
-        DataResponse<List<AchievementResponse>> response =
-                dashboardService.getUserAchievements();
+        DataResponse<List<AchievementResponse>> response = dashboardService.getUserAchievements();
 
         return ResponseEntity.ok(response);
     }

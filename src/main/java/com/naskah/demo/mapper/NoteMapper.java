@@ -64,14 +64,10 @@ public interface NoteMapper {
     @Select("SELECT COUNT(*) FROM notes WHERE user_id = #{userId}")
     Integer countByUser(@Param("userId") Long userId);
 
-    @Select("SELECT COUNT(*) FROM notes " +
-            "WHERE user_id = #{userId} AND book_id = #{bookId}")
-    Integer countByBookAndUser(
-            @Param("bookId") Long bookId,
-            @Param("userId") Long userId);
+    @Select("SELECT COUNT(*) FROM notes " + "WHERE user_id = #{userId} AND book_id = #{bookId}")
+    Integer countByBookAndUser(@Param("bookId") Long bookId, @Param("userId") Long userId);
 
-    @Select("SELECT COUNT(*) FROM notes " +
-            "WHERE user_id = #{userId} AND is_draft = true")
+    @Select("SELECT COUNT(*) FROM notes " + "WHERE user_id = #{userId}")
     Integer countDraftsByUser(@Param("userId") Long userId);
 
     @Select("SELECT * FROM notes WHERE id = #{id}")

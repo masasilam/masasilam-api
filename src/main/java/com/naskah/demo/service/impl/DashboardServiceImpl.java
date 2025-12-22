@@ -584,8 +584,7 @@ public class DashboardServiceImpl implements DashboardService {
                     Book book = bookMapper.findById(bookId);
                     if (book == null) return null;
 
-                    UserReadingDashboardResponse.BookInProgressItem item =
-                            new UserReadingDashboardResponse.BookInProgressItem();
+                    UserReadingDashboardResponse.BookInProgressItem item = new UserReadingDashboardResponse.BookInProgressItem();
 
                     item.setBookId(book.getId());
                     item.setBookTitle(book.getTitle());
@@ -653,16 +652,24 @@ public class DashboardServiceImpl implements DashboardService {
 
                     item.setLastReadAt(session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt());
 
-                    // Determine activity type
-                    if (session.getStartChapter().equals(session.getEndChapter())) {
-                        item.setActivityType("continued");
+                    Integer startChapter = session.getStartChapter();
+                    Integer endChapter = session.getEndChapter();
+
+                    String activityType = "continued"; // default
+                    if (startChapter != null && endChapter != null) {
+                        if (startChapter.equals(endChapter)) {
+                            activityType = "continued";
+                        } else if (isBookCompleted(userId, book.getId())) {
+                            activityType = "completed";
+                        } else {
+                            activityType = "started";
+                        }
                     } else if (isBookCompleted(userId, book.getId())) {
-                        item.setActivityType("completed");
-                    } else {
-                        item.setActivityType("started");
+                        activityType = "completed";
                     }
 
-                    item.setChapterNumber(session.getEndChapter());
+                    item.setActivityType(activityType);
+                    item.setChapterNumber(endChapter != null ? endChapter : 1); // default to chapter 1 if null
 
                     return item;
                 })
