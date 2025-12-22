@@ -92,7 +92,7 @@ public class EpubMetadataExtractor {
         } catch (Exception e) {
             log.error("Failed to extract title/subtitle: {}", e.getMessage());
             String fullTitle = book.getMetadata().getTitles().isEmpty() ? null : book.getMetadata().getTitles().getFirst();
-            metadata.setTitle(fullTitle);
+            metadata.setTitle(toTitleCase(fullTitle));
         }
     }
 
@@ -108,10 +108,10 @@ public class EpubMetadataExtractor {
 
             org.jsoup.nodes.Document doc = org.jsoup.Jsoup.parse(content);
             org.jsoup.nodes.Element h1 = doc.select("h1").first();
-            metadata.setTitle(Objects.requireNonNull(h1).text().trim());
+            metadata.setTitle(toTitleCase(Objects.requireNonNull(h1).text().trim()));
 
             org.jsoup.nodes.Element h2 = doc.select("h2.subtitle, h2.sigil_not_in_toc").first();
-            metadata.setSubtitle(Objects.requireNonNull(h2).text().trim());
+            metadata.setSubtitle(toTitleCase(Objects.requireNonNull(h2).text().trim()));
 
             log.info("Extracted from title page - Title: {}, Subtitle: {}", metadata.getTitle(), metadata.getSubtitle());
             return true;
@@ -131,13 +131,66 @@ public class EpubMetadataExtractor {
 
         if (fullTitle.contains(":")) {
             String[] parts = fullTitle.split(":", 2);
-            metadata.setTitle(parts[0].trim());
+            metadata.setTitle(toTitleCase(parts[0].trim()));
             if (parts.length > 1) {
-                metadata.setSubtitle(parts[1].trim());
+                metadata.setSubtitle(toTitleCase(parts[1].trim()));
             }
         } else {
-            metadata.setTitle(fullTitle);
+            metadata.setTitle(toTitleCase(fullTitle));
         }
+    }
+
+    private static String toTitleCase(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+
+        // Kata-kata yang tetap lowercase kecuali di awal kalimat
+        List<String> lowercaseWords = Arrays.asList(
+                // kata depan
+                "di", "ke", "dari", "tentang",
+                // kata hubung
+                "dan", "atau", "karena", "yang",
+                // kata seru
+                "oh", "dong", "kok", "sih",
+                // kata sandang
+                "si", "sang",
+                // partikel
+                "pun", "per"
+        );
+
+        String[] words = text.toLowerCase().split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < words.length; i++) {
+            if (i > 0) {
+                result.append(" ");
+            }
+
+            String word = words[i];
+
+            // Kata pertama selalu dikapitalisasi
+            if (i == 0) {
+                result.append(capitalizeFirstLetter(word));
+            }
+            // Kata dalam daftar lowercase tetap lowercase (kecuali kata pertama)
+            else if (lowercaseWords.contains(word)) {
+                result.append(word);
+            }
+            // Kata lainnya dikapitalisasi
+            else {
+                result.append(capitalizeFirstLetter(word));
+            }
+        }
+
+        return result.toString();
+    }
+
+    private static String capitalizeFirstLetter(String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+        return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 
     private static LocalDateTime extractModifiedDate(Book book) {
