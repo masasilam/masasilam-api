@@ -422,16 +422,16 @@ public class BookChapterController {
 
     /**
      * 🔥 GET ALL USER DATA FOR THIS BOOK IN ONE REQUEST
-     *
+     * <p>
      * This is THE MOST IMPORTANT endpoint for Dashboard integration!
-     *
+     * <p>
      * Returns everything Dashboard needs:
      * - Reading progress (for library view)
      * - All annotations (for annotations page)
      * - Chapter ratings (for statistics)
      * - Reading history (for history view)
      * - Reading patterns (for insights)
-     *
+     * <p>
      * ✅ Optimized: Single database transaction
      * ✅ Cached: Results cached for 5 minutes
      * ✅ Complete: All user data in one response
@@ -467,6 +467,13 @@ public class BookChapterController {
     @GetMapping("/analytics/chapters")
     public ResponseEntity<DataResponse<List<ChapterAnalyticsResponse>>> getChaptersAnalytics(@PathVariable String slug) {
         DataResponse<List<ChapterAnalyticsResponse>> response = chapterService.getChaptersAnalytics(slug);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{chapterNumber}/stats")
+    public ResponseEntity<DataResponse<ChapterStatsResponse>> getChapterStats(@PathVariable String slug, @PathVariable Integer chapterNumber) {
+        DataResponse<ChapterStatsResponse> response = chapterService.getChapterStats(slug, chapterNumber);
 
         return ResponseEntity.ok(response);
     }

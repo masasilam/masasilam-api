@@ -219,24 +219,8 @@ public class BookServiceImpl implements BookService {
     }
 
     private void contributorProcessing(CompleteEpubMetadata epubMeta, Book book) {
-        log.info("=== CONTRIBUTOR PROCESSING START ===");
-        log.info("Contributors from EPUB metadata: {}", epubMeta.getContributors());
-
-        if (epubMeta.getContributors() == null) {
-            log.warn("Contributors metadata is NULL");
-            return;
-        }
-
-        if (epubMeta.getContributors().isEmpty()) {
-            log.warn("Contributors metadata is EMPTY (size=0)");
-            return;
-        }
-
-        log.info("Found {} contributors to process", epubMeta.getContributors().size());
-
         for (ContributorMetadata contribMeta : epubMeta.getContributors()) {
-            log.info("Processing contributor from EPUB: name='{}', role='{}'",
-                    contribMeta.getName(), contribMeta.getRole());
+            log.info("Processing contributor from EPUB: name='{}', role='{}'", contribMeta.getName(), contribMeta.getRole());
 
             Contributor contributor = contributorMapper.findByNameAndRole(contribMeta.getName(), contribMeta.getRole());
 
@@ -264,8 +248,7 @@ public class BookServiceImpl implements BookService {
                 contributorMapper.insertContributor(contributor);
 
                 log.info("Contributor created with ID: {}", contributor.getId());
-                log.info("Auto-created contributor: {} ({}) with slug: {}",
-                        contributor.getName(), contributor.getRole(), contributor.getSlug());
+                log.info("Auto-created contributor: {} ({}) with slug: {}", contributor.getName(), contributor.getRole(), contributor.getSlug());
             } else {
                 log.info("Using existing contributor from DB: {} (ID: {})", contributor.getName(), contributor.getId());
             }
