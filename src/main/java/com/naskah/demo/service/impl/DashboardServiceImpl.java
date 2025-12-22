@@ -629,10 +629,14 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private List<UserReadingDashboardResponse.RecentlyReadItem> getRecentlyRead(Long userId) {
-        // Get recent sessions
-        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(userId, 0, 5);
+        // Get more sessions than needed to ensure we have enough unique books
+        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(userId, 0, 20);
+
+        Set<Long> seenBookIds = new HashSet<>();
 
         return sessions.stream()
+                .filter(session -> seenBookIds.add(session.getBookId())) // Only keep first occurrence
+                .limit(5) // Limit to 5 unique books
                 .map(session -> {
                     Book book = bookMapper.findById(session.getBookId());
                     if (book == null) return null;
@@ -644,7 +648,6 @@ public class DashboardServiceImpl implements DashboardService {
                     item.setBookSlug(book.getSlug());
                     item.setCoverImageUrl(book.getCoverImageUrl());
 
-                    // Get author
                     List<Author> authors = bookMapper.getBookAuthors(book.getId());
                     if (!authors.isEmpty()) {
                         item.setAuthorName(authors.getFirst().getName());
@@ -655,7 +658,7 @@ public class DashboardServiceImpl implements DashboardService {
                     Integer startChapter = session.getStartChapter();
                     Integer endChapter = session.getEndChapter();
 
-                    String activityType = "continued"; // default
+                    String activityType = "continued";
                     if (startChapter != null && endChapter != null) {
                         if (startChapter.equals(endChapter)) {
                             activityType = "continued";
@@ -669,7 +672,7 @@ public class DashboardServiceImpl implements DashboardService {
                     }
 
                     item.setActivityType(activityType);
-                    item.setChapterNumber(endChapter != null ? endChapter : 1); // default to chapter 1 if null
+                    item.setChapterNumber(endChapter != null ? endChapter : 1);
 
                     return item;
                 })
