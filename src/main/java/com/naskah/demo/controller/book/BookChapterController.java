@@ -313,10 +313,9 @@ public class BookChapterController {
      * - Updates daily statistics
      */
     @PostMapping("/reading/end")
-    public ResponseEntity<DataResponse<Void>> endReading(
-            @PathVariable String slug,
-            @Valid @RequestBody EndReadingRequest request) {
+    public ResponseEntity<DataResponse<Void>> endReading(@PathVariable String slug, @Valid @RequestBody EndReadingRequest request) {
         DataResponse<Void> response = chapterService.endReading(slug, request);
+
         return ResponseEntity.ok(response);
     }
 
@@ -324,11 +323,9 @@ public class BookChapterController {
      * Reading heartbeat - periodic updates during reading
      */
     @PostMapping("/reading/heartbeat")
-    public ResponseEntity<DataResponse<Void>> readingHeartbeat(
-            @PathVariable String slug,
-            @Valid @RequestBody ReadingHeartbeatRequest request) {
-        DataResponse<Void> response =
-                new DataResponse<>("Success", "Heartbeat received", 200, null);
+    public ResponseEntity<DataResponse<Void>> readingHeartbeat(@PathVariable String slug, @Valid @RequestBody ReadingHeartbeatRequest request) {
+        DataResponse<Void> response = new DataResponse<>("Success", "Heartbeat received", 200, null);
+
         return ResponseEntity.ok(response);
     }
 
@@ -338,10 +335,9 @@ public class BookChapterController {
      * ✅ Connected to Dashboard: Provides data for reading history view
      */
     @GetMapping("/reading/history")
-    public ResponseEntity<DataResponse<ReadingHistoryResponse>> getReadingHistory(
-            @PathVariable String slug) {
-        DataResponse<ReadingHistoryResponse> response =
-                chapterService.getReadingHistory(slug);
+    public ResponseEntity<DataResponse<ReadingHistoryResponse>> getReadingHistory(@PathVariable String slug) {
+        DataResponse<ReadingHistoryResponse> response = chapterService.getReadingHistory(slug);
+
         return ResponseEntity.ok(response);
     }
 
@@ -351,10 +347,9 @@ public class BookChapterController {
      * ✅ Connected to Dashboard: Powers reading pattern insights
      */
     @GetMapping("/reading/patterns")
-    public ResponseEntity<DataResponse<UserReadingPatternResponse>> getReadingPattern(
-            @PathVariable String slug) {
-        DataResponse<UserReadingPatternResponse> response =
-                chapterService.getUserReadingPattern(slug);
+    public ResponseEntity<DataResponse<UserReadingPatternResponse>> getReadingPattern(@PathVariable String slug) {
+        DataResponse<UserReadingPatternResponse> response = chapterService.getUserReadingPattern(slug);
+
         return ResponseEntity.ok(response);
     }
 
@@ -364,20 +359,16 @@ public class BookChapterController {
     // ============================================
 
     @PostMapping("/search")
-    public ResponseEntity<DataResponse<SearchInBookResponse>> searchInBook(
-            @PathVariable String slug,
-            @Valid @RequestBody SearchInBookRequest request) {
-        DataResponse<SearchInBookResponse> response =
-                chapterService.searchInBook(slug, request);
+    public ResponseEntity<DataResponse<SearchInBookResponse>> searchInBook(@PathVariable String slug, @Valid @RequestBody SearchInBookRequest request) {
+        DataResponse<SearchInBookResponse> response = chapterService.searchInBook(slug, request);
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/search/history")
-    public ResponseEntity<DataResponse<List<SearchHistoryResponse>>> getSearchHistory(
-            @PathVariable String slug,
-            @RequestParam(defaultValue = "10") int limit) {
-        DataResponse<List<SearchHistoryResponse>> response =
-                chapterService.getSearchHistory(slug, limit);
+    public ResponseEntity<DataResponse<List<SearchHistoryResponse>>> getSearchHistory(@PathVariable String slug, @RequestParam(defaultValue = "10") int limit) {
+        DataResponse<List<SearchHistoryResponse>> response = chapterService.getSearchHistory(slug, limit);
+
         return ResponseEntity.ok(response);
     }
 
@@ -387,31 +378,24 @@ public class BookChapterController {
     // ============================================
 
     @PostMapping("/annotations/export")
-    public ResponseEntity<DataResponse<ExportAnnotationsResponse>> exportAnnotations(
-            @PathVariable String slug,
-            @Valid @RequestBody ExportAnnotationsRequest request) {
-        DataResponse<ExportAnnotationsResponse> response =
-                chapterService.exportAnnotations(slug, request);
+    public ResponseEntity<DataResponse<ExportAnnotationsResponse>> exportAnnotations(@PathVariable String slug, @Valid @RequestBody ExportAnnotationsRequest request) {
+        DataResponse<ExportAnnotationsResponse> response = chapterService.exportAnnotations(slug, request);
+
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
     @GetMapping("/annotations/export/{exportId}")
-    public ResponseEntity<DataResponse<ExportAnnotationsResponse>> getExportStatus(
-            @PathVariable String slug,
-            @PathVariable Long exportId) {
-        DataResponse<ExportAnnotationsResponse> response =
-                chapterService.getExportStatus(exportId);
+    public ResponseEntity<DataResponse<ExportAnnotationsResponse>> getExportStatus(@PathVariable String slug, @PathVariable Long exportId) {
+        DataResponse<ExportAnnotationsResponse> response = chapterService.getExportStatus(exportId);
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/annotations/export/{exportId}/download")
-    public ResponseEntity<Void> downloadExport(
-            @PathVariable String slug,
-            @PathVariable Long exportId) {
+    public ResponseEntity<Void> downloadExport(@PathVariable String slug, @PathVariable Long exportId) {
         String downloadUrl = chapterService.getExportDownloadUrl(exportId);
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .header("Location", downloadUrl)
-                .build();
+
+        return ResponseEntity.status(HttpStatus.FOUND).header("Location", downloadUrl).build();
     }
 
     @GetMapping("/annotations/exports")
@@ -419,16 +403,15 @@ public class BookChapterController {
             @PathVariable String slug,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
-        DataResponse<ExportHistoryResponse> response =
-                chapterService.getExportHistory(page, limit);
+        DataResponse<ExportHistoryResponse> response = chapterService.getExportHistory(page, limit);
+
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/annotations/export/{exportId}")
-    public ResponseEntity<DataResponse<Void>> deleteExport(
-            @PathVariable String slug,
-            @PathVariable Long exportId) {
+    public ResponseEntity<DataResponse<Void>> deleteExport(@PathVariable String slug, @PathVariable Long exportId) {
         DataResponse<Void> response = chapterService.deleteExport(exportId);
+
         return ResponseEntity.ok(response);
     }
 
@@ -454,10 +437,9 @@ public class BookChapterController {
      * ✅ Complete: All user data in one response
      */
     @GetMapping("/me")
-    public ResponseEntity<DataResponse<UserBookDataResponse>> getMyBookData(
-            @PathVariable String slug) {
-        DataResponse<UserBookDataResponse> response =
-                chapterService.getMyBookData(slug);
+    public ResponseEntity<DataResponse<UserBookDataResponse>> getMyBookData(@PathVariable String slug) {
+        DataResponse<UserBookDataResponse> response = chapterService.getMyBookData(slug);
+
         return ResponseEntity.ok(response);
     }
 
@@ -471,13 +453,10 @@ public class BookChapterController {
      * For: Authors, Publishers, Admins
      */
     @GetMapping("/analytics")
-    public ResponseEntity<DataResponse<BookAnalyticsResponse>> getBookAnalytics(
-            @PathVariable String slug,
-            @RequestParam(required = false) String dateFrom,
-            @RequestParam(required = false) String dateTo) {
-
-        DataResponse<BookAnalyticsResponse> response =
-                chapterService.getBookAnalytics(slug, dateFrom, dateTo);
+    public ResponseEntity<DataResponse<BookAnalyticsResponse>> getBookAnalytics(@PathVariable String slug,
+                                                                                @RequestParam(required = false) String dateFrom,
+                                                                                @RequestParam(required = false) String dateTo) {
+        DataResponse<BookAnalyticsResponse> response = chapterService.getBookAnalytics(slug, dateFrom, dateTo);
 
         return ResponseEntity.ok(response);
     }
@@ -486,11 +465,8 @@ public class BookChapterController {
      * 📈 GET CHAPTER-SPECIFIC ANALYTICS
      */
     @GetMapping("/analytics/chapters")
-    public ResponseEntity<DataResponse<List<ChapterAnalyticsResponse>>> getChaptersAnalytics(
-            @PathVariable String slug) {
-
-        DataResponse<List<ChapterAnalyticsResponse>> response =
-                chapterService.getChaptersAnalytics(slug);
+    public ResponseEntity<DataResponse<List<ChapterAnalyticsResponse>>> getChaptersAnalytics(@PathVariable String slug) {
+        DataResponse<List<ChapterAnalyticsResponse>> response = chapterService.getChaptersAnalytics(slug);
 
         return ResponseEntity.ok(response);
     }
