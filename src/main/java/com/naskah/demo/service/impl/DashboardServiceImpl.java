@@ -20,7 +20,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
-
     private final HeaderHolder headerHolder;
     private final UserMapper userMapper;
     private final BookMapper bookMapper;
@@ -34,12 +33,13 @@ public class DashboardServiceImpl implements DashboardService {
     private final BookReviewMapper bookReviewMapper;
     private final UserReadingPatternMapper patternMapper;
     private final GenreMapper genreMapper;
-
     private static final String SUCCESS = "Success";
     private static final String READING = "reading";
     private static final String COMPLETED = "completed";
     private static final String STABLE = "stable";
     private static final String NOT_ENOUGH_DATA = "Not enough data";
+    private static final String BRONZE = "bronze";
+    private static final String SILVER = "silver";
 
     // ═══════════════════════════════════════════════════════════
     // MAIN DASHBOARD
@@ -1808,13 +1808,13 @@ public class DashboardServiceImpl implements DashboardService {
         // First Book
         achievements.add(createAchievement(
                 "first_book", READING, "First Book",
-                "Complete your first book", "bronze",
+                "Complete your first book", BRONZE,
                 1, totalBooks, 1));
 
         // Bookworm - 10 books
         achievements.add(createAchievement(
                 "bookworm", READING, "Bookworm",
-                "Complete 10 books", "silver",
+                "Complete 10 books", SILVER,
                 10, totalBooks, 10));
 
         // Book Master - 50 books
@@ -1826,13 +1826,13 @@ public class DashboardServiceImpl implements DashboardService {
         // 10 Hours
         achievements.add(createAchievement(
                 "10_hours", READING, "10 Hours",
-                "Read for 10 hours", "bronze",
+                "Read for 10 hours", BRONZE,
                 10, totalHours, 5));
 
         // 100 Hours
         achievements.add(createAchievement(
                 "100_hours", READING, "Century Reader",
-                "Read for 100 hours", "silver",
+                "Read for 100 hours", SILVER,
                 100, totalHours, 15));
 
         // 1000 Hours
@@ -1853,13 +1853,13 @@ public class DashboardServiceImpl implements DashboardService {
         // 7-day streak
         achievements.add(createAchievement(
                 "streak_7", READING, "Week Warrior",
-                "Read 7 days in a row", "bronze",
+                "Read 7 days in a row", BRONZE,
                 7, currentStreak, 5));
 
         // 30-day streak
         achievements.add(createAchievement(
                 "streak_30", READING, "Monthly Master",
-                "Read 30 days in a row", "silver",
+                "Read 30 days in a row", SILVER,
                 30, currentStreak, 15));
 
         // 100-day streak
@@ -1880,19 +1880,19 @@ public class DashboardServiceImpl implements DashboardService {
         // First Review
         achievements.add(createAchievement(
                 "first_review", "social", "Critic's Corner",
-                "Write your first review", "bronze",
+                "Write your first review", BRONZE,
                 1, reviewCount, 5));
 
         // 10 Reviews
         achievements.add(createAchievement(
                 "10_reviews", "social", "Book Critic",
-                "Write 10 reviews", "silver",
+                "Write 10 reviews", SILVER,
                 10, reviewCount, 10));
 
         // Highlighter
         achievements.add(createAchievement(
                 "highlighter", "contribution", "Highlighter",
-                "Create 50 highlights", "silver",
+                "Create 50 highlights", SILVER,
                 50, highlightCount, 10));
 
         return achievements;
@@ -1922,8 +1922,8 @@ public class DashboardServiceImpl implements DashboardService {
 
         // Rarity (simplified)
         achievement.setRarityPercentage(switch (tier.toLowerCase()) {
-            case "bronze" -> 60;
-            case "silver" -> 30;
+            case BRONZE -> 60;
+            case SILVER -> 30;
             default -> 10;
         });
 
@@ -2135,21 +2135,19 @@ public class DashboardServiceImpl implements DashboardService {
 
     private Integer getIntValue(Object value) {
         return switch (value) {
-            case null -> 0;
             case Integer i -> i;
             case Long l -> l.intValue();
             case Double v -> v.intValue();
-            default -> 0;
+            case null, default -> 0;
         };
     }
 
     private Double getDoubleValue(Object value) {
         return switch (value) {
-            case null -> 0.0;
             case Double v -> v;
             case Integer i -> i.doubleValue();
             case Long l -> l.doubleValue();
-            default -> 0.0;
+            case null, default -> 0.0;
         };
     }
 
