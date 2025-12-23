@@ -30,6 +30,7 @@ import java.util.*;
 public class EpubServiceImpl implements EpubService {
 
     private final BookChapterMapper chapterMapper;
+    private final FileUtil fileUtil;
 
     @Override
     public EpubProcessResult processEpubFile(MultipartFile epubFile, Book book) throws IOException {
@@ -67,7 +68,7 @@ public class EpubServiceImpl implements EpubService {
 
             // 5. Generate preview
             if (!chapters.isEmpty()) {
-                String preview = FileUtil.generatePreviewText(chapters.get(0).getContent(), 500);
+                String preview = fileUtil.generatePreviewText(chapters.get(0).getContent(), 500);
                 result.setPreviewText(preview);
             }
 
@@ -282,7 +283,7 @@ public class EpubServiceImpl implements EpubService {
                     }
                 }
 
-                int wordCount = FileUtil.countWords(content);
+                int wordCount = fileUtil.countWords(content);
 
                 // Find parent chapter ID
                 Long parentChapterId = null;
@@ -299,7 +300,7 @@ public class EpubServiceImpl implements EpubService {
                 chapter.setBookId(bookId);
                 chapter.setChapterNumber(chapterNumber);
                 chapter.setTitle(hierarchy.title);
-                chapter.setSlug(FileUtil.sanitizeFilename(hierarchy.title));
+                chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.title));
                 chapter.setContent(content);
                 chapter.setHtmlContent(htmlContentStr);
                 chapter.setWordCount(wordCount);
@@ -481,7 +482,7 @@ public class EpubServiceImpl implements EpubService {
             byte[] imageData = imageResource.getData();
             String fileName = normalizedPath.substring(normalizedPath.lastIndexOf("/") + 1);
 
-            String cloudinaryUrl = FileUtil.uploadChapterImageFromBytes(
+            String cloudinaryUrl = fileUtil.uploadChapterImageFromBytes(
                     imageData,
                     bookId,
                     fileName
@@ -499,7 +500,7 @@ public class EpubServiceImpl implements EpubService {
     private String extractAndUploadCover(Resource coverResource, Long bookId, String bookTitle) {
         try {
             byte[] imageData = coverResource.getData();
-            String coverUrl = FileUtil.uploadBookCoverFromBytes(imageData, bookTitle, bookId);
+            String coverUrl = fileUtil.uploadBookCoverFromBytes(imageData, bookTitle, bookId);
             log.info("Uploaded EPUB cover image: {}", coverUrl);
             return coverUrl;
         } catch (Exception e) {

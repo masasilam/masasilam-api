@@ -36,6 +36,7 @@ public class KiosServiceImpl implements KiosService {
     private final StockHistoryMapper stockHistoryMapper;
     private final UserMapper userMapper;
     private final HeaderHolder headerHolder;
+    private final FileUtil fileUtil;
 
     private static final String SUCCESS = "Success";
 
@@ -55,7 +56,7 @@ public class KiosServiceImpl implements KiosService {
 
         KiosProduct product = new KiosProduct();
         product.setName(request.getName());
-        product.setSlug(FileUtil.sanitizeFilename(request.getName()));
+        product.setSlug(fileUtil.sanitizeFilename(request.getName()));
         product.setSku(request.getSku());
         product.setDescription(request.getDescription());
         product.setProductType(request.getProductType()); // PHYSICAL_BOOK, ACCESSORY, MERCHANDISE
@@ -82,13 +83,13 @@ public class KiosServiceImpl implements KiosService {
         // Upload images
 //            if (images != null && !images.isEmpty()) {
 //                // Validate all images first
-//                FileUtil.validateProductImages(images);
+//                fileUtil.validateProductImages(images);
 //
 //                // Upload all images
-//                List<String> imageUrls = FileUtil.uploadMultipleProductImages(images, request.getName());
+//                List<String> imageUrls = fileUtil.uploadMultipleProductImages(images, request.getName());
 //
 //                // Set URLs
-//                product.setImageUrls(FileUtil.joinImageUrls(imageUrls));
+//                product.setImageUrls(fileUtil.joinImageUrls(imageUrls));
 //                product.setThumbnailUrl(imageUrls.get(0)); // First image as thumbnail
 //            }
 
@@ -162,7 +163,7 @@ public class KiosServiceImpl implements KiosService {
             }
 
             existing.setName(request.getName());
-            existing.setSlug(FileUtil.sanitizeFilename(request.getName()));
+            existing.setSlug(fileUtil.sanitizeFilename(request.getName()));
             existing.setSku(request.getSku());
             existing.setDescription(request.getDescription());
             existing.setCategory(request.getCategory());
@@ -178,11 +179,11 @@ public class KiosServiceImpl implements KiosService {
             if (images != null && !images.isEmpty()) {
                 List<String> imageUrls = new ArrayList<>();
                 for (MultipartFile image : images) {
-                    FileStorageResult result = FileUtil.saveAndUploadProductImage(image, request.getName());
+                    FileStorageResult result = fileUtil.saveAndUploadProductImage(image, request.getName());
                     imageUrls.add(result.getCloudUrl());
                 }
                 existing.setImageUrls(String.join(",", imageUrls));
-                existing.setThumbnailUrl(imageUrls.get(0));
+                existing.setThumbnailUrl(imageUrls.getFirst());
             }
 
             productMapper.updateProduct(existing);

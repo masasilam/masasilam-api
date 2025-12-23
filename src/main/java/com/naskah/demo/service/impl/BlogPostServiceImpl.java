@@ -27,6 +27,7 @@ import java.util.*;
 public class BlogPostServiceImpl implements BlogPostService {
 
     private final BlogPostMapper blogPostMapper;
+    private final FileUtil fileUtil;
 
     private static final String SUCCESS = "Success";
 
@@ -122,10 +123,10 @@ public class BlogPostServiceImpl implements BlogPostService {
             if (images != null && !images.isEmpty()) {
                 try {
                     MultipartFile featuredImage = images.get(0);
-                    long maxFileSize = FileUtil.parseFileSize("10MB");
-                    FileUtil.validateFile(featuredImage, maxFileSize);
+                    long maxFileSize = fileUtil.parseFileSize("10MB");
+                    fileUtil.validateFile(featuredImage, maxFileSize);
 
-                    Path imagePath = FileUtil.saveFile(featuredImage, uploadDirectory, blogPost.getId());
+                    Path imagePath = fileUtil.saveFile(featuredImage, uploadDirectory, blogPost.getId());
 
                     // Update the blog post with the image path
                     BlogPost updateForImage = new BlogPost();
@@ -223,15 +224,15 @@ public class BlogPostServiceImpl implements BlogPostService {
             if (images != null && !images.isEmpty()) {
                 try {
                     MultipartFile featuredImage = images.get(0);
-                    long maxFileSize = FileUtil.parseFileSize("10MB");
-                    FileUtil.validateFile(featuredImage, maxFileSize);
+                    long maxFileSize = fileUtil.parseFileSize("10MB");
+                    fileUtil.validateFile(featuredImage, maxFileSize);
 
                     // Delete old image if exists
                     if (existingPost.getFeaturedImage() != null) {
-                        FileUtil.deleteFile(existingPost.getFeaturedImage());
+                        fileUtil.deleteFile(existingPost.getFeaturedImage());
                     }
 
-                    Path imagePath = FileUtil.saveFile(featuredImage, uploadDirectory, id);
+                    Path imagePath = fileUtil.saveFile(featuredImage, uploadDirectory, id);
                     updatePost.setFeaturedImage(imagePath.toString());
                 } catch (Exception e) {
                     log.error("Failed to process featured image: {}", e.getMessage());
@@ -295,7 +296,7 @@ public class BlogPostServiceImpl implements BlogPostService {
         try {
             // Delete featured image if exists
             if (existingPost.getFeaturedImage() != null) {
-                FileUtil.deleteFile(existingPost.getFeaturedImage());
+                fileUtil.deleteFile(existingPost.getFeaturedImage());
             }
 
             // Delete associations
@@ -308,8 +309,7 @@ public class BlogPostServiceImpl implements BlogPostService {
             // Delete the blog post
             blogPostMapper.deleteBlogPost(id);
 
-            return new DataResponse<>(SUCCESS, "Blog post deleted successfully",
-                    HttpStatus.OK.value(), "Blog post deleted");
+            return new DataResponse<>(SUCCESS, "Blog post deleted successfully", HttpStatus.OK.value(), "Blog post deleted");
 
         } catch (Exception e) {
             log.error("Failed to delete blog post: {}", e.getMessage(), e);

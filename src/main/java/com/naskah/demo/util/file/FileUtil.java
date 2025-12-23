@@ -33,18 +33,18 @@ import java.util.*;
 @Component
 public class FileUtil {
 
-    private static Cloudinary cloudinary;
-    private static final String storageRoot = Paths.get(System.getProperty("user.dir"), "storage").toString();
+    private final Cloudinary cloudinary;
+    private static final String STORAGE_ROOT = Paths.get(System.getProperty("user.dir"), "storage").toString();
     private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "epub", "pdf", "doc", "docx");
     private static final List<String> OCR_SUPPORTED_EXTENSIONS = List.of("jpg", "jpeg", "png", "pdf");
     private static final int WORDS_PER_MINUTE = 200;
 
     public FileUtil(Cloudinary cloudinary) {
-        FileUtil.cloudinary = cloudinary;
+        this.cloudinary = cloudinary;
         try {
-            Files.createDirectories(Paths.get(storageRoot, "covers"));
-            Files.createDirectories(Paths.get(storageRoot, "books"));
-            Files.createDirectories(Paths.get(storageRoot, "authors"));
+            Files.createDirectories(Paths.get(STORAGE_ROOT, "covers"));
+            Files.createDirectories(Paths.get(STORAGE_ROOT, "books"));
+            Files.createDirectories(Paths.get(STORAGE_ROOT, "authors"));
         } catch (IOException e) {
             throw new RuntimeException("Failed to create storage directories", e);
         }
@@ -52,7 +52,7 @@ public class FileUtil {
 
     // ==================== TEXT EXTRACTION ====================
 
-    public static List<String> extractTextFromPDF(Path pdfPath) throws IOException {
+    public List<String> extractTextFromPDF(Path pdfPath) throws IOException {
         List<String> pages = new ArrayList<>();
         try (FileInputStream fis = new FileInputStream(pdfPath.toFile());
              PDDocument document = Loader.loadPDF(fis.readAllBytes())) {
@@ -75,7 +75,7 @@ public class FileUtil {
         }
     }
 
-    public static List<String> extractTextFromWord(Path wordPath) throws IOException {
+    public List<String> extractTextFromWord(Path wordPath) throws IOException {
         List<String> pages = new ArrayList<>();
         try (FileInputStream fis = new FileInputStream(wordPath.toFile())) {
             XWPFDocument document = new XWPFDocument(fis);
@@ -126,7 +126,7 @@ public class FileUtil {
 
     // ==================== TEXT UTILITIES ====================
 
-    public static String extractChapterTitle(Document doc, int defaultNumber) {
+    public String extractChapterTitle(Document doc, int defaultNumber) {
         Element h1 = doc.selectFirst("h1");
         if (h1 != null && !h1.text().trim().isEmpty()) {
             return cleanTitle(h1.text());
@@ -150,13 +150,13 @@ public class FileUtil {
         return "Chapter " + defaultNumber;
     }
 
-    private static String cleanTitle(String title) {
+    private String cleanTitle(String title) {
         return title.trim()
                 .replaceAll("\\s+", " ")
                 .substring(0, Math.min(title.length(), 200));
     }
 
-    public static int countWords(String text) {
+    public int countWords(String text) {
         if (text == null || text.trim().isEmpty()) {
             return 0;
         }
@@ -169,7 +169,7 @@ public class FileUtil {
                 .count();
     }
 
-    public static String generatePreviewText(String content, int maxLength) {
+    public String generatePreviewText(String content, int maxLength) {
         if (content == null || content.isEmpty()) {
             return "";
         }
@@ -187,7 +187,7 @@ public class FileUtil {
         return preview.trim();
     }
 
-    public static String uploadChapterImageFromBytes(byte[] imageData, Long bookId, String fileName) throws IOException {
+    public String uploadChapterImageFromBytes(byte[] imageData, Long bookId, String fileName) throws IOException {
         // Remove extension untuk public_id
         String nameWithoutExt = fileName.contains(".")
                 ? fileName.substring(0, fileName.lastIndexOf('.'))
@@ -208,7 +208,7 @@ public class FileUtil {
 
     // ==================== PROJECT PAGE CREATION ====================
 
-    public static List<ProjectPage> createPDFPagesForOCR(Long projectId, Path filePath, String originalFilename) {
+    public List<ProjectPage> createPDFPagesForOCR(Long projectId, Path filePath, String originalFilename) {
         List<ProjectPage> pages = new ArrayList<>();
         try (FileInputStream fis = new FileInputStream(filePath.toFile());
              PDDocument document = Loader.loadPDF(fis.readAllBytes())) {
@@ -233,7 +233,7 @@ public class FileUtil {
         return pages;
     }
 
-    public static List<ProjectPage> createPDFPagesWithText(Long projectId, Path filePath,
+    public List<ProjectPage> createPDFPagesWithText(Long projectId, Path filePath,
                                                            String originalFilename, List<String> extractedContent) {
         List<ProjectPage> pages = new ArrayList<>();
         for (int i = 0; i < extractedContent.size(); i++) {
@@ -253,7 +253,7 @@ public class FileUtil {
         return pages;
     }
 
-    public static List<ProjectPage> createWordPages(Long projectId, String originalFilename,
+    public List<ProjectPage> createWordPages(Long projectId, String originalFilename,
                                                     List<String> extractedContent) {
         List<ProjectPage> pages = new ArrayList<>();
         for (int i = 0; i < extractedContent.size(); i++) {
@@ -273,7 +273,7 @@ public class FileUtil {
         return pages;
     }
 
-    public static ProjectPage createImagePage(Long projectId, Path filePath, String originalFilename) {
+    public ProjectPage createImagePage(Long projectId, Path filePath, String originalFilename) {
         ProjectPage page = new ProjectPage();
         page.setProjectId(projectId);
         page.setPageNumber(1);
@@ -287,7 +287,7 @@ public class FileUtil {
 
     // ==================== FILE VALIDATION ====================
 
-    public static void validateFile(MultipartFile file, long maxSizeBytes) {
+    public void validateFile(MultipartFile file, long maxSizeBytes) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("File is empty");
         }
@@ -307,21 +307,21 @@ public class FileUtil {
         }
     }
 
-    public static boolean shouldProcessOCR(MultipartFile file) {
+    public boolean shouldProcessOCR(MultipartFile file) {
         String extension = getFileExtension(file.getOriginalFilename()).toLowerCase();
         return OCR_SUPPORTED_EXTENSIONS.contains(extension);
     }
 
     // ==================== FILE UTILITIES ====================
 
-    public static String getFileExtension(String filename) {
+    public String getFileExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "";
         }
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
-    public static FileType determineFileType(String extension) {
+    public FileType determineFileType(String extension) {
         extension = extension.toLowerCase();
         return switch (extension) {
             case "pdf" -> FileType.PDF;
@@ -332,7 +332,7 @@ public class FileUtil {
         };
     }
 
-    public static long parseFileSize(String sizeStr) {
+    public long parseFileSize(String sizeStr) {
         if (sizeStr == null || sizeStr.trim().isEmpty()) {
             return 50 * 1024 * 1024;
         }
@@ -347,20 +347,20 @@ public class FileUtil {
         }
     }
 
-    public static String sanitizeFilename(String input) {
+    public String sanitizeFilename(String input) {
         return input.toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
     }
 
-    public static int calculateEstimatedReadTime(long totalWord) {
+    public int calculateEstimatedReadTime(long totalWord) {
         return (int) Math.max(1, Math.round((double) totalWord / WORDS_PER_MINUTE));
     }
 
     // ==================== CLOUDINARY UPLOAD ====================
 
-    private static String uploadToCloudinary(MultipartFile file, String publicId,
+    private String uploadToCloudinary(MultipartFile file, String publicId,
                                              String folder, Map<String, Object> transformations) throws IOException {
         Map<String, Object> uploadParams = new HashMap<>();
         uploadParams.put("public_id", publicId);
@@ -380,7 +380,7 @@ public class FileUtil {
         return (String) uploadResult.get("secure_url");
     }
 
-    private static String uploadBytesToCloudinary(byte[] bytes, String publicId,
+    private String uploadBytesToCloudinary(byte[] bytes, String publicId,
                                                   String folder, Map<String, Object> transformations) throws IOException {
         Map<String, Object> uploadParams = new HashMap<>();
         uploadParams.put("public_id", publicId);
@@ -402,7 +402,7 @@ public class FileUtil {
 
     // ==================== BOOK FILE UPLOADS ====================
 
-    public static String uploadBookCover(MultipartFile coverImage, String bookTitle) throws IOException {
+    public String uploadBookCover(MultipartFile coverImage, String bookTitle) throws IOException {
         String publicId = sanitizeFilename(bookTitle) + "-cover";
         Map<String, Object> transformations = new HashMap<>();
         transformations.put("transformation", new Transformation()
@@ -414,7 +414,7 @@ public class FileUtil {
         return uploadToCloudinary(coverImage, publicId, "book_covers", transformations);
     }
 
-    public static String uploadBookCoverFromBytes(byte[] imageData, String bookTitle, Long bookId) throws IOException {
+    public String uploadBookCoverFromBytes(byte[] imageData, String bookTitle, Long bookId) throws IOException {
         String publicId = String.format("books/%d/cover-%s", bookId, sanitizeFilename(bookTitle));
 
         Map<String, Object> transformations = new HashMap<>();
@@ -427,7 +427,7 @@ public class FileUtil {
         return uploadBytesToCloudinary(imageData, publicId, "book_covers", transformations);
     }
 
-    public static String uploadBookFile(MultipartFile bookFile, String bookTitle) throws IOException {
+    public String uploadBookFile(MultipartFile bookFile, String bookTitle) throws IOException {
         String originalFilename = bookFile.getOriginalFilename();
         String fileExtension = originalFilename != null ?
                 originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
@@ -436,7 +436,7 @@ public class FileUtil {
         return uploadToCloudinary(bookFile, publicId, "book_files", null);
     }
 
-    public static String uploadAuthorPhoto(MultipartFile photo, String authorName) throws IOException {
+    public String uploadAuthorPhoto(MultipartFile photo, String authorName) throws IOException {
         String publicId = sanitizeFilename(authorName) + "-author";
         Map<String, Object> transformations = new HashMap<>();
         transformations.put("transformation", new Transformation()
@@ -451,7 +451,7 @@ public class FileUtil {
 
     // ==================== LOCAL STORAGE ====================
 
-    public static Path saveFile(MultipartFile file, String uploadDir, Long projectId) throws IOException {
+    public Path saveFile(MultipartFile file, String uploadDir, Long projectId) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String fileExtension = getFileExtension(originalFilename);
         String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
@@ -465,8 +465,8 @@ public class FileUtil {
         return filePath;
     }
 
-    public static String saveToLocal(MultipartFile file, String directory, String filename) throws IOException {
-        Path filePath = Paths.get(storageRoot, directory, filename);
+    public String saveToLocal(MultipartFile file, String directory, String filename) throws IOException {
+        Path filePath = Paths.get(STORAGE_ROOT, directory, filename);
         Files.createDirectories(filePath.getParent());
 
         try (InputStream inputStream = file.getInputStream()) {
@@ -477,7 +477,7 @@ public class FileUtil {
         return filePath.toString();
     }
 
-    public static String getFilename(MultipartFile file, String baseName, String suffix) {
+    public String getFilename(MultipartFile file, String baseName, String suffix) {
         String originalFilename = file.getOriginalFilename();
         String contentType = file.getContentType();
         String fileExtension = ".jpg";
@@ -493,24 +493,24 @@ public class FileUtil {
 
     // ==================== FILE STORAGE WRAPPERS ====================
 
-    public static FileStorageResult saveAndUploadBookCover(MultipartFile coverImage, String title) throws IOException {
+    public FileStorageResult saveAndUploadBookCover(MultipartFile coverImage, String title) throws IOException {
         String cloudUrl = uploadBookCover(coverImage, title);
         return new FileStorageResult(cloudUrl);
     }
 
-    public static FileStorageResult saveAndUploadBookFile(MultipartFile bookFile, String title) throws IOException {
+    public FileStorageResult saveAndUploadBookFile(MultipartFile bookFile, String title) throws IOException {
         String cloudUrl = uploadBookFile(bookFile, title);
         return new FileStorageResult(cloudUrl);
     }
 
-    public static FileStorageResult saveAndUploadAuthorPhoto(MultipartFile authorPhoto, String authorName) throws IOException {
+    public FileStorageResult saveAndUploadAuthorPhoto(MultipartFile authorPhoto, String authorName) throws IOException {
         String cloudUrl = uploadAuthorPhoto(authorPhoto, authorName);
         return new FileStorageResult(cloudUrl);
     }
 
     // ==================== PRODUCT IMAGE METHODS ====================
 
-    public static String uploadProductImage(MultipartFile image, String productName) throws IOException {
+    public String uploadProductImage(MultipartFile image, String productName) throws IOException {
         String publicId = sanitizeFilename(productName) + "-product-" + System.currentTimeMillis();
         Map<String, Object> transformations = new HashMap<>();
         transformations.put("transformation", new Transformation()
@@ -523,12 +523,12 @@ public class FileUtil {
         return uploadToCloudinary(image, publicId, "product_images", transformations);
     }
 
-    public static FileStorageResult saveAndUploadProductImage(MultipartFile image, String productName) throws IOException {
+    public FileStorageResult saveAndUploadProductImage(MultipartFile image, String productName) throws IOException {
         String cloudUrl = uploadProductImage(image, productName);
         return new FileStorageResult(cloudUrl);
     }
 
-    public static void validateProductImage(MultipartFile image) {
+    public void validateProductImage(MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new IllegalArgumentException("Product image is required");
         }
@@ -552,7 +552,7 @@ public class FileUtil {
 
     // ==================== FILE DELETION ====================
 
-    public static void deleteFile(String filePathOrUrl) {
+    public void deleteFile(String filePathOrUrl) {
         if (filePathOrUrl == null || filePathOrUrl.trim().isEmpty()) {
             return;
         }
@@ -592,7 +592,7 @@ public class FileUtil {
 
     // ==================== BOOK METADATA EXTRACTION ====================
 
-    public static BookMetadata extractBookMetadata(MultipartFile bookFile) throws IOException {
+    public BookMetadata extractBookMetadata(MultipartFile bookFile) throws IOException {
         String originalFilename = bookFile.getOriginalFilename();
         String fileFormat = "";
         long totalWord = 0L;

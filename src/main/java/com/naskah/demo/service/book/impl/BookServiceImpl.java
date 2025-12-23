@@ -47,6 +47,7 @@ public class BookServiceImpl implements BookService {
     private final GenreMapper genreMapper;
     private final HeaderHolder headerHolder;
     private final EpubService epubService;
+    private final FileUtil fileUtil;
     private static final String SUCCESS = "Success";
 
     @Value("${file.upload.max-size:52428800}")
@@ -59,10 +60,10 @@ public class BookServiceImpl implements BookService {
                 throw new UnauthorizedException();
             }
 
-            long maxSizeBytes = FileUtil.parseFileSize(maxFileSizeStr);
-            FileUtil.validateFile(request.getBookFile(), maxSizeBytes);
+            long maxSizeBytes = fileUtil.parseFileSize(maxFileSizeStr);
+            fileUtil.validateFile(request.getBookFile(), maxSizeBytes);
 
-            String fileExtension = FileUtil.getFileExtension(request.getBookFile().getOriginalFilename());
+            String fileExtension = fileUtil.getFileExtension(request.getBookFile().getOriginalFilename());
             if (!"epub".equalsIgnoreCase(fileExtension)) {
                 throw new IllegalArgumentException("Only EPUB files are supported for auto-metadata extraction");
             }
@@ -91,7 +92,7 @@ public class BookServiceImpl implements BookService {
             }
 
             // =============== GENERATE UNIQUE SLUG ===============
-            String baseSlug = FileUtil.sanitizeFilename(finalTitle);
+            String baseSlug = fileUtil.sanitizeFilename(finalTitle);
             String finalSlug = baseSlug;
 
             int duplicateCount = bookMapper.countBySlug(finalSlug);
@@ -105,8 +106,8 @@ public class BookServiceImpl implements BookService {
             CopyrightStatus copyrightStatus = copyrightStatusMapper.findByCopyrightStatusCode(epubMeta.getCopyrightStatus());
 
             // =============== UPLOAD BOOK FILE ===============
-            FileStorageResult bookResult = FileUtil.saveAndUploadBookFile(request.getBookFile(), finalTitle);
-            BookMetadata metadata = FileUtil.extractBookMetadata(request.getBookFile());
+            FileStorageResult bookResult = fileUtil.saveAndUploadBookFile(request.getBookFile(), finalTitle);
+            BookMetadata metadata = fileUtil.extractBookMetadata(request.getBookFile());
 
             // =============== CREATE BOOK ENTITY ===============
             Book book = new Book();
@@ -143,7 +144,7 @@ public class BookServiceImpl implements BookService {
 
             book.setTotalWord(result.getTotalWords());
             book.setTotalPages(result.getTotalChapters());
-            book.setEstimatedReadTime(FileUtil.calculateEstimatedReadTime(result.getTotalWords()));
+            book.setEstimatedReadTime(fileUtil.calculateEstimatedReadTime(result.getTotalWords()));
             book.setCoverImageUrl(result.getCoverImageUrl());
 
             bookMapper.updateBook(book);
@@ -173,7 +174,7 @@ public class BookServiceImpl implements BookService {
                 if (genre == null) {
                     genre = new Genre();
                     genre.setName(subject);
-                    genre.setSlug(FileUtil.sanitizeFilename(subject));
+                    genre.setSlug(fileUtil.sanitizeFilename(subject));
                     genre.setDescription("Auto-generated from EPUB metadata");
                     genre.setCreatedAt(Instant.from(LocalDateTime.now()));
                     genreMapper.insertGenre(genre);
@@ -198,7 +199,7 @@ public class BookServiceImpl implements BookService {
                 } else {
                     Author newAuthor = new Author();
                     newAuthor.setName(authorMeta.getName());
-                    newAuthor.setSlug(FileUtil.sanitizeFilename(authorMeta.getName()));
+                    newAuthor.setSlug(fileUtil.sanitizeFilename(authorMeta.getName()));
                     newAuthor.setBirthDate(null);
                     newAuthor.setDeathDate(null);
                     newAuthor.setBirthPlace(null);
@@ -234,7 +235,7 @@ public class BookServiceImpl implements BookService {
                 contributor.setCreatedAt(LocalDateTime.now());
                 contributor.setUpdatedAt(LocalDateTime.now());
 
-                String contribBaseSlug = FileUtil.sanitizeFilename(contribMeta.getName());
+                String contribBaseSlug = fileUtil.sanitizeFilename(contribMeta.getName());
                 String contribFinalSlug = contribBaseSlug;
 
                 Contributor existingBySlug = contributorMapper.findBySlug(contribFinalSlug);
@@ -340,7 +341,7 @@ public class BookServiceImpl implements BookService {
                     Files.delete(oldFilePath);
                 }
 
-                Path savedFilePath = FileUtil.saveFile(file, "uploads", id);
+                Path savedFilePath = fileUtil.saveFile(file, "uploads", id);
                 book.setFilePath(savedFilePath.toString());
             } else {
                 book.setFilePath(existingEbook.getFilePath());
@@ -440,7 +441,7 @@ public class BookServiceImpl implements BookService {
             byte[] fileContent = response.getBody();
             log.info("Successfully downloaded {} bytes from: {}", fileContent.length, fileUrl);
 
-            String filename = book.getTitle() != null ? FileUtil.sanitizeFilename(book.getTitle()) + ".epub" : slug + ".epub";
+            String filename = book.getTitle() != null ? fileUtil.sanitizeFilename(book.getTitle()) + ".epub" : slug + ".epub";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);

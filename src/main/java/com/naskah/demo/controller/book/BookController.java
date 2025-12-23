@@ -18,42 +18,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * BookController - Handle basic book CRUD operations + metadata
- * <p>
- * CRUD Endpoints:
- * - POST   /api/books                 - Create book
- * - GET    /api/books/{slug}          - Get book detail
- * - GET    /api/books                 - Get books (paginated, filtered)
- * - PUT    /api/books                 - Update book
- * - DELETE /api/books/{id}            - Delete book
- * <p>
- * Metadata Endpoints:
- * - GET    /api/books/genres          - Get all genres
- * - GET    /api/books/authors         - Get all authors
- * - GET    /api/books/contributors    - Get all contributors
- * <p>
- * Other Endpoints:
- * - GET    /api/books/{slug}/download        - Download book file
- * - GET    /api/books/{slug}/my-annotations  - Get user's annotations
- */
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api/books")
 @RequiredArgsConstructor
 public class BookController {
-
     private final BookService bookService;
     private final BookChapterService chapterService;
 
-    // ============================================
-    // BOOK CRUD OPERATIONS
-    // ============================================
-
-    /**
-     * Create new book with EPUB file
-     * Auto-extracts metadata, cover, chapters
-     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<BookResponse>> createBook(@Valid @ModelAttribute BookRequest request) {
         DataResponse<BookResponse> response = bookService.createBook(request);
@@ -61,9 +33,6 @@ public class BookController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Get detailed book information by slug
-     */
     @GetMapping("/{slug}")
     public ResponseEntity<DataResponse<BookResponse>> getBookDetail(@PathVariable String slug) {
         DataResponse<BookResponse> response = bookService.getBookDetailBySlug(slug);
@@ -120,9 +89,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Update existing book
-     */
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<Book>> updateBook(@RequestParam Long id, @RequestPart("ebook") @Valid Book book,
                                                          @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
@@ -131,9 +97,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Delete book and all associated data
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<DefaultResponse> deleteBook(@PathVariable Long id) throws IOException {
         DefaultResponse response = bookService.delete(id);
@@ -141,23 +104,11 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Download book file (EPUB/PDF)
-     * Rate-limited for guest users
-     */
     @GetMapping("/{slug}/download")
     public ResponseEntity<byte[]> downloadBook(@PathVariable String slug) {
         return bookService.downloadBookAsBytes(slug);
     }
 
-    // ============================================
-    // METADATA OPERATIONS
-    // ============================================
-
-    /**
-     * Get all genres with book count
-     * Returns list of genres sorted by name
-     */
     @GetMapping("/genres")
     public ResponseEntity<DataResponse<List<GenreResponse>>> getAllGenres(@RequestParam(defaultValue = "false") boolean includeBookCount) {
         DataResponse<List<GenreResponse>> response = bookService.getAllGenres(includeBookCount);
@@ -165,15 +116,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get all authors with book count and details
-     * Supports pagination and search
-     *
-     * @param page - Page number (default: 1)
-     * @param limit - Items per page (default: 20)
-     * @param search - Search by author name (optional)
-     * @param sortBy - Sort by: name, bookCount, createdAt (default: name)
-     */
     @GetMapping("/authors")
     public ResponseEntity<DatatableResponse<AuthorResponse>> getAllAuthors(@RequestParam(defaultValue = "1") @Min(1) int page,
                                                                            @RequestParam(defaultValue = "20") @Min(1) int limit,
@@ -184,15 +126,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Get all contributors with role information
-     * Supports pagination and filtering by role
-     *
-     * @param page - Page number (default: 1)
-     * @param limit - Items per page (default: 20)
-     * @param role - Filter by role: TRANSLATOR, ILLUSTRATOR, EDITOR, etc. (optional)
-     * @param search - Search by contributor name (optional)
-     */
     @GetMapping("/contributors")
     public ResponseEntity<DatatableResponse<ContributorResponse>> getAllContributors(@RequestParam(defaultValue = "1") @Min(1) int page,
                                                                                      @RequestParam(defaultValue = "20") @Min(1) int limit,
@@ -203,14 +136,6 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
-    // ============================================
-    // USER ANNOTATIONS
-    // ============================================
-
-    /**
-     * Get all user's annotations across ALL chapters in this book
-     * Returns: bookmarks, highlights, notes from entire book
-     */
     @GetMapping("/{slug}/my-annotations")
     public ResponseEntity<DataResponse<ChapterAnnotationsResponse>> getMyBookAnnotations(@PathVariable String slug) {
         DataResponse<ChapterAnnotationsResponse> response = chapterService.getMyChapterAnnotations(slug);

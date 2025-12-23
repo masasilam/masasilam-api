@@ -36,6 +36,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final PageCommentMapper pageCommentMapper;
     private final NotificationMapper notificationMapper;
     private final ProjectFollowMapper projectFollowMapper;
+    private final FileUtil fileUtil;
 
     private static final String SUCCESS = "Success";
 
@@ -84,7 +85,7 @@ public class ProjectServiceImpl implements ProjectService {
             // Create project entity
             Project project = new Project();
             project.setTitle(request.getTitle());
-            project.setSlug(FileUtil.sanitizeFilename(request.getTitle()));
+            project.setSlug(fileUtil.sanitizeFilename(request.getTitle()));
             project.setDescription(request.getDescription());
             project.setAuthor(request.getAuthor());
             project.setOriginalSource(request.getOriginalSource());
@@ -136,11 +137,11 @@ public class ProjectServiceImpl implements ProjectService {
 
                 for (MultipartFile file : sortedFiles) {
                     try {
-                        long maxFileSize = FileUtil.parseFileSize("50MB");
-                        FileUtil.validateFile(file, maxFileSize);
-                        Path filePath = FileUtil.saveFile(file, uploadDirectory, project.getId());
-                        String extension = FileUtil.getFileExtension(file.getOriginalFilename());
-                        FileType fileType = FileUtil.determineFileType(extension);
+                        long maxFileSize = fileUtil.parseFileSize("50MB");
+                        fileUtil.validateFile(file, maxFileSize);
+                        Path filePath = fileUtil.saveFile(file, uploadDirectory, project.getId());
+                        String extension = fileUtil.getFileExtension(file.getOriginalFilename());
+                        FileType fileType = fileUtil.determineFileType(extension);
 
                         List<ProjectPage> pages = new ArrayList<>();
                         int pagesCreated;
@@ -148,13 +149,13 @@ public class ProjectServiceImpl implements ProjectService {
                         switch (fileType) {
                             case PDF:
                                 try {
-                                    List<String> extractedContent = FileUtil.extractTextFromPDF(filePath);
+                                    List<String> extractedContent = fileUtil.extractTextFromPDF(filePath);
                                     if (extractedContent.isEmpty() || extractedContent.stream().allMatch(String::isEmpty)) {
                                         log.info("PDF contains images, will require OCR processing");
-                                        pages = FileUtil.createPDFPagesForOCR(project.getId(), filePath,
+                                        pages = fileUtil.createPDFPagesForOCR(project.getId(), filePath,
                                                 file.getOriginalFilename());
                                     } else {
-                                        pages = FileUtil.createPDFPagesWithText(project.getId(), filePath,
+                                        pages = fileUtil.createPDFPagesWithText(project.getId(), filePath,
                                                 file.getOriginalFilename(), extractedContent);
                                     }
                                     pagesCreated = pages.size();
@@ -166,10 +167,10 @@ public class ProjectServiceImpl implements ProjectService {
 
                             case EPUB:
                                 try {
-//                                    List<String> extractedContent = FileUtil.extractTextFromEPUB(filePath);
-//                                    pages = FileUtil.createEPUBPages(project.getId(),
+//                                    List<String> extractedContent = fileUtil.extractTextFromEPUB(filePath);
+//                                    pages = fileUtil.createEPUBPages(project.getId(),
 //                                            file.getOriginalFilename(), extractedContent);
-                                    pagesCreated = pages.size();
+                                    pagesCreated = 0;
                                 } catch (Exception e) {
                                     log.error("Failed to process EPUB file {}: {}", file.getOriginalFilename(), e.getMessage());
                                     throw e;
@@ -178,8 +179,8 @@ public class ProjectServiceImpl implements ProjectService {
 
                             case WORD:
                                 try {
-                                    List<String> extractedContent = FileUtil.extractTextFromWord(filePath);
-                                    pages = FileUtil.createWordPages(project.getId(),
+                                    List<String> extractedContent = fileUtil.extractTextFromWord(filePath);
+                                    pages = fileUtil.createWordPages(project.getId(),
                                             file.getOriginalFilename(), extractedContent);
                                     pagesCreated = pages.size();
                                 } catch (Exception e) {
@@ -190,7 +191,7 @@ public class ProjectServiceImpl implements ProjectService {
 
                             case IMAGE:
                                 try {
-                                    ProjectPage imagePage = FileUtil.createImagePage(project.getId(),
+                                    ProjectPage imagePage = fileUtil.createImagePage(project.getId(),
                                             filePath, file.getOriginalFilename());
                                     pages.add(imagePage);
                                     pagesCreated = 1;
@@ -1427,27 +1428,27 @@ public class ProjectServiceImpl implements ProjectService {
 //
 //            switch (format) {
 //                case PDF:
-//                    String pdfPath = FileUtil.generatePDFExport(project, pages, uploadDirectory);
+//                    String pdfPath = fileUtil.generatePDFExport(project, pages, uploadDirectory);
 //                    response.setDownloadUrl("/api/exports/download/" + pdfPath);
-//                    response.setFileSize(FileUtil.getFileSize(pdfPath));
+//                    response.setFileSize(fileUtil.getFileSize(pdfPath));
 //                    break;
 //
 //                case EPUB:
-//                    String epubPath = FileUtil.generateEPUBExport(project, pages, uploadDirectory);
+//                    String epubPath = fileUtil.generateEPUBExport(project, pages, uploadDirectory);
 //                    response.setDownloadUrl("/api/exports/download/" + epubPath);
-//                    response.setFileSize(FileUtil.getFileSize(epubPath));
+//                    response.setFileSize(fileUtil.getFileSize(epubPath));
 //                    break;
 //
 //                case HTML:
-//                    String htmlPath = FileUtil.generateHTMLExport(project, pages, uploadDirectory);
+//                    String htmlPath = fileUtil.generateHTMLExport(project, pages, uploadDirectory);
 //                    response.setDownloadUrl("/api/exports/download/" + htmlPath);
-//                    response.setFileSize(FileUtil.getFileSize(htmlPath));
+//                    response.setFileSize(fileUtil.getFileSize(htmlPath));
 //                    break;
 //
 //                case DOCX:
-//                    String docxPath = FileUtil.generateDOCXExport(project, pages, uploadDirectory);
+//                    String docxPath = fileUtil.generateDOCXExport(project, pages, uploadDirectory);
 //                    response.setDownloadUrl("/api/exports/download/" + docxPath);
-//                    response.setFileSize(FileUtil.getFileSize(docxPath));
+//                    response.setFileSize(fileUtil.getFileSize(docxPath));
 //                    break;
 //
 //                default:
