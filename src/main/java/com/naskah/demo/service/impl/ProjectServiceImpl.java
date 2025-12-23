@@ -26,7 +26,6 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 @Slf4j
 public class ProjectServiceImpl implements ProjectService {
-
     private final ProjectMapper projectMapper;
     private final ProjectPageMapper projectPageMapper;
     private final ProjectMemberMapper projectMemberMapper;
@@ -155,7 +154,7 @@ public class ProjectServiceImpl implements ProjectService {
                                         pages = fileUtil.createPDFPagesForOCR(project.getId(), filePath,
                                                 file.getOriginalFilename());
                                     } else {
-                                        pages = fileUtil.createPDFPagesWithText(project.getId(), filePath,
+                                        pages = fileUtil.createPDFPagesWithText(project.getId(),
                                                 file.getOriginalFilename(), extractedContent);
                                     }
                                     pagesCreated = pages.size();
