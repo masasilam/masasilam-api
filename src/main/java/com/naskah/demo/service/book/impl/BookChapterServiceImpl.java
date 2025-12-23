@@ -25,24 +25,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * BookChapterServiceImpl - Complete implementation
- * <p>
- * ✅ FULLY SYNCHRONIZED WITH DASHBOARD SERVICE
- * ✅ All type conversions fixed
- * ✅ All validations added
- * ✅ All null checks implemented
- * ✅ Optimized for performance
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookChapterServiceImpl implements BookChapterService {
-
-    // ============================================
-    // DEPENDENCIES
-    // ============================================
-
     private final BookMapper bookMapper;
     private final BookChapterMapper chapterMapper;
     private final UserMapper userMapper;
@@ -63,6 +49,14 @@ public class BookChapterServiceImpl implements BookChapterService {
     private final HeaderHolder headerHolder;
 
     private static final String SUCCESS = "Success";
+    private static final String TOTAL_RATINGS = "total_ratings";
+    private static final String COUNT = "count";
+    private static final String CHAPTER_NUMBER = "chapter_number";
+    private static final String CHAPTER_TITLE = "chapter_title";
+    private static final String UNKNOWN = "Unknown";
+    private static final String MODERATE = "Moderate";
+    private static final String AVG_READING_TIME = "avg_reading_time";
+    private static final String HIGHLIGHT_COUNT = "highlight_count";
 
     // ============================================
     // CHAPTER READING
@@ -74,7 +68,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             // Validate and get book
             Book book = bookMapper.findBookBySlug(bookSlug);
-            validateBook(book, bookSlug);
+            validateBook(book);
 
             // Parse slug hierarchy
             String[] slugParts = slugPath.split("/");
@@ -100,7 +94,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<List<ChapterSummaryResponse>> getAllChaptersSummary(String slug) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             List<BookChapter> chapters = chapterMapper.findChaptersByBookId(book.getId());
 
@@ -128,7 +122,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             ChapterProgress progress = chapterProgressMapper.findProgress(user.getId(), book.getId(), chapterNumber);
 
@@ -204,7 +198,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Bookmark bookmark = new Bookmark();
             bookmark.setUserId(user.getId());
@@ -233,7 +227,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Highlight highlight = new Highlight();
             highlight.setUserId(user.getId());
@@ -268,7 +262,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Note note = new Note();
             note.setUserId(user.getId());
@@ -306,7 +300,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Bookmark bookmark = bookmarkMapper.findBookmarkById(bookmarkId);
             if (bookmark == null) {
@@ -335,7 +329,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Highlight highlight = highlightMapper.findHighlightById(highlightId);
             if (highlight == null) {
@@ -365,7 +359,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             Note note = noteMapper.findNoteById(noteId);
             if (note == null) {
@@ -453,7 +447,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<List<ChapterReviewResponse>> getChapterReviews(String slug, Integer chapterNumber, int page, int limit) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             int offset = (page - 1) * limit;
             List<ChapterReview> reviews = chapterReviewMapper.findReviewsByChapter(book.getId(), chapterNumber, offset, limit);
@@ -478,7 +472,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             ChapterReview review = new ChapterReview();
             review.setUserId(user.getId());
@@ -510,7 +504,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             ChapterReview parentReview = chapterReviewMapper.findById(reviewId);
             if (parentReview == null) {
@@ -582,7 +576,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), chapterNumber);
             if (chapter == null) {
@@ -620,7 +614,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<ChapterRatingSummaryResponse> getChapterRatingSummary(String slug, Integer chapterNumber) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), chapterNumber);
             if (chapter == null) {
@@ -634,13 +628,13 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setChapterNumber(chapterNumber);
             response.setChapterTitle(chapter.getTitle());
             response.setAverageRating(safeConvertToDouble(summary.get("average_rating")));
-            response.setTotalRatings(safeConvertToInt(summary.get("total_ratings")));
+            response.setTotalRatings(safeConvertToInt(summary.get(TOTAL_RATINGS)));
 
             // Build distribution
             RatingDistribution dist = new RatingDistribution();
             for (Map<String, Object> d : distribution) {
                 int rating = safeConvertToInt(d.get("rating"));
-                int count = safeConvertToInt(d.get("count"));
+                int count = safeConvertToInt(d.get(COUNT));
 
                 switch (rating) {
                     case 1: dist.setOneStar(count); break;
@@ -648,6 +642,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                     case 3: dist.setThreeStars(count); break;
                     case 4: dist.setFourStars(count); break;
                     case 5: dist.setFiveStars(count); break;
+                    default: log.warn("Invalid rating value {} found in distribution for chapter {} of book {}", rating, chapterNumber, slug); break;
                 }
             }
             response.setDistribution(dist);
@@ -672,7 +667,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             ratingMapper.deleteRating(user.getId(), book.getId(), chapterNumber);
 
@@ -695,7 +690,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             int existingSessions = bookMapper.countUserReadSessions(book.getId(), user.getId());
             if (existingSessions == 0) {
@@ -750,7 +745,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), request.getChapterNumber());
             if (chapter == null) {
@@ -784,7 +779,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             }
 
             // 🔥 FIX: Update session dengan chapters_read
-            updateReadingSession(request.getSessionId(), book.getId(), request.getChapterNumber());
+            updateReadingSession(request.getSessionId(), request.getChapterNumber());
 
             // Calculate patterns (async would be better)
             calculateUserReadingPattern(user.getId(), book.getId());
@@ -799,7 +794,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    private void updateReadingSession(String sessionId, Long bookId, Integer endChapter) {
+    private void updateReadingSession(String sessionId, Integer endChapter) {
         ReadingSession session = sessionMapper.findBySessionId(sessionId);
         if (session != null) {
             session.setEndedAt(LocalDateTime.now());
@@ -835,7 +830,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             // Get activity summary per chapter
             List<Map<String, Object>> summaryData =
@@ -844,7 +839,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             List<ReadingActivitySummary> activities = summaryData.stream()
                     .map(data -> {
                         ReadingActivitySummary summary = new ReadingActivitySummary();
-                        summary.setChapterNumber(safeConvertToInt(data.get("chapter_number")));
+                        summary.setChapterNumber(safeConvertToInt(data.get(CHAPTER_NUMBER)));
 
                         BookChapter chapter = chapterMapper.findChapterByNumber(
                                 book.getId(), summary.getChapterNumber());
@@ -898,7 +893,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             UserReadingPattern pattern = patternMapper.findPattern(user.getId(), book.getId());
 
@@ -936,7 +931,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     private String getReadingTimeLabel(Integer hour) {
-        if (hour == null) return "Unknown";
+        if (hour == null) return UNKNOWN;
         if (hour >= 5 && hour < 12) return "Morning";
         if (hour >= 12 && hour < 17) return "Afternoon";
         if (hour >= 17 && hour < 21) return "Evening";
@@ -944,22 +939,22 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     private String getDayLabel(Integer day) {
-        if (day == null) return "Unknown";
+        if (day == null) return UNKNOWN;
         String[] days = {"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-        return day >= 1 && day <= 7 ? days[day] : "Unknown";
+        return day >= 1 && day <= 7 ? days[day] : UNKNOWN;
     }
 
     private String getReadingPaceLabel(Double chaptersPerDay) {
-        if (chaptersPerDay == null) return "Unknown";
+        if (chaptersPerDay == null) return UNKNOWN;
         if (chaptersPerDay < 1) return "Slow";
-        if (chaptersPerDay < 3) return "Moderate";
+        if (chaptersPerDay < 3) return MODERATE;
         return "Fast";
     }
 
     private String getAnnotationStyleLabel(Double frequency) {
-        if (frequency == null) return "Unknown";
+        if (frequency == null) return UNKNOWN;
         if (frequency < 1) return "Light";
-        if (frequency < 3) return "Moderate";
+        if (frequency < 3) return MODERATE;
         return "Heavy";
     }
 
@@ -972,7 +967,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             String slug, SearchInBookRequest request) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             int offset = (request.getPage() - 1) * request.getLimit();
             String searchQuery = request.getQuery().trim();
@@ -1006,7 +1001,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setQuery(request.getQuery());
             response.setTotalResults(totalResults);
             response.setTotalChapters((int) results.stream()
-                    .map(r -> r.get("chapter_number"))
+                    .map(r -> r.get(CHAPTER_NUMBER))
                     .distinct()
                     .count());
             response.setResults(searchResults);
@@ -1021,7 +1016,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             throw e;
         } catch (Exception e) {
             log.error("Error searching in book: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to search in book", e);
+            throw e;
         }
     }
 
@@ -1033,15 +1028,15 @@ public class BookChapterServiceImpl implements BookChapterService {
         ChapterSearchResultResponse response = new ChapterSearchResultResponse();
 
         // Basic chapter info
-        response.setChapterId(getLongValue(result, "chapter_id"));
-        response.setChapterNumber(getIntValue(result, "chapter_number"));
-        response.setChapterTitle((String) result.get("chapter_title"));
+        response.setChapterId(getLongValue(result));
+        response.setChapterNumber(getIntValue(result, CHAPTER_NUMBER));
+        response.setChapterTitle((String) result.get(CHAPTER_TITLE));
         response.setChapterSlug((String) result.get("chapter_slug"));
         response.setChapterLevel(getIntValue(result, "chapter_level"));
         response.setParentSlug((String) result.get("parent_slug"));
 
         // Search relevance
-        response.setRelevanceScore(getFloatValue(result, "relevance_score"));
+        response.setRelevanceScore(getFloatValue(result));
         response.setMatchCount(getIntValue(result, "match_count"));
 
         // Extract matches from highlighted content
@@ -1067,16 +1062,14 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         // Parse highlighted content untuk extract matches
         // Format: "text <mark>matched</mark> more text"
-        Pattern pattern = Pattern.compile("<mark>(.*?)</mark>",
-                Pattern.CASE_INSENSITIVE);
+        Pattern pattern = Pattern.compile("<mark>(.*?)</mark>", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(highlightedContent);
 
         while (matcher.find() && matches.size() < 5) {
             String matchedText = matcher.group(1);
 
             // Find position in original content
-            int position = fullContent.toLowerCase()
-                    .indexOf(matchedText.toLowerCase());
+            int position = fullContent.toLowerCase().indexOf(matchedText.toLowerCase());
 
             if (position >= 0) {
                 SearchMatch match = new SearchMatch();
@@ -1087,12 +1080,8 @@ public class BookChapterServiceImpl implements BookChapterService {
                 int contextStart = Math.max(0, position - 50);
                 int contextEnd = Math.min(fullContent.length(), position + matchedText.length() + 50);
 
-                match.setContextBefore(
-                        fullContent.substring(contextStart, position).trim()
-                );
-                match.setContextAfter(
-                        fullContent.substring(position + matchedText.length(), contextEnd).trim()
-                );
+                match.setContextBefore(fullContent.substring(contextStart, position).trim());
+                match.setContextAfter(fullContent.substring(position + matchedText.length(), contextEnd).trim());
 
                 // Create snippet with context
                 String snippet = (contextStart > 0 ? "..." : "") +
@@ -1152,28 +1141,31 @@ public class BookChapterServiceImpl implements BookChapterService {
     /**
      * Helper methods untuk type conversion
      */
-    private Long getLongValue(Map<String, Object> map, String key) {
-        Object value = map.get(key);
-        if (value == null) return null;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Number) return ((Number) value).longValue();
-        return null;
+    private Long getLongValue(Map<String, Object> map) {
+        Object value = map.get("chapter_id");
+        return switch (value) {
+            case Long l -> l;
+            case Number number -> number.longValue();
+            case null, default -> null;
+        };
     }
 
     private Integer getIntValue(Map<String, Object> map, String key) {
         Object value = map.get(key);
-        if (value == null) return null;
-        if (value instanceof Integer) return (Integer) value;
-        if (value instanceof Number) return ((Number) value).intValue();
-        return null;
+        return switch (value) {
+            case Integer i -> i;
+            case Number number -> number.intValue();
+            case null, default -> null;
+        };
     }
 
-    private Float getFloatValue(Map<String, Object> map, String key) {
-        Object value = map.get(key);
-        if (value == null) return 0.0f;
-        if (value instanceof Float) return (Float) value;
-        if (value instanceof Number) return ((Number) value).floatValue();
-        return 0.0f;
+    private Float getFloatValue(Map<String, Object> map) {
+        Object value = map.get("relevance_score");
+        return switch (value) {
+            case Float v -> v;
+            case Number number -> number.floatValue();
+            case null, default -> 0.0f;
+        };
     }
 
     /**
@@ -1202,7 +1194,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             List<SearchHistory> history = searchMapper.getUserBookSearchHistory(
                     user.getId(), book.getId(), limit);
@@ -1238,7 +1230,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             AnnotationExport export = new AnnotationExport();
             export.setUserId(user.getId());
@@ -1380,7 +1372,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             UserBookDataResponse response = new UserBookDataResponse();
 
@@ -1419,7 +1411,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             }
 
             // 7. Statistics
-            response.setStatistics(calculateUserBookStatistics(user.getId(), book.getId(), response));
+            response.setStatistics(calculateUserBookStatistics(response));
 
             log.info("Retrieved complete book data for user {} and book {}", user.getId(), slug);
 
@@ -1443,7 +1435,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             // TODO: Check if user is author/admin
 
@@ -1509,7 +1501,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             List<BookChapter> chapters = chapterMapper.findChaptersByBookId(book.getId());
 
@@ -1526,9 +1518,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-
-
-    private void validateBook(Book book, String slug) {
+    private void validateBook(Book book) {
         if (book == null) {
             throw new DataNotFoundException();
         }
@@ -1602,8 +1592,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setSubChapters(new ArrayList<>());
 
             if (userId != null) {
-                ChapterProgress progress = chapterProgressMapper.findProgress(
-                        userId, bookId, chapter.getChapterNumber());
+                ChapterProgress progress = chapterProgressMapper.findProgress(userId, bookId, chapter.getChapterNumber());
                 response.setIsCompleted(progress != null && progress.getIsCompleted());
             } else {
                 response.setIsCompleted(false);
@@ -1642,7 +1631,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             breadcrumb.setSlug(current.getSlug());
             breadcrumb.setChapterLevel(current.getChapterLevel());
 
-            breadcrumbs.add(0, breadcrumb);
+            breadcrumbs.addFirst(breadcrumb);
 
             if (current.getParentChapterId() != null) {
                 current = chapterMapper.findChapterById(current.getParentChapterId());
@@ -1658,23 +1647,20 @@ public class BookChapterServiceImpl implements BookChapterService {
                                       Long bookId, BookChapter currentChapter) {
 
         // Previous
-        BookChapter prevChapter = chapterMapper.findChapterByNumber(
-                bookId, currentChapter.getChapterNumber() - 1);
+        BookChapter prevChapter = chapterMapper.findChapterByNumber(bookId, currentChapter.getChapterNumber() - 1);
         if (prevChapter != null) {
             response.setPreviousChapter(mapToNavigationInfo(prevChapter));
         }
 
         // Next
-        BookChapter nextChapter = chapterMapper.findChapterByNumber(
-                bookId, currentChapter.getChapterNumber() + 1);
+        BookChapter nextChapter = chapterMapper.findChapterByNumber(bookId, currentChapter.getChapterNumber() + 1);
         if (nextChapter != null) {
             response.setNextChapter(mapToNavigationInfo(nextChapter));
         }
 
         // Parent
         if (currentChapter.getParentChapterId() != null) {
-            BookChapter parentChapter = chapterMapper.findChapterById(
-                    currentChapter.getParentChapterId());
+            BookChapter parentChapter = chapterMapper.findChapterById(currentChapter.getParentChapterId());
             if (parentChapter != null) {
                 response.setParentChapter(mapToNavigationInfo(parentChapter));
             }
@@ -1744,49 +1730,6 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .collect(Collectors.toList());
     }
 
-    private Map<Integer, ChapterNavigationInfo> getChapterInfoMap(Long bookId, Set<Integer> chapterNumbers) {
-
-        if (chapterNumbers.isEmpty()) return Collections.emptyMap();
-
-        List<BookChapter> chapters = chapterMapper.findChaptersByBookAndNumbers(
-                bookId, chapterNumbers);
-
-        Set<Long> parentIds = chapters.stream()
-                .map(BookChapter::getParentChapterId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<Long, String> parentSlugMap = new HashMap<>();
-        if (!parentIds.isEmpty()) {
-            List<BookChapter> parents = chapterMapper.findChaptersByIds(parentIds);
-            parentSlugMap = parents.stream()
-                    .collect(Collectors.toMap(BookChapter::getId, BookChapter::getSlug));
-        }
-
-        Map<Long, String> finalParentSlugMap = parentSlugMap;
-        return chapters.stream()
-                .collect(Collectors.toMap(
-                        BookChapter::getChapterNumber,
-                        chapter -> {
-                            ChapterNavigationInfo info = new ChapterNavigationInfo();
-                            info.setChapterNumber(chapter.getChapterNumber());
-                            info.setTitle(chapter.getTitle());
-                            info.setSlug(chapter.getSlug());
-                            info.setChapterLevel(chapter.getChapterLevel());
-
-                            if (chapter.getParentChapterId() != null) {
-                                info.setParentSlug(finalParentSlugMap.get(chapter.getParentChapterId()));
-                            }
-
-                            return info;
-                        }
-                ));
-    }
-
-    // ============================================
-    // ANALYTICS FOR AUTHORS/ADMINS
-    // ============================================
-
     // ============================================
     // TEXT-TO-SPEECH SUPPORT
     // ============================================
@@ -1796,7 +1739,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<ChapterTextResponse> getChapterTextForTTS(String slug, Integer chapterNumber) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), chapterNumber);
             if (chapter == null) {
@@ -1812,8 +1755,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setWordCount(chapter.getWordCount());
             response.setEstimatedDuration(calculateReadTime(chapter.getWordCount()) * 60);
 
-            return new DataResponse<>(SUCCESS, "Chapter text retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Chapter text retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting chapter text for TTS: {}", e.getMessage(), e);
@@ -1833,7 +1775,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<ChapterParagraphsResponse> getChapterParagraphs(String slug, Integer chapterNumber) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), chapterNumber);
             if (chapter == null) {
@@ -1852,8 +1794,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setParagraphs(paragraphs);
             response.setTotalParagraphs(paragraphs.size());
 
-            return new DataResponse<>(SUCCESS, "Chapter paragraphs retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Chapter paragraphs retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting chapter paragraphs: {}", e.getMessage(), e);
@@ -1866,7 +1807,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     public DataResponse<ChapterStatsResponse> getChapterStats(String slug, Integer chapterNumber) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), chapterNumber);
             if (chapter == null) {
@@ -1881,13 +1822,12 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             response.setReaderCount(safeConvertToInt(stats.get("reader_count")));
             response.setCompletionRate(safeConvertToDouble(stats.get("completion_rate")));
-            response.setAverageReadingTimeMinutes(safeConvertToInt(stats.get("avg_reading_time")));
-            response.setHighlightCount(safeConvertToInt(stats.get("highlight_count")));
+            response.setAverageReadingTimeMinutes(safeConvertToInt(stats.get(AVG_READING_TIME)));
+            response.setHighlightCount(safeConvertToInt(stats.get(HIGHLIGHT_COUNT)));
             response.setNoteCount(safeConvertToInt(stats.get("note_count")));
             response.setCommentCount(safeConvertToInt(stats.get("comment_count")));
 
-            return new DataResponse<>(SUCCESS, "Statistics retrieved successfully",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Statistics retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting chapter stats: {}", e.getMessage(), e);
@@ -1901,7 +1841,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book, slug);
+            validateBook(book);
 
             ChapterAnnotationsResponse response = new ChapterAnnotationsResponse();
             response.setBookmarks(getUserChapterBookmarks(user.getId(), book.getId(), null));
@@ -1921,72 +1861,94 @@ public class BookChapterServiceImpl implements BookChapterService {
     // ============================================
 
     private Integer safeConvertToInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        if (value instanceof Long) return ((Long) value).intValue();
-        if (value instanceof BigDecimal) return ((BigDecimal) value).intValue();
-        if (value instanceof Number) return ((Number) value).intValue();
-        if (value instanceof String) {
-            try {
-                return Integer.parseInt((String) value);
-            } catch (NumberFormatException e) {
+        switch (value) {
+            case null -> {
                 return 0;
+            }
+            case Integer i -> {
+                return i;
+            }
+            case Long l -> {
+                return l.intValue();
+            }
+            case BigDecimal bigDecimal -> {
+                return bigDecimal.intValue();
+            }
+            case Number number -> {
+                return number.intValue();
+            }
+            case String ignored -> {
+                try {
+                    return Integer.parseInt((String) value);
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+            default -> {
             }
         }
         return 0;
     }
 
     private Long safeConvertToLong(Object value) {
-        if (value == null) return 0L;
-        if (value instanceof Long) return (Long) value;
-        if (value instanceof Integer) return ((Integer) value).longValue();
-        if (value instanceof BigDecimal) return ((BigDecimal) value).longValue();
-        if (value instanceof Number) return ((Number) value).longValue();
-        if (value instanceof String) {
-            try {
-                return Long.parseLong((String) value);
-            } catch (NumberFormatException e) {
+        switch (value) {
+            case null -> {
                 return 0L;
+            }
+            case Long l -> {
+                return l;
+            }
+            case Integer i -> {
+                return i.longValue();
+            }
+            case BigDecimal bigDecimal -> {
+                return bigDecimal.longValue();
+            }
+            case Number number -> {
+                return number.longValue();
+            }
+            case String ignored -> {
+                try {
+                    return Long.parseLong((String) value);
+                } catch (NumberFormatException e) {
+                    return 0L;
+                }
+            }
+            default -> {
             }
         }
         return 0L;
     }
 
     private Double safeConvertToDouble(Object value) {
-        if (value == null) return 0.0;
-        if (value instanceof Double) return (Double) value;
-        if (value instanceof Float) return ((Float) value).doubleValue();
-        if (value instanceof BigDecimal) return ((BigDecimal) value).doubleValue();
-        if (value instanceof Number) return ((Number) value).doubleValue();
-        if (value instanceof String) {
-            try {
-                return Double.parseDouble((String) value);
-            } catch (NumberFormatException e) {
+        switch (value) {
+            case null -> {
                 return 0.0;
+            }
+            case Double v -> {
+                return v;
+            }
+            case Float v -> {
+                return v.doubleValue();
+            }
+            case BigDecimal bigDecimal -> {
+                return bigDecimal.doubleValue();
+            }
+            case Number number -> {
+                return number.doubleValue();
+            }
+            case String ignored -> {
+                try {
+                    return Double.parseDouble((String) value);
+                } catch (NumberFormatException e) {
+                    return 0.0;
+                }
+            }
+            default -> {
             }
         }
         return 0.0;
     }
-
-    private Float safeConvertToFloat(Object value) {
-        if (value == null) return 0.0f;
-        if (value instanceof Float) return (Float) value;
-        if (value instanceof Double) return ((Double) value).floatValue();
-        if (value instanceof BigDecimal) return ((BigDecimal) value).floatValue();
-        if (value instanceof Number) return ((Number) value).floatValue();
-        if (value instanceof String) {
-            try {
-                return Float.parseFloat((String) value);
-            } catch (NumberFormatException e) {
-                return 0.0f;
-            }
-        }
-        return 0.0f;
-    }
-
-
-
-
 
     // ============================================
     // HELPER METHODS - Reviews & Ratings
@@ -1998,7 +1960,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         ChapterReviewResponse response = new ChapterReviewResponse();
         response.setId(review.getId());
         response.setUserId(review.getUserId());
-        response.setUserName(reviewUser != null ? reviewUser.getUsername() : "Unknown");
+        response.setUserName(reviewUser != null ? reviewUser.getUsername() : UNKNOWN);
         response.setUserProfilePicture(reviewUser != null ? reviewUser.getProfilePictureUrl() : null);
         response.setChapterNumber(review.getChapterNumber());
         response.setComment(review.getContent());
@@ -2047,8 +2009,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         allProgress.stream()
                 .filter(p -> !p.getIsCompleted())
-                .max(Comparator.comparing(ChapterProgress::getLastReadAt)).ifPresent(
-                        lastIncomplete -> summary.setCurrentChapter(lastIncomplete.getChapterNumber()));
+                .max(Comparator.comparing(ChapterProgress::getLastReadAt)).ifPresent(lastIncomplete -> summary.setCurrentChapter(lastIncomplete.getChapterNumber()));
 
         summary.setTotalChapters(book.getTotalPages());
 
@@ -2063,9 +2024,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .max(Comparator.naturalOrder())
                 .orElse(null));
 
-        int totalTime = allProgress.stream()
-                .mapToInt(ChapterProgress::getReadingTimeSeconds)
-                .sum() / 60;
+        int totalTime = allProgress.stream().mapToInt(ChapterProgress::getReadingTimeSeconds).sum() / 60;
         summary.setTotalReadingTimeMinutes(totalTime);
 
         summary.setCompletedChapters(allProgress.stream()
@@ -2073,9 +2032,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .map(ChapterProgress::getChapterNumber)
                 .collect(Collectors.toList()));
 
-        summary.setChaptersInProgress((int) allProgress.stream()
-                .filter(p -> !p.getIsCompleted() && p.getReadingTimeSeconds() > 0)
-                .count());
+        summary.setChaptersInProgress((int) allProgress.stream().filter(p -> !p.getIsCompleted() && p.getReadingTimeSeconds() > 0).count());
 
         return summary;
     }
@@ -2135,7 +2092,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         return maxStreak;
     }
 
-    private UserBookStatistics calculateUserBookStatistics(Long userId, Long bookId, UserBookDataResponse data) {
+    private UserBookStatistics calculateUserBookStatistics(UserBookDataResponse data) {
         UserBookStatistics stats = new UserBookStatistics();
 
         stats.setTotalBookmarks(data.getBookmarks().size());
@@ -2222,9 +2179,9 @@ public class BookChapterServiceImpl implements BookChapterService {
         overview.setActiveReaders(safeConvertToLong(metrics.get("active_readers")));
         overview.setNewReaders(safeConvertToLong(metrics.get("new_readers")));
         overview.setAverageCompletionRate(safeConvertToDouble(metrics.get("avg_completion_rate")));
-        overview.setAverageReadingTimeMinutes(safeConvertToInt(metrics.get("avg_reading_time")));
+        overview.setAverageReadingTimeMinutes(safeConvertToInt(metrics.get(AVG_READING_TIME)));
         overview.setAverageRating(safeConvertToDouble(metrics.get("avg_rating")));
-        overview.setTotalRatings(safeConvertToInt(metrics.get("total_ratings")));
+        overview.setTotalRatings(safeConvertToInt(metrics.get(TOTAL_RATINGS)));
         overview.setTotalReviews(safeConvertToInt(metrics.get("total_reviews")));
 
         return overview;
@@ -2237,14 +2194,14 @@ public class BookChapterServiceImpl implements BookChapterService {
         behavior.setReadersByDevice(deviceData.stream()
                 .collect(Collectors.toMap(
                         m -> (String) m.get("device_type"),
-                        m -> safeConvertToInt(m.get("count"))
+                        m -> safeConvertToInt(m.get(COUNT))
                 )));
 
         List<Map<String, Object>> hourData = analyticsMapper.getReadingHourDistribution(bookId, startDate, endDate);
         behavior.setReadingHourDistribution(hourData.stream()
                 .collect(Collectors.toMap(
                         m -> safeConvertToInt(m.get("hour")),
-                        m -> safeConvertToInt(m.get("count"))
+                        m -> safeConvertToInt(m.get(COUNT))
                 )));
 
         Map<String, Object> patterns = analyticsMapper.getReadingPatterns(bookId, startDate, endDate);
@@ -2277,8 +2234,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         int totalChapters = chapterMapper.countChaptersByBookId(bookId);
         if (totalChapters > 0) {
-            engagement.setAverageAnnotationsPerChapter(
-                    engagement.getTotalAnnotations() / (double) totalChapters);
+            engagement.setAverageAnnotationsPerChapter(engagement.getTotalAnnotations() / (double) totalChapters);
         }
 
         return engagement;
@@ -2308,8 +2264,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         return data.stream()
                 .map(d -> {
                     ChapterSkipAnalysis analysis = new ChapterSkipAnalysis();
-                    analysis.setChapterNumber(safeConvertToInt(d.get("chapter_number")));
-                    analysis.setChapterTitle((String) d.get("chapter_title"));
+                    analysis.setChapterNumber(safeConvertToInt(d.get(CHAPTER_NUMBER)));
+                    analysis.setChapterTitle((String) d.get(CHAPTER_TITLE));
                     analysis.setSkipRate(safeConvertToDouble(d.get("skip_rate")));
                     analysis.setTimesSkipped(safeConvertToInt(d.get("times_skipped")));
                     analysis.setTotalReaders(safeConvertToInt(d.get("total_readers")));
@@ -2322,13 +2278,10 @@ public class BookChapterServiceImpl implements BookChapterService {
     private TrendAnalysis analyzeTrends(Long bookId, LocalDateTime startDate, LocalDateTime endDate) {
         TrendAnalysis trends = new TrendAnalysis();
 
-        LocalDateTime previousStart = startDate.minusDays(
-                java.time.Duration.between(startDate, endDate).toDays());
+        LocalDateTime previousStart = startDate.minusDays(java.time.Duration.between(startDate, endDate).toDays());
 
-        Map<String, Object> currentMetrics = analyticsMapper.getBookOverviewMetrics(
-                bookId, startDate, endDate);
-        Map<String, Object> previousMetrics = analyticsMapper.getBookOverviewMetrics(
-                bookId, previousStart, startDate);
+        Map<String, Object> currentMetrics = analyticsMapper.getBookOverviewMetrics(bookId, startDate, endDate);
+        Map<String, Object> previousMetrics = analyticsMapper.getBookOverviewMetrics(bookId, previousStart, startDate);
 
         long currentReaders = safeConvertToLong(currentMetrics.get("total_readers"));
         long previousReaders = safeConvertToLong(previousMetrics.get("total_readers"));
@@ -2369,13 +2322,13 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         analytics.setTotalReaders(safeConvertToLong(stats.get("total_readers")));
         analytics.setUniqueReaders(safeConvertToLong(stats.get("unique_readers")));
-        analytics.setAverageReadingTimeSeconds(safeConvertToInt(stats.get("avg_reading_time")));
+        analytics.setAverageReadingTimeSeconds(safeConvertToInt(stats.get(AVG_READING_TIME)));
         analytics.setAverageScrollDepth(safeConvertToDouble(stats.get("avg_scroll_depth")));
         analytics.setCompletionRate(safeConvertToDouble(stats.get("completion_rate")));
         analytics.setSkipRate(safeConvertToDouble(stats.get("skip_rate")));
         analytics.setRereadRate(safeConvertToDouble(stats.get("reread_rate")));
         analytics.setAverageRating(safeConvertToDouble(stats.get("avg_rating")));
-        analytics.setTotalRatings(safeConvertToInt(stats.get("total_ratings")));
+        analytics.setTotalRatings(safeConvertToInt(stats.get(TOTAL_RATINGS)));
         analytics.setTotalBookmarks(safeConvertToInt(stats.get("total_bookmarks")));
         analytics.setTotalHighlights(safeConvertToInt(stats.get("total_highlights")));
         analytics.setTotalNotes(safeConvertToInt(stats.get("total_notes")));
@@ -2396,8 +2349,8 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     private ChapterEngagement mapToChapterEngagement(Map<String, Object> data) {
         ChapterEngagement engagement = new ChapterEngagement();
-        engagement.setChapterNumber(safeConvertToInt(data.get("chapter_number")));
-        engagement.setChapterTitle((String) data.get("chapter_title"));
+        engagement.setChapterNumber(safeConvertToInt(data.get(CHAPTER_NUMBER)));
+        engagement.setChapterTitle((String) data.get(CHAPTER_TITLE));
         engagement.setAnnotationCount(safeConvertToInt(data.get("annotation_count")));
         engagement.setEngagementScore(safeConvertToDouble(data.get("engagement_score")));
         engagement.setUniqueReaders(safeConvertToInt(data.get("unique_readers")));
@@ -2407,12 +2360,12 @@ public class BookChapterServiceImpl implements BookChapterService {
     private PopularPassage mapToPopularPassage(Map<String, Object> data) {
         PopularPassage passage = new PopularPassage();
         passage.setId(safeConvertToLong(data.get("id")));
-        passage.setChapterNumber(safeConvertToInt(data.get("chapter_number")));
-        passage.setChapterTitle((String) data.get("chapter_title"));
+        passage.setChapterNumber(safeConvertToInt(data.get(CHAPTER_NUMBER)));
+        passage.setChapterTitle((String) data.get(CHAPTER_TITLE));
         passage.setPassage((String) data.get("passage"));
         passage.setStartPosition(safeConvertToInt(data.get("start_position")));
         passage.setEndPosition(safeConvertToInt(data.get("end_position")));
-        passage.setHighlightCount(safeConvertToInt(data.get("highlight_count")));
+        passage.setHighlightCount(safeConvertToInt(data.get(HIGHLIGHT_COUNT)));
         passage.setPopularityScore(safeConvertToDouble(data.get("popularity_score")));
 
         Object colorsObj = data.get("common_colors");
@@ -2425,8 +2378,8 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     private ChapterDropOffPoint mapToDropOffPoint(Map<String, Object> data) {
         ChapterDropOffPoint point = new ChapterDropOffPoint();
-        point.setChapterNumber(safeConvertToInt(data.get("chapter_number")));
-        point.setChapterTitle((String) data.get("chapter_title"));
+        point.setChapterNumber(safeConvertToInt(data.get(CHAPTER_NUMBER)));
+        point.setChapterTitle((String) data.get(CHAPTER_TITLE));
         point.setDropOffRate(safeConvertToDouble(data.get("drop_off_rate")));
         point.setAverageScrollDepth(safeConvertToInt(data.get("average_scroll_depth")));
         point.setReadersStarted(safeConvertToInt(data.get("readers_started")));
@@ -2439,25 +2392,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         else point.setSeverity("Low");
 
         return point;
-    }
-
-    private ChapterSearchResultResponse mapToSearchResult(Map<String, Object> data) {
-        ChapterSearchResultResponse result = new ChapterSearchResultResponse();
-        result.setChapterId(safeConvertToLong(data.get("chapter_id")));
-        result.setChapterNumber(safeConvertToInt(data.get("chapter_number")));
-        result.setChapterTitle((String) data.get("chapter_title"));
-        result.setChapterSlug((String) data.get("chapter_slug"));
-        result.setRelevanceScore(safeConvertToFloat(data.get("relevance_score")));
-
-        String snippet = (String) data.get("snippet");
-        if (snippet != null) {
-            SearchMatch match = new SearchMatch();
-            match.setSnippet(snippet);
-            result.setMatches(Collections.singletonList(match));
-            result.setMatchCount(1);
-        }
-
-        return result;
     }
 
     private ExportAnnotationsResponse mapToExportResponse(AnnotationExport export) {
@@ -2485,7 +2419,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .map(d -> {
                     PopularHighlight highlight = new PopularHighlight();
                     highlight.setText((String) d.get("text"));
-                    highlight.setHighlightCount(safeConvertToInt(d.get("highlight_count")));
+                    highlight.setHighlightCount(safeConvertToInt(d.get(HIGHLIGHT_COUNT)));
                     highlight.setPosition(safeConvertToInt(d.get("position")));
                     return highlight;
                 })
@@ -2499,21 +2433,21 @@ public class BookChapterServiceImpl implements BookChapterService {
     private int calculateEngagementScore(ChapterAnalyticsResponse analytics) {
         int score = 0;
 
-        score += Math.min(analytics.getCompletionRate() * 0.3, 30);
+        score += (int) Math.min(analytics.getCompletionRate() * 0.3, 30);
 
         int totalAnnotations = analytics.getTotalBookmarks() +
                 analytics.getTotalHighlights() +
                 analytics.getTotalNotes();
-        score += Math.min(totalAnnotations * 0.5, 25);
+        score += (int) Math.min(totalAnnotations * 0.5, 25);
 
         if (analytics.getAverageRating() != null) {
-            score += (analytics.getAverageRating() / 5.0) * 20;
+            score += (int) ((analytics.getAverageRating() / 5.0) * 20);
         }
 
-        score += Math.min(analytics.getTotalComments() * 0.3, 15);
+        score += (int) Math.min(analytics.getTotalComments() * 0.3, 15);
 
         if (analytics.getSkipRate() != null) {
-            score += Math.max(0, 10 - (analytics.getSkipRate() * 0.2));
+            score += (int) Math.max(0, 10 - (analytics.getSkipRate() * 0.2));
         }
 
         return Math.min(score, 100);
@@ -2550,7 +2484,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         if (difficultyScore >= 8) return "Very Difficult";
         if (difficultyScore >= 6) return "Difficult";
-        if (difficultyScore >= 4) return "Moderate";
+        if (difficultyScore >= 4) return MODERATE;
         return "Easy";
     }
 
@@ -2591,14 +2525,18 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     private List<String> parseArray(Object arrayObj) {
         // Handle PostgreSQL array conversion
-        if (arrayObj == null) return new ArrayList<>();
-
-        if (arrayObj instanceof String[]) {
-            return Arrays.asList((String[]) arrayObj);
-        }
-
-        if (arrayObj instanceof List) {
-            return (List<String>) arrayObj;
+        switch (arrayObj) {
+            case null -> {
+                return new ArrayList<>();
+            }
+            case String[] strings -> {
+                return Arrays.asList(strings);
+            }
+            case List<?> ignored -> {
+                return (List<String>) arrayObj;
+            }
+            default -> {
+            }
         }
 
         // Parse string representation: {val1,val2,val3}

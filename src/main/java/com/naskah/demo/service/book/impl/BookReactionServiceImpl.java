@@ -20,7 +20,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class BookReactionServiceImpl implements BookReactionService {
-
     private final BookRatingMapper bookRatingMapper;
     private final BookReviewMapper bookReviewMapper;
     private final BookReviewReplyMapper bookReviewReplyMapper;
@@ -28,7 +27,6 @@ public class BookReactionServiceImpl implements BookReactionService {
     private final BookMapper bookMapper;
     private final UserMapper userMapper;
     private final HeaderHolder headerHolder;
-
     private static final String SUCCESS = "Success";
 
     // ============================================
