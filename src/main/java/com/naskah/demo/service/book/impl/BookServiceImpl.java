@@ -204,7 +204,7 @@ public class BookServiceImpl implements BookService {
                     newAuthor.setDeathDate(null);
                     newAuthor.setBirthPlace(null);
                     newAuthor.setNationality(null);
-                    newAuthor.setBiography("Author information extracted from EPUB metadata");
+                    newAuthor.setBiography(null);
                     newAuthor.setPhotoUrl(null);
                     newAuthor.setTotalBooks(1);
                     newAuthor.setCreatedAt(LocalDateTime.now());
@@ -258,11 +258,8 @@ public class BookServiceImpl implements BookService {
 
             bookMapper.insertBookContributor(book.getId(), contributor.getId(), roleToInsert);
 
-            log.info("Inserted book_contributor: bookId={}, contributorId={}, role={}",
-                    book.getId(), contributor.getId(), roleToInsert);
+            log.info("Inserted book_contributor: bookId={}, contributorId={}, role={}", book.getId(), contributor.getId(), roleToInsert);
         }
-
-        log.info("=== CONTRIBUTOR PROCESSING END ===");
     }
 
     @Override
