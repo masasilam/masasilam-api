@@ -1,6 +1,7 @@
 package com.naskah.demo.service.book.impl;
 
 import com.naskah.demo.exception.custom.DataNotFoundException;
+import com.naskah.demo.model.dto.ChapterHierarchy;
 import com.naskah.demo.model.dto.EpubProcessResult;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.model.entity.BookChapter;
@@ -52,9 +53,7 @@ public class EpubServiceImpl implements EpubService {
             result.setTotalChapters(chapters.size());
 
             // 3. Calculate total words
-            long totalWords = chapters.stream()
-                    .mapToLong(BookChapter::getWordCount)
-                    .sum();
+            long totalWords = chapters.stream().mapToLong(BookChapter::getWordCount).sum();
             result.setTotalWords(totalWords);
 
             // 4. Extract cover
@@ -80,22 +79,8 @@ public class EpubServiceImpl implements EpubService {
         }
     }
 
-    private static class ChapterHierarchy {
-        String href;
-        String title;
-        int level;
-        String parentHref;
-
-        public ChapterHierarchy(String href, String title, int level, String parentHref) {
-            this.href = href;
-            this.title = title;
-            this.level = level;
-            this.parentHref = parentHref;
-        }
-    }
-
     /**
-     * ✅ FIX 3: Extract chapters WITHOUT sub-chapter content
+     * ✅ FIX 3: Extract chapters WITHOUT subchapter content
      */
     private List<BookChapter> extractAndSaveChaptersWithHierarchy(nl.siegmann.epublib.domain.Book epubBook, Long bookId,
                                                                   Map<String, ChapterHierarchy> tocStructure) {
@@ -116,7 +101,7 @@ public class EpubServiceImpl implements EpubService {
             try {
                 chapterNumber++;
 
-                String fullHref = hierarchy.href;
+                String fullHref = hierarchy.getHref();
                 String fileName = fullHref.split("#")[0];
                 String anchorId = fullHref.contains("#") ? fullHref.split("#")[1] : null;
 
@@ -157,10 +142,10 @@ public class EpubServiceImpl implements EpubService {
                     String nextAnchorInSameFile = null;
                     for (int j = i + 1; j < orderedToc.size(); j++) {
                         ChapterHierarchy next = orderedToc.get(j);
-                        if (next.href.startsWith(fileName + "#")) {
-                            nextAnchorInSameFile = next.href.split("#")[1];
+                        if (next.getHref().startsWith(fileName + "#")) {
+                            nextAnchorInSameFile = next.getHref().split("#")[1];
                             break;
-                        } else if (!next.href.startsWith(fileName)) {
+                        } else if (!next.getHref().startsWith(fileName)) {
                             // Next chapter is in different file
                             break;
                         }
@@ -203,23 +188,23 @@ public class EpubServiceImpl implements EpubService {
                     }
                 } else {
                     // No anchor - this is a parent chapter
-                    // Check if there are sub-chapters (anchors) in this file
+                    // Check if there are subchapters (anchors) in this file
                     String firstSubAnchor = null;
                     for (int j = i + 1; j < orderedToc.size(); j++) {
                         ChapterHierarchy next = orderedToc.get(j);
-                        if (next.href.startsWith(fileName + "#")) {
+                        if (next.getHref().startsWith(fileName + "#")) {
                             // Found a subchapter in the same file
-                            firstSubAnchor = next.href.split("#")[1];
+                            firstSubAnchor = next.getHref().split("#")[1];
                             log.debug("Found sub-chapter anchor in same file: {}", firstSubAnchor);
                             break;
-                        } else if (!next.href.startsWith(fileName)) {
+                        } else if (!next.getHref().startsWith(fileName)) {
                             // Next TOC entry is in different file
                             break;
                         }
                     }
 
                     if (firstSubAnchor != null) {
-                        // ✅ Parent chapter: Extract ONLY content BEFORE first sub-chapter
+                        // ✅ Parent chapter: Extract ONLY content BEFORE first subchapter
                         Element stopElement = doc.getElementById(firstSubAnchor);
 
                         if (stopElement != null) {
@@ -279,10 +264,10 @@ public class EpubServiceImpl implements EpubService {
 
                 // Find parent chapter ID
                 Long parentChapterId = null;
-                if (hierarchy.parentHref != null && !hierarchy.parentHref.isEmpty()) {
-                    parentChapterId = hrefToChapterId.get(hierarchy.parentHref);
+                if (hierarchy.getParentHref() != null && !hierarchy.getParentHref().isEmpty()) {
+                    parentChapterId = hrefToChapterId.get(hierarchy.getParentHref());
                     if (parentChapterId == null) {
-                        log.warn("Parent chapter not found for href: {} (looking for parent: {})", fullHref, hierarchy.parentHref);
+                        log.warn("Parent chapter not found for href: {} (looking for parent: {})", fullHref, hierarchy.getParentHref());
                     }
                 }
 
@@ -290,13 +275,13 @@ public class EpubServiceImpl implements EpubService {
                 BookChapter chapter = new BookChapter();
                 chapter.setBookId(bookId);
                 chapter.setChapterNumber(chapterNumber);
-                chapter.setTitle(hierarchy.title);
-                chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.title));
+                chapter.setTitle(hierarchy.getTitle());
+                chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.getTitle()));
                 chapter.setContent(content);
                 chapter.setHtmlContent(htmlContentStr);
                 chapter.setWordCount(wordCount);
                 chapter.setParentChapterId(parentChapterId);
-                chapter.setChapterLevel(hierarchy.level);
+                chapter.setChapterLevel(hierarchy.getLevel());
                 chapter.setCreatedAt(LocalDateTime.now());
                 chapter.setUpdatedAt(LocalDateTime.now());
 
@@ -305,10 +290,10 @@ public class EpubServiceImpl implements EpubService {
 
                 hrefToChapterId.put(fullHref, chapter.getId());
 
-                log.info("Saved chapter {} (Level {}): {} [Parent: {}]", chapter.getChapterNumber(), chapter.getChapterLevel(), hierarchy.title, parentChapterId != null ? "#" + parentChapterId : "Root");
+                log.info("Saved chapter {} (Level {}): {} [Parent: {}]", chapter.getChapterNumber(), chapter.getChapterLevel(), hierarchy.getTitle(), parentChapterId != null ? "#" + parentChapterId : "Root");
 
             } catch (Exception e) {
-                log.error("Failed to extract chapter '{}': {}", hierarchy.title, e.getMessage(), e);
+                log.error("Failed to extract chapter '{}': {}", hierarchy.getTitle(), e.getMessage(), e);
             }
         }
 

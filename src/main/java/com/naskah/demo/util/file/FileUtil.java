@@ -219,8 +219,7 @@ public class FileUtil {
         return pages;
     }
 
-    public List<ProjectPage> createWordPages(Long projectId, String originalFilename,
-                                                    List<String> extractedContent) {
+    public List<ProjectPage> createWordPages(Long projectId, String originalFilename, List<String> extractedContent) {
         List<ProjectPage> pages = new ArrayList<>();
         for (int i = 0; i < extractedContent.size(); i++) {
             ProjectPage page = new ProjectPage();
@@ -425,11 +424,6 @@ public class FileUtil {
     }
 
     // ==================== FILE STORAGE WRAPPERS ====================
-
-    public FileStorageResult saveAndUploadBookCover(MultipartFile coverImage, String title) throws IOException {
-        String cloudUrl = uploadBookCover(coverImage, title);
-        return new FileStorageResult(cloudUrl);
-    }
 
     public FileStorageResult saveAndUploadBookFile(MultipartFile bookFile, String title) throws IOException {
         String cloudUrl = uploadBookFile(bookFile, title);
