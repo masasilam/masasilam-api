@@ -693,10 +693,18 @@ public class BookChapterServiceImpl implements BookChapterService {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
 
+            ReadingActivityLog existingActivity = activityMapper.findActiveSession(request.getSessionId(), request.getChapterNumber());
+
+            if (existingActivity != null) {
+                log.warn("Session {} already active for chapter {}, skipping insert", request.getSessionId(), request.getChapterNumber());
+                return new DataResponse<>(SUCCESS, "Reading already started", HttpStatus.OK.value(), null);
+            }
+
             int existingSessions = bookMapper.countUserReadSessions(book.getId(), user.getId());
             if (existingSessions == 0) {
                 bookMapper.incrementReadCount(book.getId());
-                log.info("First time read: User {} started reading book {} (ID: {})", user.getId(), slug, book.getId());
+                log.info("First time read: User {} started reading book {} (ID: {})",
+                        user.getId(), slug, book.getId());
             }
 
             // Create or update session

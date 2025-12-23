@@ -31,7 +31,10 @@ public interface ReadingActivityMapper {
     void updateActivity(ReadingActivityLog activity);
 
     @Select("SELECT * FROM reading_activity_log " +
-            "WHERE session_id = #{sessionId} AND chapter_number = #{chapterNumber}")
+            "WHERE session_id = #{sessionId} " +
+            "AND chapter_number = #{chapterNumber} " +
+            "AND ended_at IS NULL " +
+            "ORDER BY started_at DESC LIMIT 1")
     ReadingActivityLog findBySessionAndChapter(@Param("sessionId") String sessionId,
                                                @Param("chapterNumber") Integer chapterNumber);
 
@@ -140,4 +143,12 @@ public interface ReadingActivityMapper {
     Boolean hasActivitySince(
             @Param("userId") Long userId,
             @Param("since") LocalDateTime since);
+
+    @Select("SELECT * FROM reading_activity_log " +
+            "WHERE session_id = #{sessionId} " +
+            "AND chapter_number = #{chapterNumber} " +
+            "AND ended_at IS NULL " +
+            "LIMIT 1")
+    ReadingActivityLog findActiveSession(@Param("sessionId") String sessionId,
+                                         @Param("chapterNumber") Integer chapterNumber);
 }
