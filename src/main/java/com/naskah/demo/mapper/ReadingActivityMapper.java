@@ -35,8 +35,7 @@ public interface ReadingActivityMapper {
             "AND chapter_number = #{chapterNumber} " +
             "AND ended_at IS NULL " +
             "ORDER BY started_at DESC LIMIT 1")
-    ReadingActivityLog findBySessionAndChapter(@Param("sessionId") String sessionId,
-                                               @Param("chapterNumber") Integer chapterNumber);
+    ReadingActivityLog findBySessionAndChapter(@Param("sessionId") String sessionId, @Param("chapterNumber") Integer chapterNumber);
 
     @Select("SELECT * FROM reading_activity_log " +
             "WHERE user_id = #{userId} AND book_id = #{bookId} " +
@@ -151,4 +150,33 @@ public interface ReadingActivityMapper {
             "LIMIT 1")
     ReadingActivityLog findActiveSession(@Param("sessionId") String sessionId,
                                          @Param("chapterNumber") Integer chapterNumber);
+
+    @Select("SELECT COUNT(*) FROM reading_activity_log " +
+            "WHERE user_id = #{userId} " +
+            "AND book_id = #{bookId} " +
+            "AND chapter_number = #{chapterNumber} " +
+            "AND ended_at IS NOT NULL " +
+            "AND id != #{excludeActivityId}")
+    Integer countCompletedReads(@Param("userId") Long userId,
+                                @Param("bookId") Long bookId,
+                                @Param("chapterNumber") Integer chapterNumber,
+                                @Param("excludeActivityId") Long excludeActivityId);
+
+    @Select("SELECT COUNT(DISTINCT chapter_number) FROM reading_activity_log " +
+            "WHERE session_id = #{sessionId} " +
+            "AND ended_at IS NOT NULL")
+    Integer countUniqueChaptersInSession(@Param("sessionId") String sessionId);
+
+    @Select("SELECT COALESCE(SUM(interaction_count), 0) FROM reading_activity_log " +
+            "WHERE session_id = #{sessionId} " +
+            "AND ended_at IS NOT NULL")
+    Integer sumInteractionsInSession(@Param("sessionId") String sessionId);
+
+    @Select("SELECT AVG(reading_speed_wpm)::INTEGER FROM reading_activity_log " +
+            "WHERE user_id = #{userId} " +
+            "AND book_id = #{bookId} " +
+            "AND reading_speed_wpm IS NOT NULL " +
+            "AND reading_speed_wpm > 0")
+    Integer calculateAverageWpm(@Param("userId") Long userId,
+                                @Param("bookId") Long bookId);
 }
