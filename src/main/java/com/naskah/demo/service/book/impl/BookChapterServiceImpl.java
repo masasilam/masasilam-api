@@ -986,20 +986,16 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             try {
                 // Primary: Full-text search
-                results = searchMapper.searchInBook(
-                        book.getId(), searchQuery, offset, request.getLimit());
+                results = searchMapper.searchInBook(book.getId(), searchQuery, offset, request.getLimit());
                 totalResults = searchMapper.countSearchResults(book.getId(), searchQuery);
 
                 log.info("Full-text search returned {} results for query: '{}'",
                         totalResults, searchQuery);
             } catch (Exception e) {
-                log.warn("Full-text search failed, falling back to LIKE search: {}",
-                        e.getMessage());
+                log.warn("Full-text search failed, falling back to LIKE search: {}", e.getMessage());
                 // Fallback: Simple LIKE search
-                results = searchMapper.searchInBookSimple(
-                        book.getId(), searchQuery, offset, request.getLimit());
-                totalResults = searchMapper.countSearchResultsSimple(
-                        book.getId(), searchQuery);
+                results = searchMapper.searchInBookSimple(book.getId(), searchQuery, offset, request.getLimit());
+                totalResults = searchMapper.countSearchResultsSimple(book.getId(), searchQuery);
             }
 
             List<ChapterSearchResultResponse> searchResults = results.stream()
@@ -1016,11 +1012,9 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setResults(searchResults);
 
             // Save search history
-            saveSearchHistory(getCurrentUserIdOrNull(), book.getId(),
-                    request.getQuery(), totalResults);
+            saveSearchHistory(getCurrentUserIdOrNull(), book.getId(), request.getQuery(), totalResults);
 
-            return new DataResponse<>(SUCCESS, "Search completed",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Search completed", HttpStatus.OK.value(), response);
 
         } catch (IllegalArgumentException e) {
             log.error("Invalid search request: {}", e.getMessage());
