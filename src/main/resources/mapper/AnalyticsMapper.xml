@@ -201,12 +201,19 @@
         COUNT(DISTINCT n.id) as total_notes,
         COUNT(DISTINCT crv.id) as total_comments
         FROM reading_activity_log ral
-        LEFT JOIN chapter_progress cp ON ral.user_id = cp.user_id AND ral.book_id = cp.book_id AND ral.chapter_number = cp.chapter_number
-        LEFT JOIN chapter_ratings cr ON ral.book_id = cr.book_id AND ral.chapter_number = cr.chapter_number
-        LEFT JOIN bookmarks b ON ral.book_id = b.book_id AND ral.chapter_number = b.page
-        LEFT JOIN highlights h ON ral.book_id = h.book_id AND ral.chapter_number = h.page
-        LEFT JOIN notes n ON ral.book_id = n.book_id AND ral.chapter_number = n.page
-        LEFT JOIN chapter_reviews crv ON ral.book_id = crv.book_id AND ral.chapter_number = crv.chapter_number
+        LEFT JOIN chapter_progress cp ON ral.user_id = cp.user_id
+        AND ral.book_id = cp.book_id
+        AND ral.chapter_number = cp.chapter_number
+        LEFT JOIN chapter_ratings cr ON ral.book_id = cr.book_id
+        AND ral.chapter_number = cr.chapter_number
+        LEFT JOIN bookmarks b ON ral.book_id = b.book_id
+        AND ral.chapter_number = b.chapter_number
+        LEFT JOIN highlights h ON ral.book_id = h.book_id
+        AND ral.chapter_number = h.chapter_number
+        LEFT JOIN notes n ON ral.book_id = n.book_id
+        AND ral.chapter_number = n.chapter_number
+        LEFT JOIN chapter_reviews crv ON ral.book_id = crv.book_id
+        AND ral.chapter_number = crv.chapter_number
         WHERE ral.book_id = #{bookId}
         AND ral.chapter_number = #{chapterNumber}
     </select>
