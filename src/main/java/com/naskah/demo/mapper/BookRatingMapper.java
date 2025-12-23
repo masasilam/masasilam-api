@@ -22,8 +22,7 @@ public interface BookRatingMapper {
 
     BookRatingStatsResponse getBookRatingStats(@Param("bookId") Long bookId);
 
-    @Select("SELECT * FROM book_ratings WHERE user_id = #{userId} " +
-            "ORDER BY created_at DESC")
+    @Select("SELECT * FROM book_ratings WHERE user_id = #{userId} " + "ORDER BY created_at DESC")
     List<BookRating> findByUser(@Param("userId") Long userId);
 
     @Select("SELECT AVG(rating) FROM book_ratings WHERE user_id = #{userId}")
@@ -35,9 +34,6 @@ public interface BookRatingMapper {
     @Select("SELECT COUNT(*) FROM book_ratings WHERE book_id = #{bookId}")
     Integer getBookRatingCount(@Param("bookId") Long bookId);
 
-    @Select("SELECT * FROM book_ratings " +
-            "WHERE user_id = #{userId} AND created_at >= #{since}")
-    List<BookRating> findByUserSince(
-            @Param("userId") Long userId,
-            @Param("since") LocalDateTime since);
+    @Select("SELECT * FROM book_ratings " + "WHERE user_id = #{userId} AND created_at >= #{since}")
+    List<BookRating> findByUserSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 }

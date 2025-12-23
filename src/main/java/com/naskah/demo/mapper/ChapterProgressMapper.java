@@ -28,10 +28,7 @@ public interface ChapterProgressMapper {
 
     void updateListeningProgress(ChapterListeningProgress progress);
 
-    List<ChapterProgress> findAllByUserAndBook(
-            @Param("userId") Long userId,
-            @Param("bookId") Long bookId
-    );
+    List<ChapterProgress> findAllByUserAndBook(@Param("userId") Long userId, @Param("bookId") Long bookId);
 
     void updateProgress(ChapterProgress progress);
 

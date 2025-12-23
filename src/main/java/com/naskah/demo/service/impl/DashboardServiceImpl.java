@@ -15,7 +15,6 @@ import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -37,6 +36,10 @@ public class DashboardServiceImpl implements DashboardService {
     private final GenreMapper genreMapper;
 
     private static final String SUCCESS = "Success";
+    private static final String READING = "reading";
+    private static final String COMPLETED = "completed";
+    private static final String STABLE = "stable";
+    private static final String NOT_ENOUGH_DATA = "Not enough data";
 
     // ═══════════════════════════════════════════════════════════
     // MAIN DASHBOARD
@@ -48,26 +51,12 @@ public class DashboardServiceImpl implements DashboardService {
             User user = getCurrentUser();
 
             UserReadingDashboardResponse response = new UserReadingDashboardResponse();
-
-            // 1. Overview Stats
             response.setOverviewStats(buildOverviewStats(user.getId()));
-
-            // 2. Books In Progress
             response.setBooksInProgress(getBooksInProgress(user.getId()));
-
-            // 3. Recently Read
             response.setRecentlyRead(getRecentlyRead(user.getId()));
-
-            // 4. Reading Pattern
             response.setReadingPattern(buildReadingPatternSummary(user.getId()));
-
-            // 5. Annotations Summary
             response.setAnnotationsSummary(buildAnnotationsSummary(user.getId()));
-
-            // 6. Quick Links
             response.setQuickLinks(buildQuickAccessLinks(user.getId()));
-
-            // 7. Recent Achievements
             response.setRecentAchievements(getRecentAchievements(user.getId()));
 
             log.info("Dashboard data retrieved for user {}", user.getId());
@@ -78,6 +67,269 @@ public class DashboardServiceImpl implements DashboardService {
             log.error("Error getting dashboard: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // HELPER METHODS - Building Response Components
+    // ═══════════════════════════════════════════════════════════
+
+    private UserReadingDashboardResponse.OverviewStats buildOverviewStats(Long userId) {
+        UserReadingDashboardResponse.OverviewStats stats = new UserReadingDashboardResponse.OverviewStats();
+
+        // Total books (unique books user has interacted with)
+        List<Long> bookIds = getInteractedBookIds(userId, "all");
+        stats.setTotalBooks(bookIds.size());
+
+        // Books in progress
+        int inProgress = (int) bookIds.stream()
+                .filter(bookId -> isBookInProgress(userId, bookId))
+                .count();
+        stats.setBooksInProgress(inProgress);
+
+        // Books completed
+        Integer completed = chapterProgressMapper.countCompletedBooks(userId);
+        stats.setBooksCompleted(completed != null ? completed : 0);
+
+        // Total reading time
+        Integer totalMinutes = activityMapper.getUserTotalReadingMinutes(userId);
+        int hours = totalMinutes != null ? totalMinutes / 60 : 0;
+        stats.setTotalReadingTimeHours(hours);
+
+        // Average rating
+        Double avgRating = bookRatingMapper.getUserAverageRating(userId);
+        stats.setAverageRating(avgRating != null ? avgRating : 0.0);
+
+        // Streaks
+        Integer currentStreak = calculateCurrentStreak(userId);
+        Integer longestStreak = calculateLongestStreak(userId);
+        stats.setCurrentStreak(currentStreak);
+        stats.setLongestStreak(longestStreak);
+
+        // Completion rate
+        if (stats.getTotalBooks() > 0) {
+            double rate = (stats.getBooksCompleted() * 100.0) / stats.getTotalBooks();
+            stats.setCompletionRate(rate);
+        } else {
+            stats.setCompletionRate(0.0);
+        }
+
+        return stats;
+    }
+
+    private List<UserReadingDashboardResponse.BookInProgressItem> getBooksInProgress(Long userId) {
+        List<Long> bookIds = getInteractedBookIds(userId, READING);
+
+        return bookIds.stream()
+                .limit(5)
+                .map(bookId -> {
+                    Book book = bookMapper.findById(bookId);
+                    if (book == null) return null;
+
+                    UserReadingDashboardResponse.BookInProgressItem item = new UserReadingDashboardResponse.BookInProgressItem();
+
+                    item.setBookId(book.getId());
+                    item.setBookTitle(book.getTitle());
+                    item.setBookSlug(book.getSlug());
+                    item.setCoverImageUrl(book.getCoverImageUrl());
+
+                    // Get author
+                    List<Author> authors = bookMapper.getBookAuthors(book.getId());
+                    if (!authors.isEmpty()) {
+                        item.setAuthorName(authors.getFirst().getName());
+                    }
+
+                    // Get progress
+                    List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, book.getId());
+
+                    int completed = (int) progress.stream()
+                            .filter(ChapterProgress::getIsCompleted)
+                            .count();
+
+                    item.setCurrentChapter(completed + 1);
+                    item.setTotalChapters(book.getTotalPages());
+
+                    double percentage = (completed * 100.0) / book.getTotalPages();
+                    item.setProgressPercentage(percentage);
+
+                    // Last read
+                    LocalDateTime lastRead = progress.stream()
+                            .map(ChapterProgress::getLastReadAt)
+                            .max(Comparator.naturalOrder())
+                            .orElse(null);
+                    item.setLastReadAt(lastRead);
+
+                    // Remaining time estimate
+                    int remainingChapters = book.getTotalPages() - completed;
+                    int avgTimePerChapter = book.getEstimatedReadTime() / book.getTotalPages();
+                    item.setRemainingMinutes(remainingChapters * avgTimePerChapter);
+
+                    return item;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<UserReadingDashboardResponse.RecentlyReadItem> getRecentlyRead(Long userId) {
+        // Get more sessions than needed to ensure we have enough unique books
+        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(userId, 0, 20);
+
+        Set<Long> seenBookIds = new HashSet<>();
+
+        return sessions.stream()
+                .filter(session -> seenBookIds.add(session.getBookId())) // Only keep first occurrence
+                .limit(5)
+                .map(session -> {
+                    Book book = bookMapper.findById(session.getBookId());
+                    if (book == null) return null;
+
+                    UserReadingDashboardResponse.RecentlyReadItem item = new UserReadingDashboardResponse.RecentlyReadItem();
+
+                    item.setBookId(book.getId());
+                    item.setBookTitle(book.getTitle());
+                    item.setBookSlug(book.getSlug());
+                    item.setCoverImageUrl(book.getCoverImageUrl());
+
+                    List<Author> authors = bookMapper.getBookAuthors(book.getId());
+                    if (!authors.isEmpty()) {
+                        item.setAuthorName(authors.getFirst().getName());
+                    }
+
+                    item.setLastReadAt(session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt());
+
+                    Integer startChapter = session.getStartChapter();
+                    Integer endChapter = session.getEndChapter();
+
+                    String activityType = "continued";
+                    if (startChapter != null && endChapter != null) {
+                        if (startChapter.equals(endChapter)) {
+                            activityType = "continued";
+                        } else if (isBookCompleted(userId, book.getId())) {
+                            activityType = COMPLETED;
+                        } else {
+                            activityType = "started";
+                        }
+                    } else if (isBookCompleted(userId, book.getId())) {
+                        activityType = COMPLETED;
+                    }
+
+                    item.setActivityType(activityType);
+                    item.setChapterNumber(endChapter != null ? endChapter : 1);
+
+                    return item;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private UserReadingDashboardResponse.ReadingPatternSummary buildReadingPatternSummary(Long userId) {
+        UserReadingDashboardResponse.ReadingPatternSummary summary = new UserReadingDashboardResponse.ReadingPatternSummary();
+
+        // Get aggregated pattern from all books
+        List<UserReadingPattern> patterns = patternMapper.findAllUserPatterns(userId);
+
+        if (!patterns.isEmpty()) {
+            // Calculate averages
+            int avgHour = (int) patterns.stream()
+                    .mapToInt(p -> p.getPreferredReadingHour() != null ? p.getPreferredReadingHour() : 12)
+                    .average()
+                    .orElse(12);
+
+            summary.setPreferredReadingTime(getTimeOfDayLabel(avgHour));
+            summary.setPreferredDay("Weekday"); // Simplified
+
+            Integer avgSession = (int) patterns.stream()
+                    .mapToInt(p -> p.getAverageSessionDurationMinutes() != null ? p.getAverageSessionDurationMinutes() : 0)
+                    .average()
+                    .orElse(0);
+            summary.setAverageSessionMinutes(avgSession);
+
+            Integer avgSpeed = (int) patterns.stream()
+                    .mapToInt(p -> p.getAverageReadingSpeedWpm() != null ? p.getAverageReadingSpeedWpm() : 200)
+                    .average()
+                    .orElse(200);
+            summary.setAverageReadingSpeedWpm(avgSpeed);
+
+            double avgCompletionSpeed = patterns.stream()
+                    .mapToDouble(p -> p.getCompletionSpeedChaptersPerDay() != null ? p.getCompletionSpeedChaptersPerDay() : 1.0)
+                    .average()
+                    .orElse(1.0);
+            summary.setReadingPace(getPaceLabel(avgCompletionSpeed));
+        } else {
+            // Defaults
+            summary.setPreferredReadingTime("Evening");
+            summary.setPreferredDay("Weekday");
+            summary.setAverageSessionMinutes(30);
+            summary.setAverageReadingSpeedWpm(200);
+            summary.setReadingPace("Moderate");
+        }
+
+        // Streaks
+        summary.setCurrentStreak(calculateCurrentStreak(userId));
+        summary.setLongestStreak(calculateLongestStreak(userId));
+
+        return summary;
+    }
+
+    private UserReadingDashboardResponse.AnnotationsSummary buildAnnotationsSummary(Long userId) {
+        UserReadingDashboardResponse.AnnotationsSummary summary = new UserReadingDashboardResponse.AnnotationsSummary();
+
+        // Counts
+        summary.setTotalBookmarks(bookmarkMapper.countByUser(userId));
+        summary.setTotalHighlights(highlightMapper.countByUser(userId));
+        summary.setTotalNotes(noteMapper.countByUser(userId));
+        summary.setTotalReviews(bookReviewMapper.countByUser(userId));
+
+        // Recent annotations (mixed)
+        List<UserReadingDashboardResponse.RecentAnnotation> recent = new ArrayList<>();
+
+        // Get 2 most recent from each type
+        List<Bookmark> recentBookmarks = bookmarkMapper.findRecentByUser(userId, 2);
+        recentBookmarks.forEach(b -> recent.add(mapBookmarkToRecentAnnotation(b)));
+
+        List<Highlight> recentHighlights = highlightMapper.findRecentByUser(userId, 2);
+        recentHighlights.forEach(h -> recent.add(mapHighlightToRecentAnnotation(h)));
+
+        List<Note> recentNotes = noteMapper.findRecentByUser(userId, 2);
+        recentNotes.forEach(n -> recent.add(mapNoteToRecentAnnotation(n)));
+
+        // Sort by date and take top 5
+        recent.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        summary.setRecentAnnotations(recent.stream().limit(5).toList());
+
+        return summary;
+    }
+
+    private UserReadingDashboardResponse.QuickAccessLinks buildQuickAccessLinks(Long userId) {
+        UserReadingDashboardResponse.QuickAccessLinks links = new UserReadingDashboardResponse.QuickAccessLinks();
+
+        // Count pending/unread items
+        links.setPendingBookmarks(bookmarkMapper.countByUser(userId));
+        links.setUnreadHighlights(highlightMapper.countByUser(userId));
+        links.setDraftNotes(noteMapper.countDraftsByUser(userId));
+
+        // Count books without reviews
+        int totalRead = chapterProgressMapper.countCompletedBooks(userId);
+        int reviewCount = bookReviewMapper.countByUser(userId);
+        links.setPendingReviews(Math.max(0, totalRead - reviewCount));
+
+        return links;
+    }
+
+    private List<UserReadingDashboardResponse.RecentAchievement> getRecentAchievements(Long userId) {
+        List<UserReadingDashboardResponse.RecentAchievement> achievements = new ArrayList<>();
+
+        // Calculate recent achievements
+        List<AchievementResponse> all = new ArrayList<>();
+        all.addAll(calculateReadingAchievements(userId));
+        all.addAll(calculateStreakAchievements(userId));
+
+        // Filter unlocked and sort by date
+        return all.stream()
+                .filter(AchievementResponse::getIsUnlocked)
+                .sorted((a, b) -> b.getUnlockedAt().compareTo(a.getUnlockedAt()))
+                .limit(3)
+                .map(this::mapToRecentAchievement)
+                .toList();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -126,8 +378,7 @@ public class DashboardServiceImpl implements DashboardService {
             List<ReadingActivityResponse> activities = new ArrayList<>();
 
             // 1. Reading sessions
-            List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(
-                    user.getId(), since, offset, limit);
+            List<ReadingSession> sessions = sessionMapper.findUserSessionsSince(user.getId(), since, offset, limit);
             activities.addAll(sessions.stream()
                     .map(this::mapSessionToActivity)
                     .toList());
@@ -529,269 +780,6 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // HELPER METHODS - Building Response Components
-    // ═══════════════════════════════════════════════════════════
-
-    private UserReadingDashboardResponse.OverviewStats buildOverviewStats(Long userId) {
-        UserReadingDashboardResponse.OverviewStats stats = new UserReadingDashboardResponse.OverviewStats();
-
-        // Total books (unique books user has interacted with)
-        List<Long> bookIds = getInteractedBookIds(userId, "all");
-        stats.setTotalBooks(bookIds.size());
-
-        // Books in progress
-        int inProgress = (int) bookIds.stream()
-                .filter(bookId -> isBookInProgress(userId, bookId))
-                .count();
-        stats.setBooksInProgress(inProgress);
-
-        // Books completed
-        Integer completed = chapterProgressMapper.countCompletedBooks(userId);
-        stats.setBooksCompleted(completed != null ? completed : 0);
-
-        // Total reading time
-        Integer totalMinutes = activityMapper.getUserTotalReadingMinutes(userId);
-        int hours = totalMinutes != null ? totalMinutes / 60 : 0;
-        stats.setTotalReadingTimeHours(hours);
-
-        // Average rating
-        Double avgRating = bookRatingMapper.getUserAverageRating(userId);
-        stats.setAverageRating(avgRating != null ? avgRating : 0.0);
-
-        // Streaks
-        Integer currentStreak = calculateCurrentStreak(userId);
-        Integer longestStreak = calculateLongestStreak(userId);
-        stats.setCurrentStreak(currentStreak);
-        stats.setLongestStreak(longestStreak);
-
-        // Completion rate
-        if (stats.getTotalBooks() > 0) {
-            double rate = (stats.getBooksCompleted() * 100.0) / stats.getTotalBooks();
-            stats.setCompletionRate(rate);
-        } else {
-            stats.setCompletionRate(0.0);
-        }
-
-        return stats;
-    }
-
-    private List<UserReadingDashboardResponse.BookInProgressItem> getBooksInProgress(Long userId) {
-        List<Long> bookIds = getInteractedBookIds(userId, "reading");
-
-        return bookIds.stream()
-                .limit(5)
-                .map(bookId -> {
-                    Book book = bookMapper.findById(bookId);
-                    if (book == null) return null;
-
-                    UserReadingDashboardResponse.BookInProgressItem item = new UserReadingDashboardResponse.BookInProgressItem();
-
-                    item.setBookId(book.getId());
-                    item.setBookTitle(book.getTitle());
-                    item.setBookSlug(book.getSlug());
-                    item.setCoverImageUrl(book.getCoverImageUrl());
-
-                    // Get author
-                    List<Author> authors = bookMapper.getBookAuthors(book.getId());
-                    if (!authors.isEmpty()) {
-                        item.setAuthorName(authors.get(0).getName());
-                    }
-
-                    // Get progress
-                    List<ChapterProgress> progress = chapterProgressMapper.findAllByUserAndBook(userId, book.getId());
-
-                    int completed = (int) progress.stream()
-                            .filter(ChapterProgress::getIsCompleted)
-                            .count();
-
-                    item.setCurrentChapter(completed + 1);
-                    item.setTotalChapters(book.getTotalPages());
-
-                    double percentage = (completed * 100.0) / book.getTotalPages();
-                    item.setProgressPercentage(percentage);
-
-                    // Last read
-                    LocalDateTime lastRead = progress.stream()
-                            .map(ChapterProgress::getLastReadAt)
-                            .max(Comparator.naturalOrder())
-                            .orElse(null);
-                    item.setLastReadAt(lastRead);
-
-                    // Remaining time estimate
-                    int remainingChapters = book.getTotalPages() - completed;
-                    int avgTimePerChapter = book.getEstimatedReadTime() / book.getTotalPages();
-                    item.setRemainingMinutes(remainingChapters * avgTimePerChapter);
-
-                    return item;
-                })
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private List<UserReadingDashboardResponse.RecentlyReadItem> getRecentlyRead(Long userId) {
-        // Get more sessions than needed to ensure we have enough unique books
-        List<ReadingSession> sessions = sessionMapper.findUserRecentSessions(userId, 0, 20);
-
-        Set<Long> seenBookIds = new HashSet<>();
-
-        return sessions.stream()
-                .filter(session -> seenBookIds.add(session.getBookId())) // Only keep first occurrence
-                .limit(5) // Limit to 5 unique books
-                .map(session -> {
-                    Book book = bookMapper.findById(session.getBookId());
-                    if (book == null) return null;
-
-                    UserReadingDashboardResponse.RecentlyReadItem item = new UserReadingDashboardResponse.RecentlyReadItem();
-
-                    item.setBookId(book.getId());
-                    item.setBookTitle(book.getTitle());
-                    item.setBookSlug(book.getSlug());
-                    item.setCoverImageUrl(book.getCoverImageUrl());
-
-                    List<Author> authors = bookMapper.getBookAuthors(book.getId());
-                    if (!authors.isEmpty()) {
-                        item.setAuthorName(authors.getFirst().getName());
-                    }
-
-                    item.setLastReadAt(session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt());
-
-                    Integer startChapter = session.getStartChapter();
-                    Integer endChapter = session.getEndChapter();
-
-                    String activityType = "continued";
-                    if (startChapter != null && endChapter != null) {
-                        if (startChapter.equals(endChapter)) {
-                            activityType = "continued";
-                        } else if (isBookCompleted(userId, book.getId())) {
-                            activityType = "completed";
-                        } else {
-                            activityType = "started";
-                        }
-                    } else if (isBookCompleted(userId, book.getId())) {
-                        activityType = "completed";
-                    }
-
-                    item.setActivityType(activityType);
-                    item.setChapterNumber(endChapter != null ? endChapter : 1);
-
-                    return item;
-                })
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private UserReadingDashboardResponse.ReadingPatternSummary buildReadingPatternSummary(Long userId) {
-        UserReadingDashboardResponse.ReadingPatternSummary summary = new UserReadingDashboardResponse.ReadingPatternSummary();
-
-        // Get aggregated pattern from all books
-        List<UserReadingPattern> patterns = patternMapper.findAllUserPatterns(userId);
-
-        if (!patterns.isEmpty()) {
-            // Calculate averages
-            int avgHour = (int) patterns.stream()
-                    .mapToInt(p -> p.getPreferredReadingHour() != null ? p.getPreferredReadingHour() : 12)
-                    .average()
-                    .orElse(12);
-
-            summary.setPreferredReadingTime(getTimeOfDayLabel(avgHour));
-            summary.setPreferredDay("Weekday"); // Simplified
-
-            Integer avgSession = (int) patterns.stream()
-                    .mapToInt(p -> p.getAverageSessionDurationMinutes() != null ? p.getAverageSessionDurationMinutes() : 0)
-                    .average()
-                    .orElse(0);
-            summary.setAverageSessionMinutes(avgSession);
-
-            Integer avgSpeed = (int) patterns.stream()
-                    .mapToInt(p -> p.getAverageReadingSpeedWpm() != null ? p.getAverageReadingSpeedWpm() : 200)
-                    .average()
-                    .orElse(200);
-            summary.setAverageReadingSpeedWpm(avgSpeed);
-
-            double avgCompletionSpeed = patterns.stream()
-                    .mapToDouble(p -> p.getCompletionSpeedChaptersPerDay() != null ? p.getCompletionSpeedChaptersPerDay() : 1.0)
-                    .average()
-                    .orElse(1.0);
-            summary.setReadingPace(getPaceLabel(avgCompletionSpeed));
-        } else {
-            // Defaults
-            summary.setPreferredReadingTime("Evening");
-            summary.setPreferredDay("Weekday");
-            summary.setAverageSessionMinutes(30);
-            summary.setAverageReadingSpeedWpm(200);
-            summary.setReadingPace("Moderate");
-        }
-
-        // Streaks
-        summary.setCurrentStreak(calculateCurrentStreak(userId));
-        summary.setLongestStreak(calculateLongestStreak(userId));
-
-        return summary;
-    }
-
-    private UserReadingDashboardResponse.AnnotationsSummary buildAnnotationsSummary(Long userId) {
-        UserReadingDashboardResponse.AnnotationsSummary summary = new UserReadingDashboardResponse.AnnotationsSummary();
-
-        // Counts
-        summary.setTotalBookmarks(bookmarkMapper.countByUser(userId));
-        summary.setTotalHighlights(highlightMapper.countByUser(userId));
-        summary.setTotalNotes(noteMapper.countByUser(userId));
-        summary.setTotalReviews(bookReviewMapper.countByUser(userId));
-
-        // Recent annotations (mixed)
-        List<UserReadingDashboardResponse.RecentAnnotation> recent = new ArrayList<>();
-
-        // Get 2 most recent from each type
-        List<Bookmark> recentBookmarks = bookmarkMapper.findRecentByUser(userId, 2);
-        recentBookmarks.forEach(b -> recent.add(mapBookmarkToRecentAnnotation(b)));
-
-        List<Highlight> recentHighlights = highlightMapper.findRecentByUser(userId, 2);
-        recentHighlights.forEach(h -> recent.add(mapHighlightToRecentAnnotation(h)));
-
-        List<Note> recentNotes = noteMapper.findRecentByUser(userId, 2);
-        recentNotes.forEach(n -> recent.add(mapNoteToRecentAnnotation(n)));
-
-        // Sort by date and take top 5
-        recent.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-        summary.setRecentAnnotations(recent.stream().limit(5).toList());
-
-        return summary;
-    }
-
-    private UserReadingDashboardResponse.QuickAccessLinks buildQuickAccessLinks(Long userId) {
-        UserReadingDashboardResponse.QuickAccessLinks links = new UserReadingDashboardResponse.QuickAccessLinks();
-
-        // Count pending/unread items
-        links.setPendingBookmarks(bookmarkMapper.countByUser(userId));
-        links.setUnreadHighlights(highlightMapper.countByUser(userId));
-        links.setDraftNotes(noteMapper.countDraftsByUser(userId));
-
-        // Count books without reviews
-        int totalRead = chapterProgressMapper.countCompletedBooks(userId);
-        int reviewCount = bookReviewMapper.countByUser(userId);
-        links.setPendingReviews(Math.max(0, totalRead - reviewCount));
-
-        return links;
-    }
-
-    private List<UserReadingDashboardResponse.RecentAchievement> getRecentAchievements(Long userId) {
-        List<UserReadingDashboardResponse.RecentAchievement> achievements = new ArrayList<>();
-
-        // Calculate recent achievements
-        List<AchievementResponse> all = new ArrayList<>();
-        all.addAll(calculateReadingAchievements(userId));
-        all.addAll(calculateStreakAchievements(userId));
-
-        // Filter unlocked and sort by date
-        return all.stream()
-                .filter(AchievementResponse::getIsUnlocked)
-                .sorted((a, b) -> b.getUnlockedAt().compareTo(a.getUnlockedAt()))
-                .limit(3)
-                .map(this::mapToRecentAchievement)
-                .toList();
-    }
-
-    // ═══════════════════════════════════════════════════════════
     // LIBRARY HELPERS
     // ═══════════════════════════════════════════════════════════
 
@@ -821,9 +809,9 @@ public class DashboardServiceImpl implements DashboardService {
         // Apply filter
         List<Long> filtered = new ArrayList<>(bookIds);
 
-        if ("reading".equals(filter)) {
+        if (READING.equals(filter)) {
             filtered.removeIf(bookId -> !isBookInProgress(userId, bookId));
-        } else if ("completed".equals(filter)) {
+        } else if (COMPLETED.equals(filter)) {
             filtered.removeIf(bookId -> !isBookCompleted(userId, bookId));
         } else if ("bookmarked".equals(filter)) {
             List<Long> bookmarkedIds = bookmarks.stream()
@@ -874,9 +862,9 @@ public class DashboardServiceImpl implements DashboardService {
         if (completed == 0) {
             item.setReadingStatus("not_started");
         } else if (completed >= book.getTotalPages()) {
-            item.setReadingStatus("completed");
+            item.setReadingStatus(COMPLETED);
         } else {
-            item.setReadingStatus("reading");
+            item.setReadingStatus(READING);
         }
 
         // Count engagement
@@ -955,29 +943,24 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Comparator<BookLibraryItemResponse> getComparator(String sortBy) {
-        switch (sortBy) {
-            case "last_read":
-                return Comparator.comparing(
-                        BookLibraryItemResponse::getLastReadAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())
-                );
-            case "progress":
-                return Comparator.comparingDouble(
-                        BookLibraryItemResponse::getProgressPercentage
-                ).reversed();
-            case "title":
-                return Comparator.comparing(
-                        BookLibraryItemResponse::getBookTitle,
-                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
-                );
-            case "rating":
-                return Comparator.comparing(
-                        BookLibraryItemResponse::getMyRating,
-                        Comparator.nullsLast(Comparator.reverseOrder())
-                );
-            default:
-                return (a, b) -> 0;
-        }
+        return switch (sortBy) {
+            case "last_read" -> Comparator.comparing(
+                    BookLibraryItemResponse::getLastReadAt,
+                    Comparator.nullsLast(Comparator.reverseOrder())
+            );
+            case "progress" -> Comparator.comparingDouble(
+                    BookLibraryItemResponse::getProgressPercentage
+            ).reversed();
+            case "title" -> Comparator.comparing(
+                    BookLibraryItemResponse::getBookTitle,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+            );
+            case "rating" -> Comparator.comparing(
+                    BookLibraryItemResponse::getMyRating,
+                    Comparator.nullsLast(Comparator.reverseOrder())
+            );
+            default -> (a, b) -> 0;
+        };
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1157,8 +1140,7 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
 
             // Ambil sesi untuk hari ini
-            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(
-                    userId, dayStart, dayEnd);
+            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(userId, dayStart, dayEnd);
 
             // Hitung total menit membaca
             int totalMinutes = sessions.stream()
@@ -1253,13 +1235,13 @@ public class DashboardServiceImpl implements DashboardService {
                 trend.setDirection("down");
                 trend.setInterpretation("Reading time is decreasing");
             } else {
-                trend.setDirection("stable");
+                trend.setDirection(STABLE);
                 trend.setInterpretation("Reading time is stable");
             }
         } else {
-            trend.setDirection("stable");
+            trend.setDirection(STABLE);
             trend.setChangePercentage(0.0);
-            trend.setInterpretation("Not enough data");
+            trend.setInterpretation(NOT_ENOUGH_DATA);
         }
 
         return trend;
@@ -1285,13 +1267,13 @@ public class DashboardServiceImpl implements DashboardService {
                 trend.setDirection("down");
                 trend.setInterpretation("Completing fewer books");
             } else {
-                trend.setDirection("stable");
+                trend.setDirection(STABLE);
                 trend.setInterpretation("Completion rate is stable");
             }
         } else {
-            trend.setDirection("stable");
+            trend.setDirection(STABLE);
             trend.setChangePercentage(0.0);
-            trend.setInterpretation("Not enough data");
+            trend.setInterpretation(NOT_ENOUGH_DATA);
         }
 
         return trend;
@@ -1322,13 +1304,13 @@ public class DashboardServiceImpl implements DashboardService {
                 trend.setDirection("down");
                 trend.setInterpretation("Reading speed is decreasing");
             } else {
-                trend.setDirection("stable");
+                trend.setDirection(STABLE);
                 trend.setInterpretation("Reading speed is stable");
             }
         } else {
-            trend.setDirection("stable");
+            trend.setDirection(STABLE);
             trend.setChangePercentage(0.0);
-            trend.setInterpretation("Not enough data");
+            trend.setInterpretation(NOT_ENOUGH_DATA);
         }
 
         return trend;
@@ -1371,7 +1353,7 @@ public class DashboardServiceImpl implements DashboardService {
             }
 
             // Tambahkan waktu membaca (setiap sesi dihitung)
-            String genreName = null;
+            String genreName;
             Book bookForSession = bookMapper.findById(session.getBookId());
             if (bookForSession != null) {
                 List<Genre> genres = bookMapper.getBookGenres(bookForSession.getId());
@@ -1515,9 +1497,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         item.setId(bookmark.getId());
         item.setType("bookmark");
-        item.setContent(bookmark.getChapterTitle() != null ?
-                "Bookmark: " + bookmark.getChapterTitle() :
-                "Bookmark chapter " + bookmark.getChapterNumber());
+        item.setContent(bookmark.getChapterTitle() != null ? "Bookmark: " + bookmark.getChapterTitle() : "Bookmark chapter " + bookmark.getChapterNumber());
         item.setBookId(bookmark.getBookId());
         item.setChapterNumber(bookmark.getChapterNumber());
         item.setChapterTitle(bookmark.getChapterTitle());
@@ -1743,52 +1723,47 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // Cek aktivitas lain (bookmark, highlight, dll)
-        try {
-            // Bookmark
-            List<Bookmark> bookmarks = bookmarkMapper.findByUserSince(userId, dayStart);
-            if (bookmarks != null) {
-                long bookmarkCount = bookmarks.stream()
-                        .filter(b -> b != null && b.getCreatedAt() != null)
-                        .filter(b -> b.getCreatedAt().isAfter(dayStart) &&
-                                b.getCreatedAt().isBefore(dayEnd))
+        // Bookmark
+        List<Bookmark> bookmarks = bookmarkMapper.findByUserSince(userId, dayStart);
+        if (bookmarks != null) {
+            long bookmarkCount = bookmarks.stream()
+                    .filter(b -> b != null && b.getCreatedAt() != null)
+                    .filter(b -> b.getCreatedAt().isAfter(dayStart) &&
+                            b.getCreatedAt().isBefore(dayEnd))
+                    .count();
+            if (bookmarkCount > 0) {
+                activities.add(String.format("%d bookmark", bookmarkCount));
+            }
+        }
+
+        // Highlight (jika ada)
+        if (highlightMapper != null) {
+            List<Highlight> highlights = highlightMapper.findByUserSince(userId, dayStart);
+            if (highlights != null) {
+                long highlightCount = highlights.stream()
+                        .filter(h -> h != null && h.getCreatedAt() != null)
+                        .filter(h -> h.getCreatedAt().isAfter(dayStart) &&
+                                h.getCreatedAt().isBefore(dayEnd))
                         .count();
-                if (bookmarkCount > 0) {
-                    activities.add(String.format("%d bookmark", bookmarkCount));
+                if (highlightCount > 0) {
+                    activities.add(String.format("%d highlight", highlightCount));
                 }
             }
+        }
 
-            // Highlight (jika ada)
-            if (highlightMapper != null) {
-                List<Highlight> highlights = highlightMapper.findByUserSince(userId, dayStart);
-                if (highlights != null) {
-                    long highlightCount = highlights.stream()
-                            .filter(h -> h != null && h.getCreatedAt() != null)
-                            .filter(h -> h.getCreatedAt().isAfter(dayStart) &&
-                                    h.getCreatedAt().isBefore(dayEnd))
-                            .count();
-                    if (highlightCount > 0) {
-                        activities.add(String.format("%d highlight", highlightCount));
-                    }
+        // Note (jika ada)
+        if (noteMapper != null) {
+            List<Note> notes = noteMapper.findByUserSince(userId, dayStart);
+            if (notes != null) {
+                long noteCount = notes.stream()
+                        .filter(n -> n != null && n.getCreatedAt() != null)
+                        .filter(n -> n.getCreatedAt().isAfter(dayStart) &&
+                                n.getCreatedAt().isBefore(dayEnd))
+                        .count();
+                if (noteCount > 0) {
+                    activities.add(String.format("%d catatan", noteCount));
                 }
             }
-
-            // Note (jika ada)
-            if (noteMapper != null) {
-                List<Note> notes = noteMapper.findByUserSince(userId, dayStart);
-                if (notes != null) {
-                    long noteCount = notes.stream()
-                            .filter(n -> n != null && n.getCreatedAt() != null)
-                            .filter(n -> n.getCreatedAt().isAfter(dayStart) &&
-                                    n.getCreatedAt().isBefore(dayEnd))
-                            .count();
-                    if (noteCount > 0) {
-                        activities.add(String.format("%d catatan", noteCount));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Log error jika diperlukan, tapi lanjutkan proses
-            // System.err.println("Error fetching additional activities: " + e.getMessage());
         }
 
         // Hitung jumlah sesi membaca
@@ -1832,37 +1807,37 @@ public class DashboardServiceImpl implements DashboardService {
 
         // First Book
         achievements.add(createAchievement(
-                "first_book", "reading", "First Book",
+                "first_book", READING, "First Book",
                 "Complete your first book", "bronze",
                 1, totalBooks, 1));
 
         // Bookworm - 10 books
         achievements.add(createAchievement(
-                "bookworm", "reading", "Bookworm",
+                "bookworm", READING, "Bookworm",
                 "Complete 10 books", "silver",
                 10, totalBooks, 10));
 
         // Book Master - 50 books
         achievements.add(createAchievement(
-                "book_master", "reading", "Book Master",
+                "book_master", READING, "Book Master",
                 "Complete 50 books", "gold",
                 50, totalBooks, 20));
 
         // 10 Hours
         achievements.add(createAchievement(
-                "10_hours", "reading", "10 Hours",
+                "10_hours", READING, "10 Hours",
                 "Read for 10 hours", "bronze",
                 10, totalHours, 5));
 
         // 100 Hours
         achievements.add(createAchievement(
-                "100_hours", "reading", "Century Reader",
+                "100_hours", READING, "Century Reader",
                 "Read for 100 hours", "silver",
                 100, totalHours, 15));
 
         // 1000 Hours
         achievements.add(createAchievement(
-                "1000_hours", "reading", "Millennium Reader",
+                "1000_hours", READING, "Millennium Reader",
                 "Read for 1000 hours", "gold",
                 1000, totalHours, 30));
 
@@ -1877,19 +1852,19 @@ public class DashboardServiceImpl implements DashboardService {
 
         // 7-day streak
         achievements.add(createAchievement(
-                "streak_7", "reading", "Week Warrior",
+                "streak_7", READING, "Week Warrior",
                 "Read 7 days in a row", "bronze",
                 7, currentStreak, 5));
 
         // 30-day streak
         achievements.add(createAchievement(
-                "streak_30", "reading", "Monthly Master",
+                "streak_30", READING, "Monthly Master",
                 "Read 30 days in a row", "silver",
                 30, currentStreak, 15));
 
         // 100-day streak
         achievements.add(createAchievement(
-                "streak_100", "reading", "Centurion",
+                "streak_100", READING, "Centurion",
                 "Read 100 days in a row", "gold",
                 100, longestStreak, 25));
 
@@ -1946,7 +1921,11 @@ public class DashboardServiceImpl implements DashboardService {
         achievement.setBadgeUrl(String.format("/badges/%s_%s.png", id, tier));
 
         // Rarity (simplified)
-        achievement.setRarityPercentage(tier.equals("bronze") ? 60 : tier.equals("silver") ? 30 : 10);
+        achievement.setRarityPercentage(switch (tier.toLowerCase()) {
+            case "bronze" -> 60;
+            case "silver" -> 30;
+            default -> 10;
+        });
 
         return achievement;
     }
@@ -1971,9 +1950,7 @@ public class DashboardServiceImpl implements DashboardService {
         UserReadingDashboardResponse.RecentAnnotation annotation = new UserReadingDashboardResponse.RecentAnnotation();
 
         annotation.setType("bookmark");
-        annotation.setContent(bookmark.getChapterTitle() != null ?
-                "Bookmark: " + bookmark.getChapterTitle() :
-                "Bookmark chapter " + bookmark.getChapterNumber());
+        annotation.setContent(bookmark.getChapterTitle() != null ? "Bookmark: " + bookmark.getChapterTitle() : "Bookmark chapter " + bookmark.getChapterNumber());
         annotation.setCreatedAt(bookmark.getCreatedAt());
         annotation.setChapterNumber(bookmark.getChapterNumber());
 
@@ -2050,8 +2027,7 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime dayStart = checkDate.atStartOfDay();
             LocalDateTime dayEnd = checkDate.plusDays(1).atStartOfDay();
 
-            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(
-                    userId, dayStart, dayEnd);
+            List<ReadingSession> sessions = sessionMapper.findUserSessionsBetween(userId, dayStart, dayEnd);
 
             if (sessions.isEmpty()) {
                 break;
@@ -2158,11 +2134,13 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private Integer getIntValue(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        if (value instanceof Long) return ((Long) value).intValue();
-        if (value instanceof Double) return ((Double) value).intValue();
-        return 0;
+        return switch (value) {
+            case null -> 0;
+            case Integer i -> i;
+            case Long l -> l.intValue();
+            case Double v -> v.intValue();
+            default -> 0;
+        };
     }
 
     private Double getDoubleValue(Object value) {
@@ -2180,13 +2158,11 @@ public class DashboardServiceImpl implements DashboardService {
     // ═══════════════════════════════════════════════════════════
 
     private User getCurrentUser() {
-        // Perbaikan 1: Gunakan getUsername() bukan getCurrentUsername()
         String username = headerHolder.getUsername();
         if (username == null || username.trim().isEmpty()) {
             throw new UnauthorizedException();
         }
 
-        // Perbaikan 2: Gunakan findUserByUsername() bukan findByUsername()
         User user = userMapper.findUserByUsername(username);
         if (user == null) {
             throw new UnauthorizedException();

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 /**
  * BookChapterServiceImpl - Complete implementation
- *
+ * <p>
  * ✅ FULLY SYNCHRONIZED WITH DASHBOARD SERVICE
  * ✅ All type conversions fixed
  * ✅ All validations added

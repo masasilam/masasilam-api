@@ -199,8 +199,7 @@ public class DashboardController {
     public ResponseEntity<DataResponse<List<BookRecommendationResponse>>> getRecommendations(
             @RequestParam(defaultValue = "10") int limit) {
 
-        DataResponse<List<BookRecommendationResponse>> response =
-                dashboardService.getPersonalizedRecommendations(limit);
+        DataResponse<List<BookRecommendationResponse>> response = dashboardService.getPersonalizedRecommendations(limit);
 
         return ResponseEntity.ok(response);
     }
