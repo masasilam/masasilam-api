@@ -392,6 +392,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         response.setBookId(book.getId());
         response.setBookTitle(book.getTitle());
+        response.setBookSubtitle(book.getSubtitle());
         response.setChapterId(chapter.getId());
         response.setChapterNumber(chapter.getChapterNumber());
         response.setChapterTitle(chapter.getTitle());

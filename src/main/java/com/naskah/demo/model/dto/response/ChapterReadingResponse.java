@@ -7,6 +7,7 @@ import java.util.List;
 public class ChapterReadingResponse {
     private Long bookId;
     private String bookTitle;
+    private String bookSubtitle;
     private Integer chapterNumber;
     private String chapterTitle;
     private String slug;
