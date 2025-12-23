@@ -803,7 +803,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             int totalDuration = (int) ChronoUnit.SECONDS.between(session.getStartedAt(), session.getEndedAt());
             session.setTotalDurationSeconds(totalDuration);
 
-            // 🔥 TAMBAHKAN: Hitung chapters_read
+            // TAMBAHKAN: Hitung chapters_read
             if (session.getStartChapter() != null && endChapter != null) {
                 int chaptersRead = Math.abs(endChapter - session.getStartChapter()) + 1;
                 session.setChaptersRead(chaptersRead);
@@ -833,33 +833,28 @@ public class BookChapterServiceImpl implements BookChapterService {
             validateBook(book);
 
             // Get activity summary per chapter
-            List<Map<String, Object>> summaryData =
-                    activityMapper.getUserChapterActivitySummary(user.getId(), book.getId());
+            List<Map<String, Object>> summaryData = activityMapper.getUserChapterActivitySummary(user.getId(), book.getId());
 
             List<ReadingActivitySummary> activities = summaryData.stream()
                     .map(data -> {
                         ReadingActivitySummary summary = new ReadingActivitySummary();
                         summary.setChapterNumber(safeConvertToInt(data.get(CHAPTER_NUMBER)));
 
-                        BookChapter chapter = chapterMapper.findChapterByNumber(
-                                book.getId(), summary.getChapterNumber());
+                        BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), summary.getChapterNumber());
                         summary.setChapterTitle(chapter != null ? chapter.getTitle() : "");
 
                         summary.setTimesRead(safeConvertToInt(data.get("times_read")));
                         summary.setTotalReadingTimeSeconds(safeConvertToInt(data.get("total_duration")));
                         summary.setAverageScrollDepth(safeConvertToDouble(data.get("avg_scroll_depth")));
                         summary.setLastReadAt((LocalDateTime) data.get("last_read_at"));
-
-                        summary.setIsCompleted(summary.getAverageScrollDepth() != null
-                                && summary.getAverageScrollDepth() > 80);
+                        summary.setIsCompleted(summary.getAverageScrollDepth() != null && summary.getAverageScrollDepth() > 80);
 
                         return summary;
                     })
                     .collect(Collectors.toList());
 
             // Get overall statistics
-            Map<String, Object> stats = activityMapper.getUserBookStatistics(
-                    user.getId(), book.getId());
+            Map<String, Object> stats = activityMapper.getUserBookStatistics(user.getId(), book.getId());
 
             ReadingStatistics statistics = new ReadingStatistics();
             statistics.setTotalChaptersRead(safeConvertToInt(stats.get("chapters_read")));
@@ -868,8 +863,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             int totalChapters = book.getTotalPages();
             if (totalChapters > 0) {
-                double completionRate = (statistics.getTotalChaptersRead().doubleValue()
-                        / totalChapters) * 100;
+                double completionRate = (statistics.getTotalChaptersRead().doubleValue() / totalChapters) * 100;
                 statistics.setCompletionRate(completionRate);
             }
 
@@ -879,8 +873,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setActivities(activities);
             response.setStatistics(statistics);
 
-            return new DataResponse<>(SUCCESS, "Reading history retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Reading history retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting reading history: {}", e.getMessage(), e);
@@ -921,8 +914,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 response.setLastCalculatedAt(pattern.getLastCalculatedAt());
             }
 
-            return new DataResponse<>(SUCCESS, "Reading pattern retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Reading pattern retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting reading pattern: {}", e.getMessage(), e);
@@ -984,8 +976,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 results = searchMapper.searchInBook(book.getId(), searchQuery, offset, request.getLimit());
                 totalResults = searchMapper.countSearchResults(book.getId(), searchQuery);
 
-                log.info("Full-text search returned {} results for query: '{}'",
-                        totalResults, searchQuery);
+                log.info("Full-text search returned {} results for query: '{}'", totalResults, searchQuery);
             } catch (Exception e) {
                 log.warn("Full-text search failed, falling back to LIKE search: {}", e.getMessage());
                 // Fallback: Simple LIKE search
@@ -1053,7 +1044,6 @@ public class BookChapterServiceImpl implements BookChapterService {
      * Extract individual search matches dengan context
      */
     private List<SearchMatch> extractSearchMatches(String highlightedContent, String fullContent, String query) {
-
         List<SearchMatch> matches = new ArrayList<>();
 
         if (highlightedContent == null || highlightedContent.isEmpty()) {
@@ -1117,16 +1107,14 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
 
         SearchMatch match = new SearchMatch();
-        match.setMatchText(content.substring(position,
-                Math.min(position + query.length(), content.length())));
+        match.setMatchText(content.substring(position, Math.min(position + query.length(), content.length())));
         match.setPosition(position);
 
         int contextStart = Math.max(0, position - 50);
         int contextEnd = Math.min(content.length(), position + query.length() + 50);
 
         match.setContextBefore(content.substring(contextStart, position).trim());
-        match.setContextAfter(content.substring(
-                position + query.length(), contextEnd).trim());
+        match.setContextAfter(content.substring(position + query.length(), contextEnd).trim());
 
         String snippet = (contextStart > 0 ? "..." : "") +
                 match.getContextBefore() + " " +
@@ -1171,8 +1159,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     /**
      * Save search history
      */
-    private void saveSearchHistory(Long userId, Long bookId,
-                                   String query, int resultsCount) {
+    private void saveSearchHistory(Long userId, Long bookId, String query, int resultsCount) {
         if (userId != null) {
             try {
                 SearchHistory history = new SearchHistory();
@@ -1451,7 +1438,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setOverview(buildAnalyticsOverview(book.getId(), startDate, endDate));
             response.setReaderBehavior(buildReaderBehaviorAnalytics(book.getId(), startDate, endDate));
             response.setContentEngagement(buildContentEngagementAnalytics(book.getId()));
-            response.setMostHighlightedPassages(findMostHighlightedPassages(book.getId(), 10));
+            response.setMostHighlightedPassages(findMostHighlightedPassages(book.getId()));
             response.setDropOffPoints(findDropOffPoints(book.getId()));
             response.setMostSkippedChapters(findMostSkippedChapters(book.getId()));
             response.setTrends(analyzeTrends(book.getId(), startDate, endDate));
@@ -2240,8 +2227,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         return engagement;
     }
 
-    private List<PopularPassage> findMostHighlightedPassages(Long bookId, int limit) {
-        List<Map<String, Object>> data = analyticsMapper.getMostHighlightedPassages(bookId, limit);
+    private List<PopularPassage> findMostHighlightedPassages(Long bookId) {
+        List<Map<String, Object>> data = analyticsMapper.getMostHighlightedPassages(bookId, 10);
 
         return data.stream()
                 .map(this::mapToPopularPassage)
