@@ -46,7 +46,7 @@ public class FileUtil {
             Files.createDirectories(Paths.get(STORAGE_ROOT, "books"));
             Files.createDirectories(Paths.get(STORAGE_ROOT, "authors"));
         } catch (IOException e) {
-            throw new RuntimeException("Failed to create storage directories", e);
+            log.error("Failed to create storage directories", e);
         }
     }
 

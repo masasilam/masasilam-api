@@ -1,5 +1,6 @@
 package com.naskah.demo.service.book.impl;
 
+import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.model.dto.EpubProcessResult;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.model.entity.BookChapter;
@@ -28,7 +29,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class EpubServiceImpl implements EpubService {
-
     private final BookChapterMapper chapterMapper;
     private final FileUtil fileUtil;
 
@@ -46,9 +46,7 @@ public class EpubServiceImpl implements EpubService {
             Map<String, ChapterHierarchy> tocStructure = parseTocStructure(epubBook);
 
             // 2. Extract chapters with hierarchy
-            List<BookChapter> chapters = extractAndSaveChaptersWithHierarchy(
-                    epubBook, book.getId(), tocStructure
-            );
+            List<BookChapter> chapters = extractAndSaveChaptersWithHierarchy(epubBook, book.getId(), tocStructure);
 
             result.setChapters(chapters);
             result.setTotalChapters(chapters.size());
@@ -68,12 +66,11 @@ public class EpubServiceImpl implements EpubService {
 
             // 5. Generate preview
             if (!chapters.isEmpty()) {
-                String preview = fileUtil.generatePreviewText(chapters.get(0).getContent(), 500);
+                String preview = fileUtil.generatePreviewText(chapters.getFirst().getContent(), 500);
                 result.setPreviewText(preview);
             }
 
-            log.info("EPUB processing completed: {} chapters, {} words",
-                    chapters.size(), totalWords);
+            log.info("EPUB processing completed: {} chapters, {} words", chapters.size(), totalWords);
 
             return result;
 
@@ -100,11 +97,8 @@ public class EpubServiceImpl implements EpubService {
     /**
      * ✅ FIX 3: Extract chapters WITHOUT sub-chapter content
      */
-    private List<BookChapter> extractAndSaveChaptersWithHierarchy(
-            nl.siegmann.epublib.domain.Book epubBook,
-            Long bookId,
-            Map<String, ChapterHierarchy> tocStructure) {
-
+    private List<BookChapter> extractAndSaveChaptersWithHierarchy(nl.siegmann.epublib.domain.Book epubBook, Long bookId,
+                                                                  Map<String, ChapterHierarchy> tocStructure) {
         List<BookChapter> chapters = new ArrayList<>();
         Map<String, Long> hrefToChapterId = new HashMap<>();
 
@@ -158,7 +152,7 @@ public class EpubServiceImpl implements EpubService {
 
                 // ✅ FIX 3: Stop at next TOC entry in same file
                 if (anchorId != null) {
-                    // This is a sub-chapter with anchor (e.g., #sigil_toc_id_1)
+                    // This is a subchapter with anchor (e.g., #sigil_toc_id_1)
                     // Get next TOC entry to know where to stop
                     String nextAnchorInSameFile = null;
                     for (int j = i + 1; j < orderedToc.size(); j++) {
@@ -188,9 +182,7 @@ public class EpubServiceImpl implements EpubService {
 
                             if (started) {
                                 // ✅ Stop if we hit the next anchor
-                                if (!current.id().isEmpty()
-                                        && !current.id().equals(anchorId)
-                                        && current.id().equals(nextAnchorInSameFile)) {
+                                if (!current.id().isEmpty() && !current.id().equals(anchorId) && current.id().equals(nextAnchorInSameFile)) {
                                     log.debug("Stopping at next anchor: {}", nextAnchorInSameFile);
                                     break;
                                 }
@@ -216,7 +208,7 @@ public class EpubServiceImpl implements EpubService {
                     for (int j = i + 1; j < orderedToc.size(); j++) {
                         ChapterHierarchy next = orderedToc.get(j);
                         if (next.href.startsWith(fileName + "#")) {
-                            // Found a sub-chapter in the same file
+                            // Found a subchapter in the same file
                             firstSubAnchor = next.href.split("#")[1];
                             log.debug("Found sub-chapter anchor in same file: {}", firstSubAnchor);
                             break;
@@ -290,8 +282,7 @@ public class EpubServiceImpl implements EpubService {
                 if (hierarchy.parentHref != null && !hierarchy.parentHref.isEmpty()) {
                     parentChapterId = hrefToChapterId.get(hierarchy.parentHref);
                     if (parentChapterId == null) {
-                        log.warn("Parent chapter not found for href: {} (looking for parent: {})",
-                                fullHref, hierarchy.parentHref);
+                        log.warn("Parent chapter not found for href: {} (looking for parent: {})", fullHref, hierarchy.parentHref);
                     }
                 }
 
@@ -314,11 +305,7 @@ public class EpubServiceImpl implements EpubService {
 
                 hrefToChapterId.put(fullHref, chapter.getId());
 
-                log.info("Saved chapter {} (Level {}): {} [Parent: {}]",
-                        chapter.getChapterNumber(),
-                        chapter.getChapterLevel(),
-                        hierarchy.title,
-                        parentChapterId != null ? "#" + parentChapterId : "Root");
+                log.info("Saved chapter {} (Level {}): {} [Parent: {}]", chapter.getChapterNumber(), chapter.getChapterLevel(), hierarchy.title, parentChapterId != null ? "#" + parentChapterId : "Root");
 
             } catch (Exception e) {
                 log.error("Failed to extract chapter '{}': {}", hierarchy.title, e.getMessage(), e);
@@ -358,8 +345,7 @@ public class EpubServiceImpl implements EpubService {
         return ordered;
     }
 
-    private void parseOrderedToc(Element ol, List<ChapterHierarchy> ordered,
-                                 int level, String parentHref) {
+    private void parseOrderedToc(Element ol, List<ChapterHierarchy> ordered, int level, String parentHref) {
         if (ol == null) return;
 
         Elements listItems = ol.select("> li");
@@ -374,8 +360,7 @@ public class EpubServiceImpl implements EpubService {
             ChapterHierarchy ch = new ChapterHierarchy(href, title, level, parentHref);
             ordered.add(ch);
 
-            log.debug("TOC Order #{}: Level {} - {} -> {} (parent: {})",
-                    ordered.size(), level, title, href, parentHref);
+            log.debug("TOC Order #{}: Level {} - {} -> {} (parent: {})", ordered.size(), level, title, href, parentHref);
 
             Element nestedOl = li.select("> ol").first();
             if (nestedOl != null) {
@@ -433,8 +418,7 @@ public class EpubServiceImpl implements EpubService {
         return structure;
     }
 
-    private void parseTocRecursive(Element ol, Map<String, ChapterHierarchy> structure,
-                                   int level, String parentHref) {
+    private void parseTocRecursive(Element ol, Map<String, ChapterHierarchy> structure, int level, String parentHref) {
         if (ol == null) return;
 
         Elements listItems = ol.select("> li");
@@ -455,8 +439,7 @@ public class EpubServiceImpl implements EpubService {
         }
     }
 
-    private String extractAndUploadChapterImage(nl.siegmann.epublib.domain.Book epubBook,
-                                                String imagePath, Long bookId) {
+    private String extractAndUploadChapterImage(nl.siegmann.epublib.domain.Book epubBook, String imagePath, Long bookId) {
         try {
             String normalizedPath = imagePath.replace("../", "");
             Resource imageResource = epubBook.getResources().getByHref(normalizedPath);
@@ -482,11 +465,7 @@ public class EpubServiceImpl implements EpubService {
             byte[] imageData = imageResource.getData();
             String fileName = normalizedPath.substring(normalizedPath.lastIndexOf("/") + 1);
 
-            String cloudinaryUrl = fileUtil.uploadChapterImageFromBytes(
-                    imageData,
-                    bookId,
-                    fileName
-            );
+            String cloudinaryUrl = fileUtil.uploadChapterImageFromBytes(imageData, bookId, fileName);
 
             log.info("Uploaded chapter image: {} -> {}", imagePath, cloudinaryUrl);
             return cloudinaryUrl;
@@ -513,7 +492,7 @@ public class EpubServiceImpl implements EpubService {
     public BookChapter getChapter(Long bookId, Integer chapterNumber) {
         BookChapter chapter = chapterMapper.findChapterByNumber(bookId, chapterNumber);
         if (chapter == null) {
-            throw new RuntimeException("Chapter not found");
+            throw new DataNotFoundException();
         }
         return chapter;
     }
