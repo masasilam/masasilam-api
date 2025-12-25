@@ -18,4 +18,6 @@ public interface EpubService {
     List<BookChapter> searchInBook(Long bookId, String query);
 
     void deleteChaptersByBookId(Long bookId);
+
+    EpubProcessResult processEpubFileForUpdate(MultipartFile newFile, Book existingBook) throws IOException;
 }

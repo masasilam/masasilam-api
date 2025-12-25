@@ -1,8 +1,10 @@
 package com.naskah.demo.mapper;
 
 import com.naskah.demo.model.entity.BookChapter;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 import java.util.Set;
@@ -40,11 +42,6 @@ public interface BookChapterMapper {
     void deleteChaptersByBookId(@Param("bookId") Long bookId);
 
     /**
-     * Update chapter
-     */
-    void updateChapter(BookChapter chapter);
-
-    /**
      * Count chapters by book ID
      */
     int countChaptersByBookId(@Param("bookId") Long bookId);
@@ -66,4 +63,21 @@ public interface BookChapterMapper {
 
     String getChapterTitle(@Param("bookId") Long bookId, @Param("chapterNumber") Integer chapterNumber);
     String getChapterSlug(@Param("bookId") Long bookId, @Param("chapterNumber") Integer chapterNumber);
+
+    // ✅ NEW: Update existing chapter
+    @Update("UPDATE book_chapters SET " +
+            "title = #{title}, " +
+            "slug = #{slug}, " +
+            "content = #{content}, " +
+            "html_content = #{htmlContent}, " +
+            "word_count = #{wordCount}, " +
+            "parent_chapter_id = #{parentChapterId}, " +
+            "chapter_level = #{chapterLevel}, " +
+            "updated_at = #{updatedAt} " +
+            "WHERE id = #{id}")
+    void updateChapter(BookChapter chapter);
+
+    // ✅ NEW: Delete specific chapter by ID
+    @Delete("DELETE FROM book_chapters WHERE id = #{id}")
+    void deleteChapterById(@Param("id") Long id);
 }

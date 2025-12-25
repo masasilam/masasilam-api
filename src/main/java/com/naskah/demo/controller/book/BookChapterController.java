@@ -291,7 +291,7 @@ public class BookChapterController {
 
     /**
      * Start reading - called when user opens a chapter
-     *
+     * <p>
      * ✅ Dashboard Impact:
      * - Updates reading calendar
      * - Maintains streak counter
@@ -306,7 +306,7 @@ public class BookChapterController {
 
     /**
      * End reading - called when user closes chapter
-     *
+     * <p>
      * ✅ Dashboard Impact:
      * - Updates total reading time
      * - Calculates reading speed
@@ -331,7 +331,7 @@ public class BookChapterController {
 
     /**
      * Get user's reading history for this book
-     *
+     * <p>
      * ✅ Connected to Dashboard: Provides data for reading history view
      */
     @GetMapping("/reading/history")
@@ -343,7 +343,7 @@ public class BookChapterController {
 
     /**
      * Get user's reading pattern analysis
-     *
+     * <p>
      * ✅ Connected to Dashboard: Powers reading pattern insights
      */
     @GetMapping("/reading/patterns")

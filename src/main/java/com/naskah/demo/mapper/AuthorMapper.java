@@ -39,4 +39,7 @@ public interface AuthorMapper {
             "</where>" +
             "</script>")
     int countAll(@Param("search") String search);
+
+    @Select("SELECT * FROM authors WHERE slug = #{slug}")
+    Author findAuthorBySlug(@Param("slug") String slug);
 }

@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -54,6 +55,7 @@ public class BookServiceImpl implements BookService {
     private String maxFileSizeStr;
 
     // ============ BOOK CRUD OPERATIONS ============
+    @Transactional
     public DataResponse<BookResponse> createBook(BookRequest request){
         try {
             if (headerHolder.getUsername() == null || headerHolder.getUsername().isEmpty()) {
@@ -91,10 +93,17 @@ public class BookServiceImpl implements BookService {
                 throw new IllegalArgumentException("Publication year not found in EPUB metadata.");
             }
 
-            // =============== GENERATE UNIQUE SLUG ===============
+            // =============== CHECK FOR EXISTING BOOK WITH SAME SLUG AND AUTHOR ===============
             String baseSlug = fileUtil.sanitizeFilename(finalTitle);
-            String finalSlug = baseSlug;
+            Book existingBook = checkExistingBookWithSameAuthor(baseSlug, epubMeta);
 
+            if (existingBook != null) {
+                log.info("Found existing book with same slug '{}' and author(s). Updating instead of creating new.", baseSlug);
+                return updateExistingBook(existingBook, request.getBookFile(), epubMeta);
+            }
+
+            // =============== GENERATE UNIQUE SLUG ===============
+            String finalSlug = baseSlug;
             int duplicateCount = bookMapper.countBySlug(finalSlug);
             if (duplicateCount > 0) {
                 finalSlug = baseSlug + "-" + System.currentTimeMillis();
@@ -166,6 +175,122 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    /**
+     * ✅ CHECK IF BOOK WITH SAME SLUG AND SAME AUTHOR(S) EXISTS - BY SLUG
+     */
+    private Book checkExistingBookWithSameAuthor(String slug, CompleteEpubMetadata epubMeta) {
+        Book existingBook = bookMapper.findBySlug(slug);
+
+        if (existingBook == null) {
+            return null;
+        }
+
+        // Check if authors match
+        if (epubMeta.getAuthors() == null || epubMeta.getAuthors().isEmpty()) {
+            return null;
+        }
+
+        // Get existing book's authors
+        List<Author> existingAuthors = bookMapper.findAuthorsByBookId(existingBook.getId());
+
+        if (existingAuthors.isEmpty()) {
+            return null;
+        }
+
+        // ✅ CHECK BY SLUG INSTEAD OF NAME
+        boolean authorMatches = false;
+        for (AuthorMetadata authorMeta : epubMeta.getAuthors()) {
+            String authorSlug = fileUtil.sanitizeFilename(authorMeta.getName());
+
+            for (Author existingAuthor : existingAuthors) {
+                if (existingAuthor.getSlug().equalsIgnoreCase(authorSlug)) {
+                    authorMatches = true;
+                    log.info("Found matching author by slug: {} = {}", existingAuthor.getSlug(), authorSlug);
+                    break;
+                }
+            }
+            if (authorMatches) break;
+        }
+
+        if (authorMatches) {
+            log.info("Found existing book '{}' with matching author(s). Will update instead of creating new.", existingBook.getTitle());
+        }
+
+        return authorMatches ? existingBook : null;
+    }
+
+    /**
+     * ✅ UPDATE EXISTING BOOK WITH NEW FILE AND METADATA
+     */
+    @Transactional
+    private DataResponse<BookResponse> updateExistingBook(Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException {
+        log.info("Updating existing book ID: {} - {}", existingBook.getId(), existingBook.getTitle());
+
+        // 1. DELETE OLD FILES
+        if (existingBook.getFileUrl() != null) {
+            fileUtil.deleteFile(existingBook.getFileUrl());
+            log.info("Deleted old book file: {}", existingBook.getFileUrl());
+        }
+
+        if (existingBook.getCoverImageUrl() != null) {
+            fileUtil.deleteFile(existingBook.getCoverImageUrl());
+            log.info("Deleted old cover image: {}", existingBook.getCoverImageUrl());
+        }
+
+        // 2. DELETE OLD RELATIONSHIPS (genres, contributors)
+        bookMapper.deleteBookGenres(existingBook.getId());
+        bookMapper.deleteBookContributors(existingBook.getId());
+        log.info("Deleted old relationships for book ID: {}", existingBook.getId());
+
+        // 3. UPLOAD NEW BOOK FILE
+        FileStorageResult bookResult = fileUtil.saveAndUploadBookFile(newFile, existingBook.getTitle());
+        BookMetadata metadata = fileUtil.extractBookMetadata(newFile);
+
+        // 4. GET LANGUAGE AND COPYRIGHT STATUS
+        Language language = languageMapper.findLanguageByName(epubMeta.getLanguage());
+        CopyrightStatus copyrightStatus = copyrightStatusMapper.findByCopyrightStatusCode(epubMeta.getCopyrightStatus());
+
+        // 5. UPDATE BOOK ENTITY
+        existingBook.setTitle(epubMeta.getTitle());
+        existingBook.setSubtitle(epubMeta.getSubtitle());
+        existingBook.setPublicationYear(epubMeta.getPublicationYear());
+        existingBook.setPublisher(epubMeta.getPublisher());
+        existingBook.setLanguageId(language.getId());
+        existingBook.setDescription(epubMeta.getDescription());
+        existingBook.setFileUrl(bookResult.getCloudUrl());
+        existingBook.setSource(epubMeta.getSource());
+        existingBook.setFileFormat(metadata.getFileFormat());
+        existingBook.setFileSize(metadata.getFileSize());
+        existingBook.setCopyrightStatusId(copyrightStatus.getId());
+        existingBook.setPublishedAt(epubMeta.getPublishedAt() != null ? epubMeta.getPublishedAt().atStartOfDay() : null);
+        existingBook.setCategory(epubMeta.getCategory());
+        existingBook.setUpdatedAt(epubMeta.getUpdatedAt());
+
+        // 6. PROCESS NEW EPUB FILE (UPDATE MODE)
+        EpubProcessResult result = epubService.processEpubFileForUpdate(newFile, existingBook);
+        log.info("New EPUB processed: {} chapters, {} words", result.getTotalChapters(), result.getTotalWords());
+
+        existingBook.setTotalWord(result.getTotalWords());
+        existingBook.setTotalPages(result.getTotalChapters());
+        existingBook.setEstimatedReadTime(fileUtil.calculateEstimatedReadTime(result.getTotalWords()));
+        existingBook.setCoverImageUrl(result.getCoverImageUrl());
+
+        bookMapper.updateBook(existingBook);
+        log.info("Updated book entity ID: {}", existingBook.getId());
+
+        // 7. RE-PROCESS METADATA (genres, authors, contributors)
+        genreProcessing(epubMeta, existingBook);
+        authorProcessing(epubMeta, existingBook);
+        contributorProcessing(epubMeta, existingBook);
+
+        // 8. GET COMPLETE BOOK RESPONSE
+        BookResponse data = bookMapper.getBookDetailBySlug(existingBook.getSlug());
+
+        log.info("Book successfully updated: {}", existingBook.getTitle());
+
+        return new DataResponse<>(SUCCESS, "Book updated successfully", 200, data);
+    }
+
     private void genreProcessing(CompleteEpubMetadata epubMeta, Book book) {
         if (epubMeta.getSubjects() != null && !epubMeta.getSubjects().isEmpty()) {
             for (String subject : epubMeta.getSubjects()) {
@@ -186,35 +311,99 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    /**
+     * ✅ AUTHOR PROCESSING - LANGSUNG CARI BY SLUG
+     */
     private void authorProcessing(CompleteEpubMetadata epubMeta, Book book) {
-        if (epubMeta.getAuthors() != null && !epubMeta.getAuthors().isEmpty()) {
-            for (AuthorMetadata authorMeta : epubMeta.getAuthors()) {
-                Author author = authorMapper.findAuthorByName(authorMeta.getName());
+        if (epubMeta.getAuthors() == null || epubMeta.getAuthors().isEmpty()) {
+            return;
+        }
 
-                if (author != null) {
+        List<Author> existingAuthors = bookMapper.findAuthorsByBookId(book.getId());
+        Set<Long> existingAuthorIds = existingAuthors.stream()
+                .map(Author::getId)
+                .collect(Collectors.toSet());
+
+        Set<Long> newAuthorIds = new HashSet<>();
+
+        for (AuthorMetadata authorMeta : epubMeta.getAuthors()) {
+            String slug = fileUtil.sanitizeFilename(authorMeta.getName());
+            Author author = authorMapper.findAuthorBySlug(slug);
+
+            if (author != null) {
+                boolean needsUpdate = false;
+
+                if (authorMeta.getBirthDate() != null && author.getBirthDate() == null) {
+                    author.setBirthDate(authorMeta.getBirthDate());
+                    needsUpdate = true;
+                }
+
+                if (authorMeta.getDeathDate() != null && author.getDeathDate() == null) {
+                    author.setDeathDate(authorMeta.getDeathDate());
+                    needsUpdate = true;
+                }
+
+                if (authorMeta.getBirthPlace() != null && author.getBirthPlace() == null) {
+                    author.setBirthPlace(authorMeta.getBirthPlace());
+                    needsUpdate = true;
+                }
+
+                if (authorMeta.getNationality() != null && author.getNationality() == null) {
+                    author.setNationality(authorMeta.getNationality());
+                    needsUpdate = true;
+                }
+
+                if (authorMeta.getBiography() != null && author.getBiography() == null) {
+                    author.setBiography(authorMeta.getBiography());
+                    needsUpdate = true;
+                }
+
+                if (authorMeta.getPhotoUrl() != null && author.getPhotoUrl() == null) {
+                    author.setPhotoUrl(authorMeta.getPhotoUrl());
+                    needsUpdate = true;
+                }
+
+                if (!existingAuthorIds.contains(author.getId())) {
                     author.setTotalBooks(author.getTotalBooks() + 1);
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate) {
                     author.setUpdatedAt(LocalDateTime.now());
                     authorMapper.updateAuthor(author);
-                    bookMapper.insertBookAuthor(book.getId(), author.getId());
-                } else {
-                    Author newAuthor = new Author();
-                    newAuthor.setName(authorMeta.getName());
-                    newAuthor.setSlug(fileUtil.sanitizeFilename(authorMeta.getName()));
-                    newAuthor.setBirthDate(null);
-                    newAuthor.setDeathDate(null);
-                    newAuthor.setBirthPlace(null);
-                    newAuthor.setNationality(null);
-                    newAuthor.setBiography(null);
-                    newAuthor.setPhotoUrl(null);
-                    newAuthor.setTotalBooks(1);
-                    newAuthor.setCreatedAt(LocalDateTime.now());
-                    newAuthor.setUpdatedAt(LocalDateTime.now());
-
-                    authorMapper.insertAuthor(newAuthor);
-                    bookMapper.insertBookAuthor(book.getId(), newAuthor.getId());
-
-                    log.info("Auto-created author: {}", newAuthor.getName());
+                    log.info("Updated author '{}' with new metadata from EPUB", author.getName());
                 }
+
+                if (!existingAuthorIds.contains(author.getId())) {
+                    bookMapper.insertBookAuthor(book.getId(), author.getId());
+                    log.info("Linked book {} with existing author {}", book.getId(), author.getId());
+                } else {
+                    log.info("Book-author relationship already exists, skipping: book={}, author={}", book.getId(), author.getId());
+                }
+
+                newAuthorIds.add(author.getId());
+
+            } else {
+                Author newAuthor = new Author();
+                newAuthor.setName(authorMeta.getName());
+                newAuthor.setSlug(slug);
+                newAuthor.setBirthDate(authorMeta.getBirthDate());
+                newAuthor.setDeathDate(authorMeta.getDeathDate());
+                newAuthor.setBirthPlace(authorMeta.getBirthPlace());
+                newAuthor.setNationality(authorMeta.getNationality());
+                newAuthor.setBiography(authorMeta.getBiography());
+                newAuthor.setPhotoUrl(authorMeta.getPhotoUrl());
+                newAuthor.setTotalBooks(1);
+                newAuthor.setCreatedAt(LocalDateTime.now());
+                newAuthor.setUpdatedAt(LocalDateTime.now());
+
+                authorMapper.insertAuthor(newAuthor);
+                bookMapper.insertBookAuthor(book.getId(), newAuthor.getId());
+
+                log.info("Auto-created author: {} with slug: {} and complete metadata (birth: {}, death: {}, nationality: {})",
+                        newAuthor.getName(), newAuthor.getSlug(), newAuthor.getBirthDate(), newAuthor.getDeathDate(), newAuthor.getNationality());
+
+                newAuthorIds.add(newAuthor.getId());
             }
         }
     }

@@ -6,9 +6,7 @@ import com.naskah.demo.model.dto.response.BookResponse;
 import com.naskah.demo.model.entity.Author;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.model.entity.Genre;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -113,4 +111,65 @@ public interface BookMapper {
     void incrementViewCountBySlug(@Param("slug") String slug);
 
     int countUserReadSessions(@Param("bookId") Long bookId, @Param("userId") Long userId);
+
+    /**
+     * Find all authors associated with a book
+     */
+    @Select("SELECT a.* FROM authors a " +
+            "INNER JOIN book_authors ba ON a.id = ba.author_id " +
+            "WHERE ba.book_id = #{bookId}")
+    List<Author> findAuthorsByBookId(@Param("bookId") Long bookId);
+
+    /**
+     * Delete all genre relationships for a book
+     */
+    @Delete("DELETE FROM book_genres WHERE book_id = #{bookId}")
+    void deleteBookGenres(@Param("bookId") Long bookId);
+
+    /**
+     * Delete all contributor relationships for a book
+     */
+    @Delete("DELETE FROM book_contributors WHERE book_id = #{bookId}")
+    void deleteBookContributors(@Param("bookId") Long bookId);
+
+    /**
+     * Optional: Delete author relationships (if you want to re-create them)
+     * Note: Usually we keep author relationships and just add new ones if needed
+     */
+    @Delete("DELETE FROM book_authors WHERE book_id = #{bookId}")
+    void deleteBookAuthors(@Param("bookId") Long bookId);
+
+    @Select("SELECT * FROM books WHERE slug = #{slug}")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "title", column = "title"),
+            @Result(property = "slug", column = "slug"),
+            @Result(property = "subtitle", column = "subtitle"),
+            @Result(property = "seriesId", column = "series_id"),
+            @Result(property = "seriesOrder", column = "series_order"),
+            @Result(property = "edition", column = "edition"),
+            @Result(property = "publicationYear", column = "publication_year"),
+            @Result(property = "publisher", column = "publisher"),
+            @Result(property = "languageId", column = "language_id"),
+            @Result(property = "description", column = "description"),
+            @Result(property = "fileUrl", column = "file_url"),
+            @Result(property = "coverImageUrl", column = "cover_image_url"),
+            @Result(property = "source", column = "source"),
+            @Result(property = "fileFormat", column = "file_format"),
+            @Result(property = "fileSize", column = "file_size"),
+            @Result(property = "totalPages", column = "total_pages"),
+            @Result(property = "totalWord", column = "total_word"),
+            @Result(property = "estimatedReadTime", column = "estimated_read_time"),
+            @Result(property = "copyrightStatusId", column = "copyright_status_id"),
+            @Result(property = "viewCount", column = "view_count"),
+            @Result(property = "readCount", column = "read_count"),
+            @Result(property = "downloadCount", column = "download_count"),
+            @Result(property = "isActive", column = "is_active"),
+            @Result(property = "isFeatured", column = "is_featured"),
+            @Result(property = "publishedAt", column = "published_at"),
+            @Result(property = "category", column = "category"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "updatedAt", column = "updated_at")
+    })
+    Book findBySlug(@Param("slug") String slug);
 }

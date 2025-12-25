@@ -107,20 +107,6 @@
         DELETE FROM book_chapters WHERE book_id = #{bookId}
     </delete>
 
-    <!-- Update Chapter -->
-    <update id="updateChapter">
-        UPDATE book_chapters
-        SET title = #{title},
-        slug = #{slug},
-        content = #{content},
-        html_content = #{htmlContent},
-        word_count = #{wordCount},
-        parent_chapter_id = #{parentChapterId},
-        chapter_level = #{chapterLevel},
-        updated_at = #{updatedAt}
-        WHERE id = #{id}
-    </update>
-
     <!-- Count Chapters by Book ID -->
     <select id="countChaptersByBookId" resultType="int">
         SELECT COUNT(*) FROM book_chapters WHERE book_id = #{bookId}

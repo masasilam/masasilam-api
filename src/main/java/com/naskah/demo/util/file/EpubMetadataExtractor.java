@@ -38,20 +38,12 @@ public class EpubMetadataExtractor {
 
             extractTitleAndSubtitle(book, metadata);
 
-            List<AuthorMetadata> authors = new ArrayList<>();
-            epubMetadata.getAuthors().forEach(author -> {
-                AuthorMetadata authorMeta = new AuthorMetadata();
-                String firstName = author.getFirstname();
-                String lastName = author.getLastname();
-
-                authorMeta.setName(firstName + " " + lastName);
-                authorMeta.setRole("Author");
-                authors.add(authorMeta);
-            });
+            List<AuthorMetadata> authors = extractAuthorsWithMetadata(book);
             metadata.setAuthors(authors);
 
             List<ContributorMetadata> contributors = extractContributorsWithRoles(book);
             metadata.setContributors(contributors);
+
             metadata.setPublisher(epubMetadata.getPublishers().isEmpty() ? null : epubMetadata.getPublishers().getFirst());
             metadata.setLanguage(epubMetadata.getLanguage());
             metadata.setDescription(epubMetadata.getDescriptions().isEmpty() ? null : epubMetadata.getDescriptions().getFirst());
@@ -69,17 +61,192 @@ public class EpubMetadataExtractor {
                     }
                 }
             }
+
             metadata.setSubjects(subjects);
             metadata.setCopyrightStatus(parseCopyrightStatus(epubMetadata.getRights().isEmpty() ? null : epubMetadata.getRights().getFirst()));
             metadata.setSource(extractSource(book));
             metadata.setCoverImageData(book.getCoverImage().getData());
-            metadata.setCategory(subjects.getFirst());
+            metadata.setCategory(subjects.isEmpty() ? null : subjects.getFirst());
+
         } catch (Exception e) {
             log.error("Failed to extract EPUB metadata: {}", e.getMessage(), e);
             throw e;
         }
 
         return metadata;
+    }
+
+    /**
+     * ✅ NEW: Extract authors with complete metadata from OPF
+     */
+    private static List<AuthorMetadata> extractAuthorsWithMetadata(Book book) {
+        List<AuthorMetadata> authors = new ArrayList<>();
+
+        try {
+            byte[] opfData = book.getOpfResource().getData();
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(opfData));
+
+            // Get all dc:creator elements
+            NodeList creatorNodes = doc.getElementsByTagNameNS("http://purl.org/dc/elements/1.1/", "creator");
+            log.info("Found {} dc:creator nodes in OPF", creatorNodes.getLength());
+
+            for (int i = 0; i < creatorNodes.getLength(); i++) {
+                Element creatorElement = (Element) creatorNodes.item(i);
+                String authorName = creatorElement.getTextContent().trim();
+                String creatorId = creatorElement.getAttribute("id");
+
+                log.info("Processing author node #{}: name='{}', id='{}'", i+1, authorName, creatorId);
+
+                if (authorName.isEmpty()) {
+                    log.warn("Author name is empty, skipping");
+                    continue;
+                }
+
+                AuthorMetadata authorMeta = new AuthorMetadata();
+                authorMeta.setName(authorName);
+                authorMeta.setRole("Author");
+
+                // ✅ Extract extended metadata using schema.org properties
+                extractSchemaMetadata(doc, authorMeta);
+
+                // ✅ Extract term metadata (alternate format: 1922-1949)
+                if (!creatorId.isEmpty()) {
+                    extractTermMetadata(doc, creatorId, authorMeta);
+                }
+
+                authors.add(authorMeta);
+                log.info("Successfully extracted author: {} with metadata", authorName);
+            }
+
+            // Fallback to basic metadata if no creators found
+            if (authors.isEmpty()) {
+                log.warn("No authors found in OPF with extended metadata, using fallback");
+                return extractAuthorsFallback(book.getMetadata());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to extract authors from OPF: {}", e.getMessage(), e);
+            return extractAuthorsFallback(book.getMetadata());
+        }
+
+        return authors;
+    }
+
+    /**
+     * ✅ NEW: Extract schema.org metadata for author
+     */
+    private static void extractSchemaMetadata(Document doc, AuthorMetadata authorMeta) {
+        NodeList metaNodes = doc.getElementsByTagName("meta");
+
+        for (int j = 0; j < metaNodes.getLength(); j++) {
+            Element meta = (Element) metaNodes.item(j);
+            String property = meta.getAttribute("property");
+            String content = meta.getTextContent().trim();
+
+            if (content.isEmpty()) continue;
+
+            switch (property) {
+                case "schema:birthDate":
+                    try {
+                        authorMeta.setBirthDate(LocalDate.parse(content));
+                        log.info("Extracted birthDate: {}", content);
+                    } catch (Exception e) {
+                        log.warn("Failed to parse birthDate: {}", content);
+                    }
+                    break;
+
+                case "schema:deathDate":
+                    try {
+                        authorMeta.setDeathDate(LocalDate.parse(content));
+                        log.info("Extracted deathDate: {}", content);
+                    } catch (Exception e) {
+                        log.warn("Failed to parse deathDate: {}", content);
+                    }
+                    break;
+
+                case "schema:birthPlace":
+                    authorMeta.setBirthPlace(content);
+                    log.info("Extracted birthPlace: {}", content);
+                    break;
+
+                case "schema:nationality":
+                    authorMeta.setNationality(content);
+                    log.info("Extracted nationality: {}", content);
+                    break;
+
+                case "schema:description":
+                    authorMeta.setBiography(content);
+                    log.info("Extracted biography (length: {})", content.length());
+                    break;
+
+                case "schema:image":
+                    authorMeta.setPhotoUrl(content);
+                    log.info("Extracted photoUrl: {}", content);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * ✅ NEW: Extract term metadata (e.g., "1922-1949")
+     */
+    private static void extractTermMetadata(Document doc, String creatorId, AuthorMetadata authorMeta) {
+        NodeList metaNodes = doc.getElementsByTagName("meta");
+
+        for (int j = 0; j < metaNodes.getLength(); j++) {
+            Element meta = (Element) metaNodes.item(j);
+            String refines = meta.getAttribute("refines");
+            String property = meta.getAttribute("property");
+
+            if (("#" + creatorId).equals(refines) && "term".equals(property)) {
+                String term = meta.getTextContent().trim();
+                log.info("Found term metadata: {}", term);
+
+                // Parse "1922-1949" format
+                if (term.contains("-") && term.length() >= 9) {
+                    String[] years = term.split("-");
+
+                    try {
+                        if (authorMeta.getBirthDate() == null) {
+                            int birthYear = Integer.parseInt(years[0].trim());
+                            authorMeta.setBirthDate(LocalDate.of(birthYear, 1, 1));
+                            log.info("Extracted birthYear from term: {}", birthYear);
+                        }
+
+                        if (years.length > 1 && authorMeta.getDeathDate() == null) {
+                            int deathYear = Integer.parseInt(years[1].trim());
+                            authorMeta.setDeathDate(LocalDate.of(deathYear, 1, 1));
+                            log.info("Extracted deathYear from term: {}", deathYear);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to parse term years: {}", term);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Fallback: Extract basic author info
+     */
+    private static List<AuthorMetadata> extractAuthorsFallback(Metadata metadata) {
+        List<AuthorMetadata> authors = new ArrayList<>();
+
+        metadata.getAuthors().forEach(author -> {
+            AuthorMetadata authorMeta = new AuthorMetadata();
+            String firstName = author.getFirstname();
+            String lastName = author.getLastname();
+            authorMeta.setName(firstName + " " + lastName);
+            authorMeta.setRole("Author");
+            authors.add(authorMeta);
+        });
+
+        log.info("Extracted {} authors using fallback method", authors.size());
+        return authors;
     }
 
     private static void extractTitleAndSubtitle(Book book, CompleteEpubMetadata metadata) {
@@ -328,6 +495,8 @@ public class EpubMetadataExtractor {
             case "aut" -> "Author";
             case "pht" -> "Photographer";
             case "cov" -> "Cover Designer";
+            case "art" -> "Cover Artist";
+            case "ann" -> "Annotator";
             case "ctb" -> CONTRIBUTOR;
             default -> {
                 log.debug("Unknown relator code '{}', returning 'Contributor'", code);
