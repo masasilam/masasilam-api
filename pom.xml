@@ -22,7 +22,6 @@
 		<springdoc.version>2.3.0</springdoc.version>
 		<json-simple.version>1.1.1</json-simple.version>
 		<commons-lang3.version>3.17.0</commons-lang3.version>
-		<!-- FIXED: Updated MyBatis version for Spring Boot 3.x compatibility -->
 		<mybatis.version>3.0.3</mybatis.version>
 		<pdfbox.version>3.0.5</pdfbox.version>
 		<epublib.version>3.1</epublib.version>
@@ -75,7 +74,7 @@
 			<artifactId>spring-boot-starter-log4j2</artifactId>
 		</dependency>
 
-		<!-- Database - FIXED: Proper MyBatis configuration -->
+		<!-- Database -->
 		<dependency>
 			<groupId>org.mybatis.spring.boot</groupId>
 			<artifactId>mybatis-spring-boot-starter</artifactId>
@@ -89,7 +88,6 @@
 			<version>${postgresql.version}</version>
 		</dependency>
 
-		<!-- ADD: JDBC Template for additional database support -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jdbc</artifactId>
@@ -149,7 +147,7 @@
 			<version>${cloudinary.version}</version>
 		</dependency>
 
-		<!-- API Documentation - FIXED: Updated version for Spring Boot 3.x -->
+		<!-- API Documentation -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -257,6 +255,23 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+
+			<!-- Maven Compiler Plugin dengan Lombok Annotation Processor -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>21</source>
+					<target>21</target>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 		</plugins>

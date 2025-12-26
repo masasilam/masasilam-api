@@ -1,5 +1,6 @@
 package com.naskah.demo.mapper;
 
+import com.naskah.demo.model.dto.response.UserResponse;
 import com.naskah.demo.model.entity.Role;
 import com.naskah.demo.model.entity.User;
 import com.naskah.demo.model.entity.UserActivity;
@@ -27,4 +28,5 @@ public interface UserMapper {
     void linkGoogleAccount(@Param("userId") Long userId, @Param("googleId") String googleId);
     void verifyUserEmail(@Param("userId") Long userId);
     void deleteVerificationToken(@Param("userId") Long userId);
+    List<UserResponse> findAllUsers();
 }

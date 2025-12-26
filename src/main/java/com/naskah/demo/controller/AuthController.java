@@ -3,7 +3,6 @@ package com.naskah.demo.controller;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.service.AuthService;
-import com.naskah.demo.util.interceptor.HeaderHolder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
