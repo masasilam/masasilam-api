@@ -2,7 +2,6 @@ package com.naskah.demo.controller;
 
 import com.naskah.demo.model.dto.response.DataResponse;
 import com.naskah.demo.model.dto.response.UserResponse;
-import com.naskah.demo.model.entity.User;
 import com.naskah.demo.service.impl.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
