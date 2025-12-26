@@ -662,9 +662,7 @@ public class BookServiceImpl implements BookService {
                 genres = genreMapper.findAll();
             }
 
-            List<GenreResponse> responses = genres.stream()
-                    .map(this::mapToGenreResponse)
-                    .toList();
+            List<GenreResponse> responses = genres.stream().map(this::mapToGenreResponse).toList();
 
             log.info("Retrieved {} genres", responses.size());
 
@@ -693,9 +691,7 @@ public class BookServiceImpl implements BookService {
             int offset = (page - 1) * limit;
             List<Author> authors = authorMapper.findAllWithPagination(offset, limit, search, sortColumn);
 
-            List<AuthorResponse> responses = authors.stream()
-                    .map(this::mapToAuthorResponse)
-                    .toList();
+            List<AuthorResponse> responses = authors.stream().map(this::mapToAuthorResponse).toList();
 
             int totalAuthors = authorMapper.countAll(search);
             int totalPages = (int) Math.ceil((double) totalAuthors / limit);
@@ -722,9 +718,7 @@ public class BookServiceImpl implements BookService {
             int offset = (page - 1) * limit;
             List<Contributor> contributors = contributorMapper.findAllWithPagination(offset, limit, role, search);
 
-            List<ContributorResponse> responses = contributors.stream()
-                    .map(this::mapToContributorResponse)
-                    .toList();
+            List<ContributorResponse> responses = contributors.stream().map(this::mapToContributorResponse).toList();
 
             int totalContributors = contributorMapper.countAll(role, search);
             int totalPages = (int) Math.ceil((double) totalContributors / limit);
