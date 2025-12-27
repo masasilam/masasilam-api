@@ -23,7 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -88,11 +87,7 @@ public class EpubServiceImpl implements EpubService {
     /**
      * ✅ UNIFIED METHOD: Extract chapters with optional image caching
      */
-    private List<BookChapter> extractAndSaveChaptersWithHierarchy(
-            nl.siegmann.epublib.domain.Book epubBook,
-            Long bookId,
-            Map<String, ChapterHierarchy> tocStructure,
-            Map<String, String> imageCache) {
+    private List<BookChapter> extractAndSaveChaptersWithHierarchy(nl.siegmann.epublib.domain.Book epubBook, Long bookId, Map<String, ChapterHierarchy> tocStructure, Map<String, String> imageCache) {
 
         List<BookChapter> chapters = new ArrayList<>();
         Map<String, Long> hrefToChapterId = new HashMap<>();
@@ -132,9 +127,7 @@ public class EpubServiceImpl implements EpubService {
                     String imgSrc = img.attr("src");
                     if (!imgSrc.isEmpty()) {
                         try {
-                            String cloudinaryUrl = extractAndUploadChapterImageOptimized(
-                                    epubBook, imgSrc, bookId, imageCache
-                            );
+                            String cloudinaryUrl = extractAndUploadChapterImageOptimized(epubBook, imgSrc, bookId, imageCache);
                             if (cloudinaryUrl != null) {
                                 img.attr("src", cloudinaryUrl);
                             }
@@ -272,7 +265,7 @@ public class EpubServiceImpl implements EpubService {
                 BookChapter chapter = new BookChapter();
                 chapter.setBookId(bookId);
                 chapter.setChapterNumber(chapterNumber);
-                chapter.setTitle(hierarchy.getTitle());
+                chapter.setTitle(fileUtil.toTitleCase(hierarchy.getTitle()));
                 chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.getTitle()));
                 chapter.setContent(content);
                 chapter.setHtmlContent(htmlContentStr);
@@ -597,13 +590,7 @@ public class EpubServiceImpl implements EpubService {
             Map<String, String> imageCache = buildExistingImageCache(existingChapters);
 
             // 4. Extract and update/insert chapters WITH IMAGE CACHE
-            List<BookChapter> processedChapters = updateOrInsertChaptersWithHierarchy(
-                    epubBook,
-                    book.getId(),
-                    tocStructure,
-                    existingChapterMap,
-                    imageCache
-            );
+            List<BookChapter> processedChapters = updateOrInsertChaptersWithHierarchy(epubBook, book.getId(), tocStructure, existingChapterMap, imageCache);
 
             result.setChapters(processedChapters);
             result.setTotalChapters(processedChapters.size());
@@ -636,9 +623,7 @@ public class EpubServiceImpl implements EpubService {
 
             // 8. Generate preview
             if (!processedChapters.isEmpty()) {
-                String preview = fileUtil.generatePreviewText(
-                        processedChapters.get(0).getContent(), 500
-                );
+                String preview = fileUtil.generatePreviewText(processedChapters.getFirst().getContent(), 500);
                 result.setPreviewText(preview);
             }
 
@@ -816,7 +801,7 @@ public class EpubServiceImpl implements EpubService {
 
                 if (chapter != null) {
                     // UPDATE existing chapter
-                    chapter.setTitle(hierarchy.getTitle());
+                    chapter.setTitle(fileUtil.toTitleCase(hierarchy.getTitle()));
                     chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.getTitle()));
                     chapter.setContent(content);
                     chapter.setHtmlContent(htmlContentStr);
@@ -832,7 +817,7 @@ public class EpubServiceImpl implements EpubService {
                     chapter = new BookChapter();
                     chapter.setBookId(bookId);
                     chapter.setChapterNumber(chapterNumber);
-                    chapter.setTitle(hierarchy.getTitle());
+                    chapter.setTitle(fileUtil.toTitleCase(hierarchy.getTitle()));
                     chapter.setSlug(fileUtil.sanitizeFilename(hierarchy.getTitle()));
                     chapter.setContent(content);
                     chapter.setHtmlContent(htmlContentStr);

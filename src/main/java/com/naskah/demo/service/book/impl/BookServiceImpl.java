@@ -311,9 +311,6 @@ public class BookServiceImpl implements BookService {
         }
     }
 
-    /**
-     * ✅ AUTHOR PROCESSING - LANGSUNG CARI BY SLUG
-     */
     private void authorProcessing(CompleteEpubMetadata epubMeta, Book book) {
         if (epubMeta.getAuthors() == null || epubMeta.getAuthors().isEmpty()) {
             return;
@@ -333,52 +330,47 @@ public class BookServiceImpl implements BookService {
             if (author != null) {
                 boolean needsUpdate = false;
 
-                if (authorMeta.getBirthDate() != null && author.getBirthDate() == null) {
+                // ✅ Update semua field jika berbeda (digabung jadi satu blok)
+                if (authorMeta.getBirthDate() != null && !authorMeta.getBirthDate().equals(author.getBirthDate())) {
                     author.setBirthDate(authorMeta.getBirthDate());
                     needsUpdate = true;
                 }
 
-                if (authorMeta.getDeathDate() != null && author.getDeathDate() == null) {
+                if (authorMeta.getDeathDate() != null && !authorMeta.getDeathDate().equals(author.getDeathDate())) {
                     author.setDeathDate(authorMeta.getDeathDate());
                     needsUpdate = true;
                 }
 
-                if (authorMeta.getBirthPlace() != null && author.getBirthPlace() == null) {
+                if (authorMeta.getBirthPlace() != null && !authorMeta.getBirthPlace().equals(author.getBirthPlace())) {
                     author.setBirthPlace(authorMeta.getBirthPlace());
                     needsUpdate = true;
                 }
 
-                if (authorMeta.getNationality() != null && author.getNationality() == null) {
+                if (authorMeta.getNationality() != null && !authorMeta.getNationality().equals(author.getNationality())) {
                     author.setNationality(authorMeta.getNationality());
                     needsUpdate = true;
                 }
 
-                if (authorMeta.getBiography() != null && author.getBiography() == null) {
+                if (authorMeta.getBiography() != null && !authorMeta.getBiography().equals(author.getBiography())) {
                     author.setBiography(authorMeta.getBiography());
                     needsUpdate = true;
                 }
 
-                if (authorMeta.getPhotoUrl() != null && author.getPhotoUrl() == null) {
+                if (authorMeta.getPhotoUrl() != null && !authorMeta.getPhotoUrl().equals(author.getPhotoUrl())) {
                     author.setPhotoUrl(authorMeta.getPhotoUrl());
                     needsUpdate = true;
                 }
 
                 if (!existingAuthorIds.contains(author.getId())) {
                     author.setTotalBooks(author.getTotalBooks() + 1);
+                    bookMapper.insertBookAuthor(book.getId(), author.getId());
                     needsUpdate = true;
                 }
 
                 if (needsUpdate) {
                     author.setUpdatedAt(LocalDateTime.now());
                     authorMapper.updateAuthor(author);
-                    log.info("Updated author '{}' with new metadata from EPUB", author.getName());
-                }
-
-                if (!existingAuthorIds.contains(author.getId())) {
-                    bookMapper.insertBookAuthor(book.getId(), author.getId());
-                    log.info("Linked book {} with existing author {}", book.getId(), author.getId());
-                } else {
-                    log.info("Book-author relationship already exists, skipping: book={}, author={}", book.getId(), author.getId());
+                    log.info("Updated author '{}' with new metadata", author.getName());
                 }
 
                 newAuthorIds.add(author.getId());
@@ -399,9 +391,7 @@ public class BookServiceImpl implements BookService {
 
                 authorMapper.insertAuthor(newAuthor);
                 bookMapper.insertBookAuthor(book.getId(), newAuthor.getId());
-
-                log.info("Auto-created author: {} with slug: {} and complete metadata (birth: {}, death: {}, nationality: {})",
-                        newAuthor.getName(), newAuthor.getSlug(), newAuthor.getBirthDate(), newAuthor.getDeathDate(), newAuthor.getNationality());
+                log.info("Auto-created author: {} with complete metadata", newAuthor.getName());
 
                 newAuthorIds.add(newAuthor.getId());
             }

@@ -525,4 +525,61 @@ public class FileUtil {
         log.debug("Extracted metadata - Words: {}, Pages: {}", totalWord, totalPages);
         return new BookMetadata(fileFormat, bookFile.getSize(), totalPages, totalWord);
     }
+
+    public String toTitleCase(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+
+        // Kata-kata yang tetap lowercase kecuali di awal kalimat
+        List<String> lowercaseWords = Arrays.asList(
+                // kata depan
+                "di", "ke", "dari", "tentang",
+                // kata hubung
+                "dan", "atau", "karena", "yang",
+                // kata seru
+                "oh", "dong", "kok", "sih",
+                // kata sandang
+                "si", "sang",
+                // partikel
+                "pun", "per"
+        );
+
+        String[] words = text.toLowerCase().split("\\s+");
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < words.length; i++) {
+            if (i > 0) {
+                result.append(" ");
+            }
+
+            String word = words[i];
+
+            // ✅ Cek apakah kata adalah angka Romawi (I, II, III, IV, V, dst)
+            if (word.matches("^[ivxlcdm]+\\.?$")) {
+                result.append(word.toUpperCase());
+            }
+            // Kata pertama selalu dikapitalisasi
+            else if (i == 0) {
+                result.append(capitalizeFirstLetter(word));
+            }
+            // Kata dalam daftar lowercase tetap lowercase (kecuali kata pertama)
+            else if (lowercaseWords.contains(word)) {
+                result.append(word);
+            }
+            // Kata lainnya dikapitalisasi
+            else {
+                result.append(capitalizeFirstLetter(word));
+            }
+        }
+
+        return result.toString();
+    }
+
+    private String capitalizeFirstLetter(String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+        return word.substring(0, 1).toUpperCase() + word.substring(1);
+    }
 }
