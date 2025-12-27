@@ -4,6 +4,7 @@ import com.naskah.demo.model.dto.BookSearchCriteria;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
+import com.naskah.demo.model.entity.Genre;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,4 +21,7 @@ public interface BookService {
     DatatableResponse<AuthorResponse> getAllAuthors(int page, int limit, String search, String sortBy);
     DatatableResponse<ContributorResponse> getAllContributors(int page, int limit, String role, String search);
     DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder, BookSearchCriteria criteria);
+
+
+    List<Book> getAllBooksForSitemap();
 }

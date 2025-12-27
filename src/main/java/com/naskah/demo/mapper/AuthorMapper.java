@@ -2,9 +2,7 @@ package com.naskah.demo.mapper;
 
 import com.naskah.demo.model.dto.response.AuthorResponse;
 import com.naskah.demo.model.entity.Author;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -42,4 +40,17 @@ public interface AuthorMapper {
 
     @Select("SELECT * FROM authors WHERE slug = #{slug}")
     Author findAuthorBySlug(@Param("slug") String slug);
+
+    @Select("SELECT id, name, slug, updated_at, created_at " +
+            "FROM authors " +
+            "WHERE id IN (SELECT DISTINCT author_id FROM book_authors) " +
+            "ORDER BY name ASC")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "name", column = "name"),
+            @Result(property = "slug", column = "slug"),
+            @Result(property = "updatedAt", column = "updated_at"),
+            @Result(property = "createdAt", column = "created_at")
+    })
+    List<Author> findAllAuthors();
 }

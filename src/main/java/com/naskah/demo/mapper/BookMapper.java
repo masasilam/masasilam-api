@@ -172,4 +172,20 @@ public interface BookMapper {
             @Result(property = "updatedAt", column = "updated_at")
     })
     Book findBySlug(@Param("slug") String slug);
+
+    @Select("SELECT id, title, slug, cover_image_url, " +
+            "updated_at, created_at, is_active " +
+            "FROM books " +
+            "WHERE is_active = true " +
+            "ORDER BY updated_at DESC")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "title", column = "title"),
+            @Result(property = "slug", column = "slug"),
+            @Result(property = "coverImageUrl", column = "cover_image_url"),
+            @Result(property = "updatedAt", column = "updated_at"),
+            @Result(property = "createdAt", column = "created_at"),
+            @Result(property = "isActive", column = "is_active")
+    })
+    List<Book> findAllBooksForSitemap();
 }

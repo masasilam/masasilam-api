@@ -769,4 +769,9 @@ public class BookServiceImpl implements BookService {
         response.setUpdatedAt(contributor.getUpdatedAt());
         return response;
     }
+
+    @Override
+    public List<Book> getAllBooksForSitemap() {
+        return bookMapper.findAllBooksForSitemap();
+    }
 }
