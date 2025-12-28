@@ -774,4 +774,14 @@ public class BookServiceImpl implements BookService {
     public List<Book> getAllBooksForSitemap() {
         return bookMapper.findAllBooksForSitemap();
     }
+
+    @Override
+    public List<String> getChapterPaths(String bookSlug) {
+        try {
+            return bookMapper.getChapterPathsForSitemap(bookSlug);
+        } catch (Exception e) {
+            log.error("Error getting chapter paths for book slug: {}", bookSlug, e);
+            return List.of();
+        }
+    }
 }

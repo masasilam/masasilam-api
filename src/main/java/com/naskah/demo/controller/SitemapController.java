@@ -27,7 +27,7 @@ public class SitemapController {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_DATE;
 
     // ============================================
-    // SITEMAP INDEX - Entry Point
+    // SITEMAP INDEX - Entry Point (ENHANCED)
     // ============================================
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     public String sitemapIndex() {
@@ -49,6 +49,10 @@ public class SitemapController {
                 "  </sitemap>\n" +
                 "  <sitemap>\n" +
                 "    <loc>" + SITE_URL + "/sitemap-books.xml</loc>\n" +
+                "    <lastmod>" + today + "</lastmod>\n" +
+                "  </sitemap>\n" +
+                "  <sitemap>\n" +
+                "    <loc>" + SITE_URL + "/sitemap-chapters.xml</loc>\n" +
                 "    <lastmod>" + today + "</lastmod>\n" +
                 "  </sitemap>\n" +
                 "</sitemapindex>";
@@ -108,7 +112,6 @@ public class SitemapController {
                 }
             }
         } catch (Exception e) {
-            // Log error but return valid XML
             log.error("Error generating genres sitemap: {}", e.getMessage());
         }
 
@@ -189,7 +192,45 @@ public class SitemapController {
                 addUrl(xml, "/buku/" + book.getSlug() + "/ulasan", "monthly", "0.5", lastmod);
             }
         } catch (Exception e) {
-            System.err.println("Error generating books sitemap: " + e.getMessage());
+            log.error("Error generating books sitemap: {}", e.getMessage());
+        }
+
+        xml.append("</urlset>");
+        return xml.toString();
+    }
+
+    // ============================================
+    // SITEMAP CHAPTERS - All Reading Pages
+    // ============================================
+    @GetMapping(value = "/sitemap-chapters.xml", produces = MediaType.APPLICATION_XML_VALUE)
+    public String sitemapChapters() {
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+
+        try {
+            List<Book> books = bookService.getAllBooksForSitemap();
+
+            for (Book book : books) {
+                String bookLastmod = book.getUpdatedAt() != null
+                        ? book.getUpdatedAt().format(DATE_FORMATTER)
+                        : LocalDateTime.now().format(DATE_FORMATTER);
+
+                List<String> chapterPaths = bookService.getChapterPaths(book.getSlug());
+
+                for (String path : chapterPaths) {
+                    if (path != null && !path.isEmpty()) {
+                        addUrl(xml,
+                                "/buku/" + book.getSlug() + "/" + path,
+                                "yearly",
+                                "0.6",
+                                bookLastmod
+                        );
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error generating chapters sitemap: {}", e.getMessage(), e);
         }
 
         xml.append("</urlset>");
@@ -224,5 +265,30 @@ public class SitemapController {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+    }
+
+    /**
+     * Build chapter path from chapter object
+     * Handles nested chapters (parent/child structure)
+     */
+    private String buildChapterPath(Object chapter) {
+        try {
+            // This is a simplified version - adjust based on your actual Chapter entity structure
+            // You might need to implement this based on your chapter hierarchy
+            var slugField = chapter.getClass().getDeclaredField("slug");
+            slugField.setAccessible(true);
+            String slug = (String) slugField.get(chapter);
+
+            var parentField = chapter.getClass().getDeclaredField("parentChapterId");
+            parentField.setAccessible(true);
+            Object parentId = parentField.get(chapter);
+
+            // If has parent, you might need to build full path
+            // For now, return simple slug
+            return slug;
+        } catch (Exception e) {
+            log.warn("Error building chapter path: {}", e.getMessage());
+            return null;
+        }
     }
 }

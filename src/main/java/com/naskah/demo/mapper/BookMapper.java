@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface BookMapper {
@@ -188,4 +189,29 @@ public interface BookMapper {
             @Result(property = "isActive", column = "is_active")
     })
     List<Book> findAllBooksForSitemap();
+
+    @Select("WITH RECURSIVE chapter_paths AS ( " +
+            "    SELECT " +
+            "        c.id, " +
+            "        c.book_id, " +
+            "        c.slug, " +
+            "        c.parent_chapter_id, " +
+            "        c.slug::TEXT as full_path " +
+            "    FROM book_chapters c " +
+            "    INNER JOIN books b ON c.book_id = b.id " +
+            "    WHERE b.slug = #{bookSlug} AND c.parent_chapter_id IS NULL " +
+            "    UNION ALL " +
+            "    SELECT " +
+            "        c.id, " +
+            "        c.book_id, " +
+            "        c.slug, " +
+            "        c.parent_chapter_id, " +
+            "        (cp.full_path || '/' || c.slug)::TEXT " +
+            "    FROM book_chapters c " +
+            "    INNER JOIN chapter_paths cp ON c.parent_chapter_id = cp.id " +
+            "    WHERE c.book_id = cp.book_id " +
+            ") " +
+            "SELECT full_path FROM chapter_paths " +
+            "ORDER BY id ASC")
+    List<String> getChapterPathsForSitemap(@Param("bookSlug") String bookSlug);
 }

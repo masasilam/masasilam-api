@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public interface BookService {
     DataResponse<BookResponse> createBook(BookRequest request);
@@ -21,7 +22,6 @@ public interface BookService {
     DatatableResponse<AuthorResponse> getAllAuthors(int page, int limit, String search, String sortBy);
     DatatableResponse<ContributorResponse> getAllContributors(int page, int limit, String role, String search);
     DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder, BookSearchCriteria criteria);
-
-
     List<Book> getAllBooksForSitemap();
+    List<String> getChapterPaths(String slug);
 }
