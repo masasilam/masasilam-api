@@ -450,9 +450,15 @@ public class BookServiceImpl implements BookService {
         try {
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
-            String viewerHash = HashUtil.generateViewerHash(slug, ipAddress, userAgent);
 
-            log.info("Checking view for slug: {}, IP: {}, Hash: {}", slug, ipAddress, viewerHash);
+            // Get user ID jika login
+            Long userId = getCurrentUserId();
+            String userType = userId != null ? "authenticated (userId: " + userId + ")" : "guest";
+
+            String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
+
+            log.info("Checking view for slug: {}, User: {}, IP: {}, Hash: {}",
+                    slug, userType, ipAddress, viewerHash);
 
             boolean hasViewed = bookMapper.hasActionByHash(viewerHash, "view");
 
@@ -465,6 +471,7 @@ public class BookServiceImpl implements BookService {
                     BookView bookView = BookView.builder()
                             .bookId(bookId)
                             .slug(slug)
+                            .userId(userId)
                             .ipAddress(ipAddress)
                             .userAgent(userAgent)
                             .viewerHash(viewerHash)
@@ -472,12 +479,13 @@ public class BookServiceImpl implements BookService {
                             .build();
 
                     bookMapper.insertAction(bookView);
-                    log.info("New view recorded for slug: {} from IP: {}", slug, ipAddress);
+                    log.info("✓ New view recorded for slug: {} by {}", slug, userType);
                 } else {
                     log.warn("Book ID not found for slug: {}", slug);
                 }
             } else {
-                log.info("Duplicate view detected for slug: {} from IP: {}", slug, ipAddress);
+                log.info("✗ Duplicate view detected for slug: {} by {} - NOT incrementing",
+                        slug, userType);
             }
 
             BookResponse data = bookMapper.getBookDetailBySlug(slug);
@@ -491,7 +499,7 @@ public class BookServiceImpl implements BookService {
             throw e;
         } catch (Exception e) {
             log.error("Error when get book detail for slug: {}", slug, e);
-            throw e;
+            throw new RuntimeException("Failed to fetch book detail", e);
         }
     }
 
@@ -605,9 +613,15 @@ public class BookServiceImpl implements BookService {
 
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
-            String viewerHash = HashUtil.generateViewerHash(slug, ipAddress, userAgent);
 
-            log.info("Checking download for slug: {}, IP: {}, Hash: {}", slug, ipAddress, viewerHash);
+            // Get user ID jika login
+            Long userId = getCurrentUserId();
+            String userType = userId != null ? "authenticated (userId: " + userId + ")" : "guest";
+
+            String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
+
+            log.info("Checking download for slug: {}, User: {}, IP: {}, Hash: {}",
+                    slug, userType, ipAddress, viewerHash);
 
             boolean hasDownloaded = bookMapper.hasActionByHash(viewerHash, "download");
 
@@ -618,6 +632,7 @@ public class BookServiceImpl implements BookService {
                 BookView bookDownload = BookView.builder()
                         .bookId(book.getId())
                         .slug(slug)
+                        .userId(userId)
                         .ipAddress(ipAddress)
                         .userAgent(userAgent)
                         .viewerHash(viewerHash)
@@ -625,11 +640,13 @@ public class BookServiceImpl implements BookService {
                         .build();
 
                 bookMapper.insertAction(bookDownload);
-                log.info("New download recorded for slug: {} from IP: {}", slug, ipAddress);
+                log.info("✓ New download recorded for slug: {} by {}", slug, userType);
             } else {
-                log.info("Duplicate download detected for slug: {} from IP: {} - NOT incrementing count", slug, ipAddress);
+                log.info("✗ Duplicate download detected for slug: {} by {} - NOT incrementing",
+                        slug, userType);
             }
 
+            // Log user activity untuk authenticated users
             String username = headerHolder.getUsername();
             boolean isAuthenticated = username != null && !username.isEmpty();
 
@@ -641,6 +658,7 @@ public class BookServiceImpl implements BookService {
                             "book_title", book.getTitle(),
                             "book_slug", book.getSlug(),
                             "is_unique_download", !hasDownloaded,
+                            "user_type", "authenticated",
                             "device_info", Map.of(
                                     "type", headerHolder.getDeviceType(),
                                     "browser", headerHolder.getBrowser(),
@@ -844,6 +862,20 @@ public class BookServiceImpl implements BookService {
         } catch (Exception e) {
             log.error("Error getting chapter paths for book slug: {}", bookSlug, e);
             return List.of();
+        }
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            String username = headerHolder.getUsername();
+            if (username != null && !username.isEmpty()) {
+                User user = userMapper.findUserByUsername(username);
+                return user != null ? user.getId() : null;
+            }
+            return null;
+        } catch (Exception e) {
+            log.debug("No authenticated user found, treating as guest");
+            return null;
         }
     }
 }

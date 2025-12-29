@@ -15,6 +15,7 @@ public class BookView {
     private Long id;
     private Long bookId;
     private String slug;
+    private Long userId;
     private String ipAddress;
     private String userAgent;
     private String viewerHash;

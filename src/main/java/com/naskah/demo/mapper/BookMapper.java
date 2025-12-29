@@ -215,24 +215,26 @@ public interface BookMapper {
             "SELECT full_path FROM chapter_paths " +
             "ORDER BY id ASC")
     List<String> getChapterPathsForSitemap(@Param("bookSlug") String bookSlug);
+
     @Select("SELECT COUNT(*) > 0 FROM book_views " +
             "WHERE viewer_hash = #{viewerHash} AND action_type = #{actionType}")
     boolean hasActionByHash(@Param("viewerHash") String viewerHash,
                             @Param("actionType") String actionType);
 
-    @Insert("INSERT INTO book_views (book_id, slug, ip_address, user_agent, viewer_hash, action_type, viewed_at) " +
-            "VALUES (#{bookId}, #{slug}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())")
+    // Insert action
+    @Insert("INSERT INTO book_views (book_id, slug, user_id, ip_address, user_agent, viewer_hash, action_type, viewed_at) " +
+            "VALUES (#{bookId}, #{slug}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertAction(BookView bookView);
 
     @Select("SELECT id FROM books WHERE slug = #{slug}")
     Long getBookIdBySlug(@Param("slug") String slug);
 
-    @Select("SELECT COUNT(DISTINCT viewer_hash) FROM book_views " +
-            "WHERE slug = #{slug} AND action_type = 'view'")
+    @Select("SELECT COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id ELSE viewer_hash END) " +
+            "FROM book_views WHERE slug = #{slug} AND action_type = 'view'")
     int getUniqueViewCount(@Param("slug") String slug);
 
-    @Select("SELECT COUNT(DISTINCT viewer_hash) FROM book_views " +
-            "WHERE slug = #{slug} AND action_type = 'download'")
+    @Select("SELECT COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id ELSE viewer_hash END) " +
+            "FROM book_views WHERE slug = #{slug} AND action_type = 'download'")
     int getUniqueDownloadCount(@Param("slug") String slug);
 }

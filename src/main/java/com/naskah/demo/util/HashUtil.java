@@ -24,8 +24,15 @@ public class HashUtil {
         }
     }
 
-    public static String generateViewerHash(String slug, String ipAddress, String userAgent) {
-        String combined = slug + ":" + ipAddress + ":" + (userAgent != null ? userAgent : "");
-        return generateSHA256(combined);
+    public static String generateViewerHash(String slug, Long userId, String ipAddress, String userAgent) {
+        // Prioritas: userId jika ada (untuk authenticated users)
+        if (userId != null) {
+            String combined = slug + ":user:" + userId;
+            return generateSHA256(combined);
+        } else {
+            // Fallback: IP + UserAgent untuk guest users
+            String combined = slug + ":guest:" + ipAddress + ":" + (userAgent != null ? userAgent : "");
+            return generateSHA256(combined);
+        }
     }
 }
