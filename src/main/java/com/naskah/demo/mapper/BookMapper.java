@@ -5,6 +5,7 @@ import com.naskah.demo.model.dto.response.BookRecommendationResponse;
 import com.naskah.demo.model.dto.response.BookResponse;
 import com.naskah.demo.model.entity.Author;
 import com.naskah.demo.model.entity.Book;
+import com.naskah.demo.model.entity.BookView;
 import com.naskah.demo.model.entity.Genre;
 import org.apache.ibatis.annotations.*;
 
@@ -214,4 +215,24 @@ public interface BookMapper {
             "SELECT full_path FROM chapter_paths " +
             "ORDER BY id ASC")
     List<String> getChapterPathsForSitemap(@Param("bookSlug") String bookSlug);
+    @Select("SELECT COUNT(*) > 0 FROM book_views " +
+            "WHERE viewer_hash = #{viewerHash} AND action_type = #{actionType}")
+    boolean hasActionByHash(@Param("viewerHash") String viewerHash,
+                            @Param("actionType") String actionType);
+
+    @Insert("INSERT INTO book_views (book_id, slug, ip_address, user_agent, viewer_hash, action_type, viewed_at) " +
+            "VALUES (#{bookId}, #{slug}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    void insertAction(BookView bookView);
+
+    @Select("SELECT id FROM books WHERE slug = #{slug}")
+    Long getBookIdBySlug(@Param("slug") String slug);
+
+    @Select("SELECT COUNT(DISTINCT viewer_hash) FROM book_views " +
+            "WHERE slug = #{slug} AND action_type = 'view'")
+    int getUniqueViewCount(@Param("slug") String slug);
+
+    @Select("SELECT COUNT(DISTINCT viewer_hash) FROM book_views " +
+            "WHERE slug = #{slug} AND action_type = 'download'")
+    int getUniqueDownloadCount(@Param("slug") String slug);
 }

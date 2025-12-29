@@ -6,6 +6,7 @@ import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.service.book.BookChapterService;
 import com.naskah.demo.service.book.BookService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +35,8 @@ public class BookController {
     }
 
     @GetMapping("/{slug}")
-    public ResponseEntity<DataResponse<BookResponse>> getBookDetail(@PathVariable String slug) {
-        DataResponse<BookResponse> response = bookService.getBookDetailBySlug(slug);
+    public ResponseEntity<DataResponse<BookResponse>> getBookDetail(@PathVariable String slug, HttpServletRequest request) {
+        DataResponse<BookResponse> response = bookService.getBookDetailBySlug(slug, request);
 
         return ResponseEntity.ok(response);
     }
@@ -105,8 +106,8 @@ public class BookController {
     }
 
     @GetMapping("/{slug}/download")
-    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug) {
-        return bookService.downloadBookAsBytes(slug);
+    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug, HttpServletRequest request) {
+        return bookService.downloadBookAsBytes(slug, request);
     }
 
     @GetMapping("/genres")

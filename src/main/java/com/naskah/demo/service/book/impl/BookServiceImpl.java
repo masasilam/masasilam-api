@@ -11,9 +11,12 @@ import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.*;
 import com.naskah.demo.service.book.BookService;
 import com.naskah.demo.service.book.EpubService;
+import com.naskah.demo.util.HashUtil;
+import com.naskah.demo.util.IPUtil;
 import com.naskah.demo.util.file.EpubMetadataExtractor;
 import com.naskah.demo.util.file.FileUtil;
 import com.naskah.demo.util.interceptor.HeaderHolder;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -443,9 +446,39 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
-    public DataResponse<BookResponse> getBookDetailBySlug(String slug) {
+    public DataResponse<BookResponse> getBookDetailBySlug(String slug, HttpServletRequest request) {
         try {
-            bookMapper.incrementViewCountBySlug(slug);
+            String ipAddress = IPUtil.getClientIP(request);
+            String userAgent = IPUtil.getUserAgent(request);
+            String viewerHash = HashUtil.generateViewerHash(slug, ipAddress, userAgent);
+
+            log.info("Checking view for slug: {}, IP: {}, Hash: {}", slug, ipAddress, viewerHash);
+
+            boolean hasViewed = bookMapper.hasActionByHash(viewerHash, "view");
+
+            if (!hasViewed) {
+                bookMapper.incrementViewCountBySlug(slug);
+
+                Long bookId = bookMapper.getBookIdBySlug(slug);
+
+                if (bookId != null) {
+                    BookView bookView = BookView.builder()
+                            .bookId(bookId)
+                            .slug(slug)
+                            .ipAddress(ipAddress)
+                            .userAgent(userAgent)
+                            .viewerHash(viewerHash)
+                            .actionType("view")
+                            .build();
+
+                    bookMapper.insertAction(bookView);
+                    log.info("New view recorded for slug: {} from IP: {}", slug, ipAddress);
+                } else {
+                    log.warn("Book ID not found for slug: {}", slug);
+                }
+            } else {
+                log.info("Duplicate view detected for slug: {} from IP: {}", slug, ipAddress);
+            }
 
             BookResponse data = bookMapper.getBookDetailBySlug(slug);
 
@@ -454,8 +487,10 @@ public class BookServiceImpl implements BookService {
             } else {
                 throw new DataNotFoundException();
             }
+        } catch (DataNotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error when get book detail", e);
+            log.error("Error when get book detail for slug: {}", slug, e);
             throw e;
         }
     }
@@ -561,32 +596,56 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
-    public ResponseEntity<byte[]> downloadBookAsBytes(String slug) {
+    public ResponseEntity<byte[]> downloadBookAsBytes(String slug, HttpServletRequest request) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
             if (book == null) {
                 throw new DataNotFoundException();
             }
 
+            String ipAddress = IPUtil.getClientIP(request);
+            String userAgent = IPUtil.getUserAgent(request);
+            String viewerHash = HashUtil.generateViewerHash(slug, ipAddress, userAgent);
+
+            log.info("Checking download for slug: {}, IP: {}, Hash: {}", slug, ipAddress, viewerHash);
+
+            boolean hasDownloaded = bookMapper.hasActionByHash(viewerHash, "download");
+
+            if (!hasDownloaded) {
+                bookMapper.incrementDownloadCount(book.getId());
+                log.info("Increased download count for book: {} (ID: {})", book.getTitle(), book.getId());
+
+                BookView bookDownload = BookView.builder()
+                        .bookId(book.getId())
+                        .slug(slug)
+                        .ipAddress(ipAddress)
+                        .userAgent(userAgent)
+                        .viewerHash(viewerHash)
+                        .actionType("download")
+                        .build();
+
+                bookMapper.insertAction(bookDownload);
+                log.info("New download recorded for slug: {} from IP: {}", slug, ipAddress);
+            } else {
+                log.info("Duplicate download detected for slug: {} from IP: {} - NOT incrementing count", slug, ipAddress);
+            }
+
             String username = headerHolder.getUsername();
             boolean isAuthenticated = username != null && !username.isEmpty();
-
-            bookMapper.incrementDownloadCount(book.getId());
-            log.info("Increased download count for book: {} (ID: {})", book.getTitle(), book.getId());
 
             if (isAuthenticated) {
                 User user = userMapper.findUserByUsername(username);
                 if (user != null) {
-                    // Log download activity for authenticated users
                     Map<String, Object> metadata = Map.of(
                             "action", "download_book",
                             "book_title", book.getTitle(),
                             "book_slug", book.getSlug(),
+                            "is_unique_download", !hasDownloaded,
                             "device_info", Map.of(
                                     "type", headerHolder.getDeviceType(),
                                     "browser", headerHolder.getBrowser(),
                                     "os", headerHolder.getOs(),
-                                    "ip", headerHolder.getIpAddress()
+                                    "ip", ipAddress
                             )
                     );
 
@@ -596,9 +655,10 @@ public class BookServiceImpl implements BookService {
                     activity.setEntityType("BOOK");
                     activity.setEntityId(book.getId());
                     activity.setMetadata(new ObjectMapper().writeValueAsString(metadata));
-
                     activity.setCreatedAt(LocalDateTime.now());
+
                     userMapper.insertUserActivity(activity);
+                    log.info("User activity logged for user: {} downloading book: {}", username, book.getTitle());
                 }
             }
 
@@ -617,7 +677,9 @@ public class BookServiceImpl implements BookService {
             byte[] fileContent = response.getBody();
             log.info("Successfully downloaded {} bytes from: {}", fileContent.length, fileUrl);
 
-            String filename = book.getTitle() != null ? fileUtil.sanitizeFilename(book.getTitle()) + ".epub" : slug + ".epub";
+            String filename = book.getTitle() != null
+                    ? fileUtil.sanitizeFilename(book.getTitle()) + ".epub"
+                    : slug + ".epub";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);

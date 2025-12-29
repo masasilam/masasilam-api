@@ -5,6 +5,7 @@ import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.model.entity.Genre;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,8 +15,8 @@ import java.util.Map;
 
 public interface BookService {
     DataResponse<BookResponse> createBook(BookRequest request);
-    DataResponse<BookResponse> getBookDetailBySlug(String slug);
-    ResponseEntity<byte[]> downloadBookAsBytes(String slug);
+    DataResponse<BookResponse> getBookDetailBySlug(String slug, HttpServletRequest request);
+    ResponseEntity<byte[]> downloadBookAsBytes(String slug, HttpServletRequest request);
     DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException;
     DefaultResponse delete(Long id) throws IOException;
     DataResponse<List<GenreResponse>> getAllGenres(boolean includeBookCount);
