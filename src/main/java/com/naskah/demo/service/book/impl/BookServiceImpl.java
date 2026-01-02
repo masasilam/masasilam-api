@@ -457,8 +457,7 @@ public class BookServiceImpl implements BookService {
 
             String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
-            log.info("Checking view for slug: {}, User: {}, IP: {}, Hash: {}",
-                    slug, userType, ipAddress, viewerHash);
+            log.info("Checking view for slug: {}, User: {}, IP: {}, Hash: {}", slug, userType, ipAddress, viewerHash);
 
             boolean hasViewed = bookMapper.hasActionByHash(viewerHash, "view");
 

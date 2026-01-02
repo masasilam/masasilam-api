@@ -358,8 +358,7 @@
 
     <update id="incrementDownloadCount">
         UPDATE books
-        SET download_count = COALESCE(download_count, 0) + 1,
-        updated_at = NOW()
+        SET download_count = COALESCE(download_count, 0) + 1
         WHERE id = #{id}
     </update>
 
@@ -624,8 +623,7 @@
 
     <update id="incrementViewCountBySlug">
         UPDATE books
-        SET view_count = view_count + 1,
-        updated_at = NOW()
+        SET view_count = view_count + 1
         WHERE slug = #{slug}
     </update>
 

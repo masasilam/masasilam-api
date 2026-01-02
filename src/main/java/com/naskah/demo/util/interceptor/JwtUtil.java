@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -17,7 +18,6 @@ public class JwtUtil {
 
     public static final String DEFAULT_TOKEN_PREFIX = "Bearer ";
 
-    // Token blacklist (in production, use Redis or database)
     private final Set<String> blacklistedTokens = ConcurrentHashMap.newKeySet();
 
     @Value("${jwt.secret}")
@@ -26,11 +26,16 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
 
-    @Value("${jwt.verification.expiration:3600}") // 1 hour for email verification
+    @Value("${jwt.verification.expiration:3600}")
     private Long verificationTokenExpiration;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        // Pastikan secret key cukup panjang (minimal 256 bit = 32 karakter)
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalArgumentException("JWT secret must be at least 256 bits (32 characters)");
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(String username, String name, List<String> roles) {
@@ -42,14 +47,14 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + expiration * 1000);
 
         return Jwts.builder()
-                .setSubject(username)
+                .subject(username)
                 .claim("username", username)
                 .claim("name", name)
                 .claim("role", String.join(",", roles))
                 .claim("tokenType", "ACCESS")
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -58,24 +63,24 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + verificationTokenExpiration * 1000);
 
         return Jwts.builder()
-                .setSubject(userId.toString())
+                .subject(userId.toString())
                 .claim("tokenType", "EMAIL_VERIFICATION")
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
     public String generateRefreshToken(String username) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + (jwtExpiration * 7 * 1000)); // 7 times longer than access token
+        Date expiryDate = new Date(now.getTime() + (jwtExpiration * 7 * 1000));
 
         return Jwts.builder()
-                .setSubject(username)
+                .subject(username)
                 .claim("tokenType", "REFRESH")
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -86,10 +91,10 @@ public class JwtUtil {
                 return false;
             }
 
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
+            Jwts.parser()
+                    .verifyWith(getSigningKey())
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             log.error("JWT token is expired: {}", e.getMessage());
@@ -97,7 +102,7 @@ public class JwtUtil {
             log.error("JWT token is unsupported: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             log.error("JWT token is malformed: {}", e.getMessage());
-        } catch (SignatureException e) {
+        } catch (JwtException e) {
             log.error("JWT signature validation failed: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             log.error("JWT token compact is invalid: {}", e.getMessage());
@@ -123,11 +128,11 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private Boolean isTokenExpired(String token) {
@@ -143,7 +148,6 @@ public class JwtUtil {
         return blacklistedTokens.contains(token);
     }
 
-    // Keep existing methods for backward compatibility
     public static String extractAuthToken(String authHeader, String prefix){
         String token = Optional.ofNullable(authHeader).orElse("");
         if (prefix != null && token.startsWith(prefix)){
