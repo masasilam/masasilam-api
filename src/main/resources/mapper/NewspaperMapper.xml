@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.NewspaperMapper">
+
+    <!-- ============================================ -->
+    <!-- CATEGORIES & SOURCES -->
+    <!-- ============================================ -->
+
+    <select id="getAllCategories" resultType="com.naskah.demo.model.dto.newspaper.NewspaperCategoryResponse">
+        SELECT
+        category as slug,
+        COUNT(*) as articleCount
+        FROM newspaper_articles
+        WHERE is_active = true
+        GROUP BY category
+        ORDER BY category
+    </select>
+
+    <select id="getAllSources" resultType="com.naskah.demo.model.dto.newspaper.NewspaperSourceResponse">
+        SELECT
+        ns.id,
+        ns.name,
+        ns.location,
+        ns.established_year as establishedYear,
+        ns.description,
+        COUNT(na.id) as articleCount
+        FROM newspaper_sources ns
+        LEFT JOIN newspaper_articles na ON ns.id = na.source_id AND na.is_active = true
+        WHERE ns.is_active = true
+        <if test="search != null and search != ''">
+            AND ns.name ILIKE CONCAT('%', #{search}, '%')
+        </if>
+        GROUP BY ns.id
+        ORDER BY ns.name
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAllSources" resultType="int">
+        SELECT COUNT(DISTINCT id)
+        FROM newspaper_sources
+        WHERE is_active = true
+        <if test="search != null and search != ''">
+            AND name ILIKE CONCAT('%', #{search}, '%')
+        </if>
+    </select>
+
+    <select id="getOverallStats" resultType="com.naskah.demo.model.dto.newspaper.NewspaperStatsResponse">
+        SELECT
+        COUNT(*) as totalArticles,
+        COUNT(DISTINCT source_id) as totalSources,
+        COUNT(DISTINCT category) as totalCategories,
+        MIN(publish_date) as earliestDate,
+        MAX(publish_date) as latestDate
+        FROM newspaper_articles
+        WHERE is_active = true
+    </select>
+
+    <!-- ============================================ -->
+    <!-- ARTICLE QUERIES -->
+    <!-- ============================================ -->
+
+    <select id="getArticlesByCategory" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.page_number as pageNumber,
+        na.importance,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.category = #{categorySlug}
+        AND na.is_active = true
+        <if test="criteria.dateFrom != null">
+            AND na.publish_date &gt;= #{criteria.dateFrom}
+        </if>
+        <if test="criteria.dateTo != null">
+            AND na.publish_date &lt;= #{criteria.dateTo}
+        </if>
+        <if test="criteria.source != null">
+            AND ns.name ILIKE CONCAT('%', #{criteria.source}, '%')
+        </if>
+        <if test="criteria.importance != null">
+            AND na.importance = #{criteria.importance}
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'date'">na.publish_date</when>
+            <when test="sortBy == 'views'">na.view_count</when>
+            <when test="sortBy == 'rating'">na.average_rating</when>
+            <otherwise>na.importance DESC, na.publish_date</otherwise>
+        </choose>
+        <if test="sortOrder == 'ASC'">ASC</if>
+        <if test="sortOrder == 'DESC'">DESC</if>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countArticlesByCategory" resultType="int">
+        SELECT COUNT(*)
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.category = #{categorySlug}
+        AND na.is_active = true
+        <if test="criteria.dateFrom != null">
+            AND na.publish_date &gt;= #{criteria.dateFrom}
+        </if>
+        <if test="criteria.dateTo != null">
+            AND na.publish_date &lt;= #{criteria.dateTo}
+        </if>
+        <if test="criteria.source != null">
+            AND ns.name ILIKE CONCAT('%', #{criteria.source}, '%')
+        </if>
+        <if test="criteria.importance != null">
+            AND na.importance = #{criteria.importance}
+        </if>
+    </select>
+
+    <select id="getArticlesByDate" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.page_number as pageNumber,
+        na.importance,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.publish_date = #{date}
+        AND na.is_active = true
+        <if test="category != null">
+            AND na.category = #{category}
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'views'">na.view_count DESC</when>
+            <when test="sortBy == 'rating'">na.average_rating DESC</when>
+            <otherwise>na.importance DESC</otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countArticlesByDate" resultType="int">
+        SELECT COUNT(*)
+        FROM newspaper_articles
+        WHERE publish_date = #{date}
+        AND is_active = true
+        <if test="category != null">
+            AND category = #{category}
+        </if>
+    </select>
+
+    <!-- ============================================ -->
+    <!-- ARTICLE DETAIL -->
+    <!-- ============================================ -->
+
+    <select id="findArticleByCategoryDateAndSlug" resultType="com.naskah.demo.model.entity.newspaper.NewspaperArticle">
+        SELECT *
+        FROM newspaper_articles
+        WHERE category = #{categorySlug}
+        AND publish_date = #{date}
+        AND slug = #{articleSlug}
+        AND is_active = true
+    </select>
+
+    <select id="getArticleDetailBySlug" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleDetailResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.content,
+        na.html_content as htmlContent,
+        na.word_count as wordCount,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.page_number as pageNumber,
+        na.importance,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as totalRatings,
+        na.rating_distribution as ratingDistribution,
+        na.image_url as imageUrl,
+        na.parent_article_id as parentArticleId,
+        na.article_level as articleLevel,
+        na.created_at as createdAt,
+        na.updated_at as updatedAt,
+        ns.id as sourceId,
+        ns.name as sourceName,
+        ns.location as sourceLocation,
+        ns.description as sourceDescription
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.slug = #{slug}
+        AND na.is_active = true
+    </select>
+
+    <!-- ============================================ -->
+    <!-- SEARCH -->
+    <!-- ============================================ -->
+
+    <select id="searchArticles" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.page_number as pageNumber,
+        na.importance,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation,
+        ts_rank(na.search_vector, plainto_tsquery('indonesian', #{criteria.searchQuery})) as rank
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.search_vector @@ plainto_tsquery('indonesian', #{criteria.searchQuery})
+        AND na.is_active = true
+        <if test="criteria.category != null">
+            AND na.category = #{criteria.category}
+        </if>
+        <if test="criteria.dateFrom != null">
+            AND na.publish_date &gt;= #{criteria.dateFrom}
+        </if>
+        <if test="criteria.dateTo != null">
+            AND na.publish_date &lt;= #{criteria.dateTo}
+        </if>
+        <if test="criteria.source != null">
+            AND ns.name ILIKE CONCAT('%', #{criteria.source}, '%')
+        </if>
+        <if test="criteria.importance != null">
+            AND na.importance = #{criteria.importance}
+        </if>
+        ORDER BY rank DESC, na.publish_date DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearchArticles" resultType="int">
+        SELECT COUNT(*)
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.search_vector @@ plainto_tsquery('indonesian', #{criteria.searchQuery})
+        AND na.is_active = true
+        <if test="criteria.category != null">
+            AND na.category = #{criteria.category}
+        </if>
+        <if test="criteria.dateFrom != null">
+            AND na.publish_date &gt;= #{criteria.dateFrom}
+        </if>
+        <if test="criteria.dateTo != null">
+            AND na.publish_date &lt;= #{criteria.dateTo}
+        </if>
+        <if test="criteria.source != null">
+            AND ns.name ILIKE CONCAT('%', #{criteria.source}, '%')
+        </if>
+        <if test="criteria.importance != null">
+            AND na.importance = #{criteria.importance}
+        </if>
+    </select>
+
+    <!-- ============================================ -->
+    <!-- ON THIS DAY -->
+    <!-- ============================================ -->
+
+    <select id="getArticlesOnThisDay" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.importance,
+        na.view_count as viewCount,
+        na.average_rating as averageRating,
+        na.image_url as imageUrl,
+        ns.name as sourceName
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE EXTRACT(MONTH FROM na.publish_date) = #{month}
+        AND EXTRACT(DAY FROM na.publish_date) = #{day}
+        AND na.is_active = true
+        ORDER BY na.publish_date DESC, na.importance DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countArticlesOnThisDay" resultType="int">
+        SELECT COUNT(*)
+        FROM newspaper_articles
+        WHERE EXTRACT(MONTH FROM publish_date) = #{month}
+        AND EXTRACT(DAY FROM publish_date) = #{day}
+        AND is_active = true
+    </select>
+
+    <!-- ============================================ -->
+    <!-- ANALYTICS -->
+    <!-- ============================================ -->
+
+    <select id="getAnalyticsOverview" resultType="com.naskah.demo.model.dto.newspaper.NewspaperAnalyticsResponse">
+        SELECT
+        COUNT(*) as totalArticles,
+        SUM(view_count) as totalViews,
+        SUM(save_count) as totalSaves,
+        SUM(comment_count) as totalComments,
+        AVG(average_rating) as averageRating
+        FROM newspaper_articles
+        WHERE is_active = true
+        AND publish_date BETWEEN #{dateFrom} AND #{dateTo}
+    </select>
+
+    <select id="getTrendingArticles" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.view_count as viewCount,
+        na.average_rating as averageRating,
+        na.image_url as imageUrl,
+        ns.name as sourceName
+        FROM newspaper_articles na
+        INNER JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.is_active = true
+        AND na.publish_date >= CURRENT_DATE - INTERVAL '1 day' * #{days}
+        ORDER BY na.view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ============================================ -->
+    <!-- RELATED ARTICLES -->
+    <!-- ============================================ -->
+
+    <select id="getRelatedArticles" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.author,
+        na.view_count as viewCount,
+        na.average_rating as averageRating,
+        na.image_url as imageUrl
+        FROM newspaper_articles na
+        WHERE na.category = #{category}
+        AND na.id != #{articleId}
+        AND na.is_active = true
+        ORDER BY na.average_rating DESC, na.view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getSameDateArticles" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        na.id,
+        na.slug,
+        na.title,
+        na.category,
+        na.publish_date as publishDate,
+        na.view_count as viewCount,
+        na.average_rating as averageRating,
+        na.image_url as imageUrl
+        FROM newspaper_articles na
+        WHERE na.publish_date = #{date}
+        AND na.id != #{articleId}
+        AND na.is_active = true
+        ORDER BY na.importance DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ============================================ -->
+    <!-- USER INTERACTIONS -->
+    <!-- ============================================ -->
+
+    <select id="isArticleSavedByUser" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM article_saves
+        WHERE user_id = #{userId}
+        AND article_id = #{articleId}
+        AND is_saved = true
+        )
+    </select>
+
+    <select id="hasUserReviewedArticle" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM article_reviews
+        WHERE user_id = #{userId}
+        AND article_id = #{articleId}
+        )
+    </select>
+
+    <!-- ============================================ -->
+    <!-- VIEW TRACKING -->
+    <!-- ============================================ -->
+
+    <select id="hasViewByHash" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM article_views
+        WHERE viewer_hash = #{viewerHash}
+        AND action_type = #{actionType}
+        AND created_at > NOW() - INTERVAL '24 hours'
+        )
+    </select>
+
+    <insert id="insertArticleView">
+        INSERT INTO article_views (article_id, user_id, ip_address, user_agent, viewer_hash, action_type)
+        VALUES (#{articleId}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType})
+    </insert>
+
+    <update id="incrementViewCount">
+        UPDATE newspaper_articles
+        SET view_count = view_count + 1
+        WHERE id = #{articleId}
+    </update>
+
+    <!-- ============================================ -->
+    <!-- CRUD OPERATIONS -->
+    <!-- ============================================ -->
+
+    <insert id="insertArticle" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO newspaper_articles (
+        source_id, slug, category, publish_date,
+        title, content, html_content, word_count,
+        author, page_number, importance, image_url,
+        parent_article_id, article_level
+        ) VALUES (
+        #{sourceId}, #{slug}, #{category}, #{publishDate},
+        #{title}, #{content}, #{htmlContent}, #{wordCount},
+        #{author}, #{pageNumber}, #{importance}, #{imageUrl},
+        #{parentArticleId}, #{articleLevel}
+        )
+    </insert>
+
+    <update id="updateArticle">
+        UPDATE newspaper_articles SET
+        title = #{title},
+        content = #{content},
+        html_content = #{htmlContent},
+        word_count = #{wordCount},
+        author = #{author},
+        page_number = #{pageNumber},
+        importance = #{importance},
+        image_url = #{imageUrl},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="existsBySlug" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM newspaper_articles WHERE slug = #{slug})
+    </select>
+
+    <select id="findById" resultType="com.naskah.demo.model.entity.newspaper.NewspaperArticle">
+        SELECT * FROM newspaper_articles WHERE id = #{id}
+    </select>
+
+    <update id="incrementSaveCount">
+        UPDATE newspaper_articles
+        SET save_count = save_count + 1
+        WHERE id = #{articleId}
+    </update>
+
+    <update id="decrementSaveCount">
+        UPDATE newspaper_articles
+        SET save_count = GREATEST(save_count - 1, 0)
+        WHERE id = #{articleId}
+    </update>
+
+    <update id="incrementShareCount">
+        UPDATE newspaper_articles
+        SET share_count = share_count + 1
+        WHERE id = #{articleId}
+    </update>
+
+</mapper>

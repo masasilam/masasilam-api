@@ -8,4 +8,5 @@ public class ChapterBreadcrumb {
     private String title;
     private String slug;
     private Integer chapterLevel;
+    private String fullPath;
 }

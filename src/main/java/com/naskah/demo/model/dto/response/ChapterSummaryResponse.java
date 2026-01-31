@@ -10,6 +10,7 @@ public class ChapterSummaryResponse {
     private Long parentChapterId;
     private Integer chapterLevel;
     private String slug;
+    private String fullPath;
     private String title;
     private Integer wordCount;
     private Integer estimatedReadTime;

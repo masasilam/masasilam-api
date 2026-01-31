@@ -9,4 +9,5 @@ public class ChapterNavigationInfo {
     private Integer chapterLevel;
     private String slug;
     private String parentSlug;
+    private String fullPath;
 }

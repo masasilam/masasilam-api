@@ -3,11 +3,13 @@ package com.naskah.demo.util.interceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import nl.basjes.parse.useragent.UserAgent;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
 import org.springframework.web.servlet.HandlerInterceptor;
 import java.util.Map;
 
+@Slf4j
 @RequiredArgsConstructor
 public class HeaderInterceptor implements HandlerInterceptor {
 
@@ -20,14 +22,28 @@ public class HeaderInterceptor implements HandlerInterceptor {
         String token = request.getHeader("Authorization");
         Map<String, String> tokenValue = jwtUtil.getValueFromToken(token, new String[]{"name", "username", "role"});
 
-        headerHolder.setName(tokenValue.getOrDefault("name", ""));
-        headerHolder.setUsername(tokenValue.getOrDefault("username", ""));
-        headerHolder.setRoles(tokenValue.getOrDefault("role", "").split(","));
+        String username = tokenValue.getOrDefault("username", "");
+        String name = tokenValue.getOrDefault("name", "");
+        String[] roles = extractRoles(tokenValue);
+
+        headerHolder.setName(name);
+        headerHolder.setUsername(username);
+        headerHolder.setRoles(roles);
         headerHolder.setIpAddress(getClientIpAddress(request));
 
         parseUserAgentWithYauaa(request);
 
         return true;
+    }
+
+    private String[] extractRoles(Map<String, String> tokenValue) {
+        String rolesStr = tokenValue.getOrDefault("role", "");
+
+        if (rolesStr == null || rolesStr.trim().isEmpty()) {
+            return new String[0];
+        }
+
+        return rolesStr.split(",");
     }
 
     private void parseUserAgentWithYauaa(HttpServletRequest request) {

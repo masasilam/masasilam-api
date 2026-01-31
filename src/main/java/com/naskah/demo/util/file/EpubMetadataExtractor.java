@@ -151,7 +151,7 @@ public class EpubMetadataExtractor {
             switch (property) {
                 case "schema:birthDate":
                     try {
-                        authorMeta.setBirthDate(LocalDate.parse(content));
+                        authorMeta.setBirthDate(String.valueOf(LocalDate.parse(content)));
                         log.info("Extracted birthDate: {}", content);
                     } catch (Exception e) {
                         log.warn("Failed to parse birthDate: {}", content);
@@ -160,7 +160,7 @@ public class EpubMetadataExtractor {
 
                 case "schema:deathDate":
                     try {
-                        authorMeta.setDeathDate(LocalDate.parse(content));
+                        authorMeta.setDeathDate(String.valueOf(LocalDate.parse(content)));
                         log.info("Extracted deathDate: {}", content);
                     } catch (Exception e) {
                         log.warn("Failed to parse deathDate: {}", content);
@@ -212,13 +212,13 @@ public class EpubMetadataExtractor {
                     try {
                         if (authorMeta.getBirthDate() == null) {
                             int birthYear = Integer.parseInt(years[0].trim());
-                            authorMeta.setBirthDate(LocalDate.of(birthYear, 1, 1));
+                            authorMeta.setBirthDate(String.valueOf(LocalDate.of(birthYear, 1, 1)));
                             log.info("Extracted birthYear from term: {}", birthYear);
                         }
 
                         if (years.length > 1 && authorMeta.getDeathDate() == null) {
                             int deathYear = Integer.parseInt(years[1].trim());
-                            authorMeta.setDeathDate(LocalDate.of(deathYear, 1, 1));
+                            authorMeta.setDeathDate(String.valueOf(LocalDate.of(deathYear, 1, 1)));
                             log.info("Extracted deathYear from term: {}", deathYear);
                         }
                     } catch (Exception e) {

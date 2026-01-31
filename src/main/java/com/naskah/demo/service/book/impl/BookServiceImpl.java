@@ -2,6 +2,7 @@ package com.naskah.demo.service.book.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naskah.demo.exception.custom.DataNotFoundException;
+import com.naskah.demo.exception.custom.ForbiddenException;
 import com.naskah.demo.exception.custom.InternalServerErrorException;
 import com.naskah.demo.exception.custom.UnauthorizedException;
 import com.naskah.demo.mapper.*;
@@ -63,6 +64,10 @@ public class BookServiceImpl implements BookService {
         try {
             if (headerHolder.getUsername() == null || headerHolder.getUsername().isEmpty()) {
                 throw new UnauthorizedException();
+            }
+
+            if (headerHolder.getRoles() == null || !Arrays.asList(headerHolder.getRoles()).contains("ADMIN")) {
+                throw new ForbiddenException();
             }
 
             long maxSizeBytes = fileUtil.parseFileSize(maxFileSizeStr);

@@ -91,8 +91,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public DataResponse<RegisterResponse> register(RegisterRequest request) {
-        if (userMapper.findUserByUsername(request.getUsername()) != null ||
-                userMapper.findUserByEmail(request.getEmail()) != null) {
+        if (userMapper.findUserByUsername(request.getUsername()) != null || userMapper.findUserByEmail(request.getEmail()) != null) {
             throw new DataAlreadyExistsException();
         }
 
@@ -134,8 +133,7 @@ public class AuthServiceImpl implements AuthService {
         userMapper.saveVerificationToken(user.getId(), verificationToken, LocalDateTime.now().plusHours(24));
 
         // Send verification email
-        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                frontendUrl + "/verifikasi-email?token=" + verificationToken);
+        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), frontendUrl + "/verifikasi-email?token=" + verificationToken);
 
         RegisterResponse response = new RegisterResponse();
         response.setUsername(user.getUsername());

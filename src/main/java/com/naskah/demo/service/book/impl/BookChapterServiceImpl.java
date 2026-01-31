@@ -1645,8 +1645,8 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     // ============================================
-    // HELPER METHODS - Chapter Operations
-    // ============================================
+// HELPER METHODS - Chapter Operations
+// ============================================
 
     private BookChapter findChapterBySlugHierarchy(Long bookId, String[] slugParts) {
         Long currentParentId = null;
@@ -1665,71 +1665,59 @@ public class BookChapterServiceImpl implements BookChapterService {
         return currentChapter;
     }
 
-    private List<ChapterSummaryResponse> buildChapterHierarchy(
-            List<BookChapter> chapters, Long bookId, Long userId) {
-
-        Map<Long, ChapterSummaryResponse> chapterMap = new HashMap<>();
-        List<ChapterSummaryResponse> rootChapters = new ArrayList<>();
-
-        for (BookChapter chapter : chapters) {
-            ChapterSummaryResponse response = new ChapterSummaryResponse();
-            response.setId(chapter.getId());
-            response.setChapterNumber(chapter.getChapterNumber());
-            response.setParentChapterId(chapter.getParentChapterId());
-            response.setChapterLevel(chapter.getChapterLevel());
-            response.setTitle(chapter.getTitle());
-            response.setSlug(chapter.getSlug());
-            response.setWordCount(chapter.getWordCount());
-            response.setEstimatedReadTime(calculateReadTime(chapter.getWordCount()));
-            response.setSubChapters(new ArrayList<>());
-
-            if (userId != null) {
-                ChapterProgress progress = chapterProgressMapper.findProgress(userId, bookId, chapter.getChapterNumber());
-                response.setIsCompleted(progress != null && progress.getIsCompleted());
-            } else {
-                response.setIsCompleted(false);
-            }
-
-            chapterMap.put(chapter.getId(), response);
+    // ✅ TAMBAH METHOD INI - Build full path dari chapter hierarchy
+    private String buildFullChapterPath(BookChapter chapter) {
+        if (chapter == null) {
+            return "";
         }
 
-        // Build hierarchy
-        for (BookChapter chapter : chapters) {
-            ChapterSummaryResponse response = chapterMap.get(chapter.getId());
-
-            if (chapter.getParentChapterId() == null) {
-                rootChapters.add(response);
-            } else {
-                ChapterSummaryResponse parent = chapterMap.get(chapter.getParentChapterId());
-                if (parent != null) {
-                    parent.getSubChapters().add(response);
-                } else {
-                    rootChapters.add(response);
-                }
-            }
-        }
-
-        return rootChapters;
-    }
-
-    private List<ChapterBreadcrumb> buildBreadcrumbs(BookChapter chapter) {
-        List<ChapterBreadcrumb> breadcrumbs = new ArrayList<>();
+        List<String> pathSegments = new ArrayList<>();
         BookChapter current = chapter;
 
+        // Build path from bottom to top
         while (current != null) {
-            ChapterBreadcrumb breadcrumb = new ChapterBreadcrumb();
-            breadcrumb.setChapterId(current.getId());
-            breadcrumb.setTitle(current.getTitle());
-            breadcrumb.setSlug(current.getSlug());
-            breadcrumb.setChapterLevel(current.getChapterLevel());
-
-            breadcrumbs.addFirst(breadcrumb);
+            pathSegments.add(0, current.getSlug());
 
             if (current.getParentChapterId() != null) {
                 current = chapterMapper.findChapterById(current.getParentChapterId());
             } else {
                 current = null;
             }
+        }
+
+        // Join with "/"
+        return String.join("/", pathSegments);
+    }
+
+    private List<ChapterBreadcrumb> buildBreadcrumbs(BookChapter chapter) {
+        List<ChapterBreadcrumb> breadcrumbs = new ArrayList<>();
+        List<BookChapter> hierarchy = new ArrayList<>();
+        BookChapter current = chapter;
+
+        // Collect all chapters in hierarchy
+        while (current != null) {
+            hierarchy.add(0, current);
+
+            if (current.getParentChapterId() != null) {
+                current = chapterMapper.findChapterById(current.getParentChapterId());
+            } else {
+                current = null;
+            }
+        }
+
+        // Build breadcrumbs with full path for each level
+        List<String> pathSegments = new ArrayList<>();
+        for (BookChapter ch : hierarchy) {
+            pathSegments.add(ch.getSlug());
+
+            ChapterBreadcrumb breadcrumb = new ChapterBreadcrumb();
+            breadcrumb.setChapterId(ch.getId());
+            breadcrumb.setTitle(ch.getTitle());
+            breadcrumb.setSlug(ch.getSlug());
+            breadcrumb.setChapterLevel(ch.getChapterLevel());
+            breadcrumb.setFullPath(String.join("/", pathSegments)); // ✅ Set full path
+
+            breadcrumbs.add(breadcrumb);
         }
 
         return breadcrumbs;
@@ -1766,6 +1754,10 @@ public class BookChapterServiceImpl implements BookChapterService {
         info.setChapterLevel(chapter.getChapterLevel());
         info.setSlug(chapter.getSlug());
 
+        // ✅ Build full path
+        info.setFullPath(buildFullChapterPath(chapter));
+
+        // Set parent slug (for backward compatibility)
         if (chapter.getParentChapterId() != null) {
             BookChapter parent = chapterMapper.findChapterById(chapter.getParentChapterId());
             if (parent != null) {
@@ -1776,6 +1768,62 @@ public class BookChapterServiceImpl implements BookChapterService {
         return info;
     }
 
+    private List<ChapterSummaryResponse> buildChapterHierarchy(
+            List<BookChapter> chapters, Long bookId, Long userId) {
+
+        Map<Long, ChapterSummaryResponse> chapterMap = new HashMap<>();
+        Map<Long, BookChapter> chapterEntityMap = new HashMap<>();
+        List<ChapterSummaryResponse> rootChapters = new ArrayList<>();
+
+        // First pass: create map of entities
+        for (BookChapter chapter : chapters) {
+            chapterEntityMap.put(chapter.getId(), chapter);
+        }
+
+        // Second pass: build responses
+        for (BookChapter chapter : chapters) {
+            ChapterSummaryResponse response = new ChapterSummaryResponse();
+            response.setId(chapter.getId());
+            response.setChapterNumber(chapter.getChapterNumber());
+            response.setParentChapterId(chapter.getParentChapterId());
+            response.setChapterLevel(chapter.getChapterLevel());
+            response.setTitle(chapter.getTitle());
+            response.setSlug(chapter.getSlug());
+            response.setWordCount(chapter.getWordCount());
+            response.setEstimatedReadTime(calculateReadTime(chapter.getWordCount()));
+            response.setSubChapters(new ArrayList<>());
+
+            // ✅ Build full path
+            response.setFullPath(buildFullChapterPath(chapter));
+
+            if (userId != null) {
+                ChapterProgress progress = chapterProgressMapper.findProgress(userId, bookId, chapter.getChapterNumber());
+                response.setIsCompleted(progress != null && progress.getIsCompleted());
+            } else {
+                response.setIsCompleted(false);
+            }
+
+            chapterMap.put(chapter.getId(), response);
+        }
+
+        // Build hierarchy
+        for (BookChapter chapter : chapters) {
+            ChapterSummaryResponse response = chapterMap.get(chapter.getId());
+
+            if (chapter.getParentChapterId() == null) {
+                rootChapters.add(response);
+            } else {
+                ChapterSummaryResponse parent = chapterMap.get(chapter.getParentChapterId());
+                if (parent != null) {
+                    parent.getSubChapters().add(response);
+                } else {
+                    rootChapters.add(response);
+                }
+            }
+        }
+
+        return rootChapters;
+    }
     // ============================================
     // HELPER METHODS - Annotations
     // ============================================
