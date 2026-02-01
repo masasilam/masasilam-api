@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface NoteMapper {
 
-    @Insert("INSERT INTO notes (user_id, book_id, chapter_number, chapter_title, chapter_slug, position, content, created_at, updated_at) " +
-            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{position}, #{content}, #{createdAt}, #{updatedAt})")
+    @Insert("INSERT INTO notes (user_id, book_id, chapter_number, chapter_title, chapter_slug, position, content, selected_text, created_at, updated_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{position}, #{content}, #{selectedText}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertNote(Note note);
 

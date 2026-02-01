@@ -7,7 +7,7 @@
         WHERE slug = #{slug}
     </select>
 
-    <insert id="insertBook" parameterType="Book" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO books (
         title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
@@ -93,6 +93,12 @@
         JOIN authors a ON ba.author_id = a.id
         WHERE ba.book_id = b.id
         ) AS author_slugs,
+        (
+        SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name)
+        FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id
+        ) AS author_photo_urls,
         (
         SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
         FROM book_contributors bc
@@ -319,7 +325,7 @@
         WHERE id = #{id}
     </delete>
 
-    <update id="updateBook" parameterType="Book">
+    <update id="updateBook" parameterType="com.naskah.demo.model.entity.Book">
         UPDATE books
         SET
         title = #{title},

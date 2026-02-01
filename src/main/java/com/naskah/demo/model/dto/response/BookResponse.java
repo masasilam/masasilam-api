@@ -37,6 +37,7 @@ public class BookResponse {
     private Boolean isFeatured;
     private String authorNames;
     private String authorSlugs;
+    private String authorPhotoUrls;
     private String contributors;
     private String genres;
     private Integer totalRatings;

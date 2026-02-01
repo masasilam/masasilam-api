@@ -13,6 +13,7 @@ public class HighlightResponse {
     private String startPosition;
     private String endPosition;
     private String highlightedText;
+    private String color;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

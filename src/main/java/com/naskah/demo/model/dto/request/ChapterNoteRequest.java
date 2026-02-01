@@ -6,4 +6,5 @@ import lombok.Data;
 public class ChapterNoteRequest {
     private String position;
     private String content;
+    private String selectedText;
 }

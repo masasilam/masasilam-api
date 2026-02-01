@@ -12,6 +12,7 @@ public class NoteResponse {
     private String chapterSlug;
     private String position;
     private String content;
+    private String selectedText;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

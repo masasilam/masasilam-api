@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface HighlightMapper {
 
-    @Insert("INSERT INTO highlights (user_id, book_id, chapter_number, chapter_title, chapter_slug, start_position, end_position, highlighted_text, created_at, updated_at) " +
-            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{startPosition}, #{endPosition}, #{highlightedText}, #{createdAt}, #{updatedAt})")
+    @Insert("INSERT INTO highlights (user_id, book_id, chapter_number, chapter_title, chapter_slug, start_position, end_position, highlighted_text, color, created_at, updated_at) " +
+            "VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{chapterTitle}, #{chapterSlug}, #{startPosition}, #{endPosition}, #{highlightedText}, #{color}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertHighlight(Highlight highlight);
 

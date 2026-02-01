@@ -238,6 +238,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             highlight.setStartPosition(request.getStartPosition());
             highlight.setEndPosition(request.getEndPosition());
             highlight.setHighlightedText(request.getHighlightedText());
+            highlight.setColor(request.getColor());
             highlight.setCreatedAt(LocalDateTime.now());
             highlight.setUpdatedAt(LocalDateTime.now());
 
@@ -272,6 +273,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             note.setChapterSlug(chapterMapper.getChapterSlug(book.getId(), chapterNumber));
             note.setPosition(request.getPosition());
             note.setContent(request.getContent());
+            note.setSelectedText(request.getSelectedText());
             note.setCreatedAt(LocalDateTime.now());
             note.setUpdatedAt(LocalDateTime.now());
 

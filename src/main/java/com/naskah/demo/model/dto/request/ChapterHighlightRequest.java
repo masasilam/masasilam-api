@@ -7,4 +7,5 @@ public class ChapterHighlightRequest {
     private String startPosition;
     private String endPosition;
     private String highlightedText;
+    private String color;
 }

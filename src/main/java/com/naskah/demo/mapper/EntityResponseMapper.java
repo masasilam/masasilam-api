@@ -61,6 +61,7 @@ public class EntityResponseMapper {
         response.setStartPosition(highlight.getStartPosition());
         response.setEndPosition(highlight.getEndPosition());
         response.setHighlightedText(highlight.getHighlightedText());
+        response.setColor(highlight.getColor());
         response.setCreatedAt(highlight.getCreatedAt());
         response.setUpdatedAt(highlight.getUpdatedAt());
         // HAPUS: color, note
@@ -78,6 +79,7 @@ public class EntityResponseMapper {
         response.setChapterSlug(note.getChapterSlug());          // TAMBAH
         response.setPosition(note.getPosition());
         response.setContent(note.getContent());
+        response.setSelectedText(note.getSelectedText());
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
         // HAPUS: title, color, isPrivate
