@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class ChapterHighlightRequest {
-    private String startPosition;
-    private String endPosition;
+    private Integer startPosition;
+    private Integer endPosition;
     private String highlightedText;
     private String color;
 }

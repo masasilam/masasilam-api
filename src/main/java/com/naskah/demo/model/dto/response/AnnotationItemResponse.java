@@ -19,7 +19,8 @@ public class AnnotationItemResponse {
     // Location
     private Integer chapterNumber;
     private String chapterTitle;
-    private String position;
+    private Integer startPosition;
+    private Integer endPosition;
 
     // Metadata
     private LocalDateTime createdAt;

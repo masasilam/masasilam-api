@@ -4,7 +4,8 @@ import lombok.Data;
 
 @Data
 public class ChapterNoteRequest {
-    private String position;
+    private Integer startPosition;
+    private Integer endPosition;
     private String content;
     private String selectedText;
 }

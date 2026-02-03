@@ -11,8 +11,8 @@ public class Highlight {
     private Integer chapterNumber;
     private String chapterTitle;
     private String chapterSlug;
-    private String startPosition;
-    private String endPosition;
+    private Integer startPosition;
+    private Integer endPosition;
     private String highlightedText;
     private String color;
     private LocalDateTime createdAt;

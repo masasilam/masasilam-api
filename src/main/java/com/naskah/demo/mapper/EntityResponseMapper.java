@@ -40,9 +40,9 @@ public class EntityResponseMapper {
         BookmarkResponse response = new BookmarkResponse();
         response.setId(bookmark.getId());
         response.setBookId(bookmark.getBookId());
-        response.setChapterNumber(bookmark.getChapterNumber());  // GANTI: page -> chapterNumber
-        response.setChapterTitle(bookmark.getChapterTitle());    // TAMBAH
-        response.setChapterSlug(bookmark.getChapterSlug());      // TAMBAH
+        response.setChapterNumber(bookmark.getChapterNumber());
+        response.setChapterTitle(bookmark.getChapterTitle());
+        response.setChapterSlug(bookmark.getChapterSlug());
         response.setPosition(bookmark.getPosition());
         response.setCreatedAt(bookmark.getCreatedAt());
         // HAPUS: title, description, color
@@ -74,10 +74,11 @@ public class EntityResponseMapper {
         NoteResponse response = new NoteResponse();
         response.setId(note.getId());
         response.setBookId(note.getBookId());
-        response.setChapterNumber(note.getChapterNumber());      // GANTI: page -> chapterNumber
-        response.setChapterTitle(note.getChapterTitle());        // TAMBAH
-        response.setChapterSlug(note.getChapterSlug());          // TAMBAH
-        response.setPosition(note.getPosition());
+        response.setChapterNumber(note.getChapterNumber());
+        response.setChapterTitle(note.getChapterTitle());
+        response.setChapterSlug(note.getChapterSlug());
+        response.setStartPosition(note.getStartPosition());
+        response.setEndPosition(note.getEndPosition());
         response.setContent(note.getContent());
         response.setSelectedText(note.getSelectedText());
         response.setCreatedAt(note.getCreatedAt());

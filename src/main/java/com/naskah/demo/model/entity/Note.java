@@ -11,9 +11,10 @@ public class Note {
     private Integer chapterNumber;
     private String chapterTitle;
     private String chapterSlug;
-    private String position;
-    private String content;
     private String selectedText;
+    private String content;
+    private Integer startPosition;
+    private Integer endPosition;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

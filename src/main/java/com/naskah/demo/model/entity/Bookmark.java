@@ -11,6 +11,7 @@ public class Bookmark {
     private Integer chapterNumber;
     private String chapterTitle;
     private String chapterSlug;
+
     private String position;
     private LocalDateTime createdAt;
 }

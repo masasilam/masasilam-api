@@ -1501,7 +1501,8 @@ public class DashboardServiceImpl implements DashboardService {
         item.setBookId(bookmark.getBookId());
         item.setChapterNumber(bookmark.getChapterNumber());
         item.setChapterTitle(bookmark.getChapterTitle());
-        item.setPosition(bookmark.getPosition());
+        item.setStartPosition(Integer.valueOf(bookmark.getPosition()));
+        item.setEndPosition(Integer.valueOf(bookmark.getPosition()));
         item.setCreatedAt(bookmark.getCreatedAt());
         item.setUpdatedAt(bookmark.getCreatedAt());
 
@@ -1524,7 +1525,8 @@ public class DashboardServiceImpl implements DashboardService {
         item.setBookId(highlight.getBookId());
         item.setChapterNumber(highlight.getChapterNumber());
         item.setChapterTitle(highlight.getChapterTitle());
-        item.setPosition(highlight.getStartPosition());
+        item.setStartPosition(highlight.getStartPosition());
+        item.setEndPosition(highlight.getEndPosition());
         item.setCreatedAt(highlight.getCreatedAt());
         item.setUpdatedAt(highlight.getUpdatedAt());
 
@@ -1547,7 +1549,8 @@ public class DashboardServiceImpl implements DashboardService {
         item.setBookId(note.getBookId());
         item.setChapterNumber(note.getChapterNumber());
         item.setChapterTitle(note.getChapterTitle());
-        item.setPosition(note.getPosition());
+        item.setStartPosition(note.getStartPosition());
+        item.setEndPosition(note.getEndPosition());
         item.setCreatedAt(note.getCreatedAt());
         item.setUpdatedAt(note.getUpdatedAt());
 

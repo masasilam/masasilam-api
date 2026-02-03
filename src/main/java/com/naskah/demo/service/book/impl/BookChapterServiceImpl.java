@@ -271,7 +271,8 @@ public class BookChapterServiceImpl implements BookChapterService {
             note.setChapterNumber(chapterNumber);
             note.setChapterTitle(chapterMapper.getChapterTitle(book.getId(), chapterNumber));
             note.setChapterSlug(chapterMapper.getChapterSlug(book.getId(), chapterNumber));
-            note.setPosition(request.getPosition());
+            note.setStartPosition(request.getStartPosition());
+            note.setEndPosition(request.getEndPosition());
             note.setContent(request.getContent());
             note.setSelectedText(request.getSelectedText());
             note.setCreatedAt(LocalDateTime.now());
