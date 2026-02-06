@@ -11,12 +11,16 @@ import com.naskah.demo.util.interceptor.HeaderHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -47,7 +51,6 @@ public class BookChapterServiceImpl implements BookChapterService {
     private final AnnotationExportMapper exportMapper;
     private final EntityResponseMapper entityMapper;
     private final HeaderHolder headerHolder;
-
     private static final String SUCCESS = "Success";
     private static final String TOTAL_RATINGS = "total_ratings";
     private static final String COUNT = "count";
@@ -58,19 +61,13 @@ public class BookChapterServiceImpl implements BookChapterService {
     private static final String AVG_READING_TIME = "avg_reading_time";
     private static final String HIGHLIGHT_COUNT = "highlight_count";
 
-    // ============================================
-    // CHAPTER READING
-    // ============================================
-
     @Override
     @Cacheable(value = "chapter-by-path", key = "#slug + ':' + #slugPath")
     public DataResponse<ChapterReadingResponse> readChapterBySlugPath(String bookSlug, String slugPath) {
         try {
-            // Validate and get book
             Book book = bookMapper.findBookBySlug(bookSlug);
             validateBook(book);
 
-            // Parse slug hierarchy
             String[] slugParts = slugPath.split("/");
             BookChapter chapter = findChapterBySlugHierarchy(book.getId(), slugParts);
 
@@ -78,7 +75,6 @@ public class BookChapterServiceImpl implements BookChapterService {
                 throw new DataNotFoundException();
             }
 
-            // Build complete response
             ChapterReadingResponse response = buildChapterReadingResponse(book, chapter);
 
             return new DataResponse<>(SUCCESS, "Chapter retrieved successfully", HttpStatus.OK.value(), response);
@@ -98,10 +94,8 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             List<BookChapter> chapters = chapterMapper.findChaptersByBookId(book.getId());
 
-            // Get user ID if authenticated
             Long userId = getCurrentUserIdOrNull();
 
-            // Build hierarchical structure
             List<ChapterSummaryResponse> hierarchicalChapters = buildChapterHierarchy(chapters, book.getId(), userId);
 
             return new DataResponse<>(SUCCESS, "Chapters retrieved successfully", HttpStatus.OK.value(), hierarchicalChapters);
@@ -111,10 +105,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             throw e;
         }
     }
-
-    // ============================================
-    // CHAPTER PROGRESS
-    // ============================================
 
     @Override
     @Transactional
@@ -147,7 +137,6 @@ public class BookChapterServiceImpl implements BookChapterService {
                 chapterProgressMapper.updateProgress(progress);
             }
 
-            // Update overall book progress for Dashboard
             updateOverallBookProgress(user.getId(), book.getId());
 
             ChapterProgressResponse response = new ChapterProgressResponse();
@@ -187,10 +176,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             log.warn("Failed to update overall book progress: {}", e.getMessage());
         }
     }
-
-    // ============================================
-    // CHAPTER ANNOTATIONS (ADD)
-    // ============================================
 
     @Override
     @Transactional
@@ -293,10 +278,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // CHAPTER ANNOTATIONS (DELETE)
-    // ============================================
-
     @Override
     @Transactional
     public DataResponse<Void> deleteChapterBookmark(String slug, Integer chapterNumber, Long bookmarkId) {
@@ -386,10 +367,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // HELPER METHODS - Building Responses
-    // ============================================
-
     private ChapterReadingResponse buildChapterReadingResponse(Book book, BookChapter chapter) {
         ChapterReadingResponse response = new ChapterReadingResponse();
 
@@ -412,7 +389,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         response.setBreadcrumbs(buildBreadcrumbs(chapter));
         setChapterNavigation(response, book.getId(), chapter);
 
-        // Get user-specific data if authenticated
         Long userId = getCurrentUserIdOrNull();
         if (userId != null) {
             response.setBookmarks(getUserChapterBookmarks(userId, book.getId(), chapter.getChapterNumber()));
@@ -443,10 +419,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         return Math.max(1, wordCount / 200);
     }
 
-    // ============================================
-    // CHAPTER REVIEWS & SOCIAL
-    // ============================================
-
     @Override
     public DataResponse<List<ChapterReviewResponse>> getChapterReviews(String slug, Integer chapterNumber, int page, int limit) {
         try {
@@ -460,7 +432,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             List<ChapterReviewResponse> responses = reviews.stream()
                     .map(review -> mapToChapterReviewResponse(review, currentUserId))
-                    .collect(Collectors.toList());
+                    .toList();
 
             return new DataResponse<>(SUCCESS, "Reviews retrieved successfully", HttpStatus.OK.value(), responses);
 
@@ -503,8 +475,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     @Override
     @Transactional
-    public DataResponse<ChapterReviewResponse> replyToChapterReview(
-            String slug, Integer chapterNumber, Long reviewId, ChapterReplyRequest request) {
+    public DataResponse<ChapterReviewResponse> replyToChapterReview(String slug, Integer chapterNumber, Long reviewId, ChapterReplyRequest request) {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
@@ -555,8 +526,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     @Override
     @Transactional
-    public DataResponse<Void> unlikeChapterReview(
-            String slug, Integer chapterNumber, Long reviewId) {
+    public DataResponse<Void> unlikeChapterReview(String slug, Integer chapterNumber, Long reviewId) {
         try {
             User user = getCurrentUser();
 
@@ -569,10 +539,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             throw e;
         }
     }
-
-    // ============================================
-    // CHAPTER RATING
-    // ============================================
 
     @Override
     @Transactional
@@ -634,24 +600,34 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setAverageRating(safeConvertToDouble(summary.get("average_rating")));
             response.setTotalRatings(safeConvertToInt(summary.get(TOTAL_RATINGS)));
 
-            // Build distribution
             RatingDistribution dist = new RatingDistribution();
             for (Map<String, Object> d : distribution) {
                 int rating = safeConvertToInt(d.get("rating"));
                 int count = safeConvertToInt(d.get(COUNT));
 
                 switch (rating) {
-                    case 1: dist.setOneStar(count); break;
-                    case 2: dist.setTwoStars(count); break;
-                    case 3: dist.setThreeStars(count); break;
-                    case 4: dist.setFourStars(count); break;
-                    case 5: dist.setFiveStars(count); break;
-                    default: log.warn("Invalid rating value {} found in distribution for chapter {} of book {}", rating, chapterNumber, slug); break;
+                    case 1:
+                        dist.setOneStar(count);
+                        break;
+                    case 2:
+                        dist.setTwoStars(count);
+                        break;
+                    case 3:
+                        dist.setThreeStars(count);
+                        break;
+                    case 4:
+                        dist.setFourStars(count);
+                        break;
+                    case 5:
+                        dist.setFiveStars(count);
+                        break;
+                    default:
+                        log.warn("Invalid rating value {} found in distribution for chapter {} of book {}", rating, chapterNumber, slug);
+                        break;
                 }
             }
             response.setDistribution(dist);
 
-            // Get user's rating if authenticated
             Long userId = getCurrentUserIdOrNull();
             if (userId != null) {
                 ChapterRating userRating = ratingMapper.findRating(userId, book.getId(), chapterNumber);
@@ -684,10 +660,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // READING ACTIVITY TRACKING
-    // ============================================
-
     @Override
     @Transactional
     public DataResponse<Void> startReading(String slug, StartReadingRequest request) {
@@ -696,13 +668,11 @@ public class BookChapterServiceImpl implements BookChapterService {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
 
-            // Validasi chapter exists
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), request.getChapterNumber());
             if (chapter == null) {
                 throw new DataNotFoundException();
             }
 
-            // Cek apakah session ini sudah punya activity aktif untuk chapter ini
             ReadingActivityLog existingActivity = activityMapper.findActiveSession(request.getSessionId(), request.getChapterNumber());
 
             if (existingActivity != null) {
@@ -710,14 +680,12 @@ public class BookChapterServiceImpl implements BookChapterService {
                 return new DataResponse<>(SUCCESS, "Reading session already active", HttpStatus.OK.value(), null);
             }
 
-            // First time read check (increment book read_count hanya sekali per user)
             int existingSessions = bookMapper.countUserReadSessions(book.getId(), user.getId());
             if (existingSessions == 0) {
                 bookMapper.incrementReadCount(book.getId());
                 log.info("First time read: User {} started reading book {} (ID: {})", user.getId(), slug, book.getId());
             }
 
-            // Create or get existing session
             ReadingSession session = sessionMapper.findBySessionId(request.getSessionId());
             if (session == null) {
                 session = new ReadingSession();
@@ -735,7 +703,6 @@ public class BookChapterServiceImpl implements BookChapterService {
                 log.info("Created new reading session: {}", request.getSessionId());
             }
 
-            // Wrap insert dalam try-catch untuk handle race condition di database level
             try {
                 ReadingActivityLog activity = new ReadingActivityLog();
                 activity.setUserId(user.getId());
@@ -755,8 +722,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
                 log.info("User {} started reading chapter {} of book {} (session: {})", user.getId(), request.getChapterNumber(), slug, request.getSessionId());
 
-            } catch (org.springframework.dao.DuplicateKeyException e) {
-                // Handle race condition gracefully jika unique constraint triggered
+            } catch (DuplicateKeyException e) {
                 log.warn("Race condition detected while inserting activity for session {} chapter {}, but it's already handled", request.getSessionId(), request.getChapterNumber());
                 return new DataResponse<>(SUCCESS, "Reading session already started (race condition handled)", HttpStatus.OK.value(), null);
             }
@@ -768,7 +734,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             throw e;
         } catch (Exception e) {
             log.error("Error starting reading for slug {}: {}", slug, e.getMessage(), e);
-            throw new RuntimeException("Failed to start reading session", e);
+            throw e;
         }
     }
 
@@ -780,13 +746,11 @@ public class BookChapterServiceImpl implements BookChapterService {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
 
-            // Validasi chapter exists
             BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), request.getChapterNumber());
             if (chapter == null) {
                 throw new DataNotFoundException();
             }
 
-            // Find active reading activity
             ReadingActivityLog activity = activityMapper.findActiveSession(request.getSessionId(), request.getChapterNumber());
 
             if (activity == null) {
@@ -794,46 +758,37 @@ public class BookChapterServiceImpl implements BookChapterService {
                 return new DataResponse<>(SUCCESS, "No active reading session to end", HttpStatus.OK.value(), null);
             }
 
-            // Update activity log with end data
             LocalDateTime now = LocalDateTime.now();
             activity.setEndedAt(now);
 
-            // Calculate duration
             int duration = (int) ChronoUnit.SECONDS.between(activity.getStartedAt(), now);
             activity.setDurationSeconds(duration);
 
-            // Set end metrics
             activity.setEndPosition(request.getEndPosition() != null ? request.getEndPosition() : 0);
             activity.setScrollDepthPercentage(request.getScrollDepthPercentage() != null ? request.getScrollDepthPercentage() : 0.0);
             activity.setWordsRead(request.getWordsRead() != null ? request.getWordsRead() : 0);
             activity.setInteractionCount(request.getInteractionCount() != null ? request.getInteractionCount() : 0);
 
-            // Calculate reading speed (WPM)
             if (activity.getWordsRead() != null && activity.getWordsRead() > 0 && duration > 0) {
                 double minutes = duration / 60.0;
                 int wpm = (int) (activity.getWordsRead() / minutes);
                 activity.setReadingSpeedWpm(wpm);
             }
 
-            // Detect skip behavior (scrolled less than 30%)
             if (activity.getScrollDepthPercentage() != null && activity.getScrollDepthPercentage() < 30.0) {
                 activity.setIsSkip(true);
             }
 
-            // Detect reread (check if user has completed this chapter before)
             Integer previousReads = activityMapper.countCompletedReads(user.getId(), book.getId(), request.getChapterNumber(), activity.getId());
             if (previousReads != null && previousReads > 0) {
                 activity.setIsReread(true);
             }
 
             activityMapper.updateActivity(activity);
-            log.info("Updated activity log: duration={}s, wpm={}, skip={}, reread={}",
-                    duration, activity.getReadingSpeedWpm(), activity.getIsSkip(), activity.getIsReread());
+            log.info("Updated activity log: duration={}s, wpm={}, skip={}, reread={}", duration, activity.getReadingSpeedWpm(), activity.getIsSkip(), activity.getIsReread());
 
-            // Update reading session summary
             updateReadingSession(request.getSessionId(), request.getChapterNumber());
 
-            // Calculate user reading patterns (could be async in production)
             calculateUserReadingPattern(user.getId(), book.getId());
 
             log.info("User {} ended reading chapter {} of book {}", user.getId(), request.getChapterNumber(), slug);
@@ -841,15 +796,14 @@ public class BookChapterServiceImpl implements BookChapterService {
             return new DataResponse<>(SUCCESS, "Reading ended successfully", HttpStatus.OK.value(), null);
 
         } catch (DataNotFoundException e) {
-            log.error("Resource not found: {}", e.getMessage());
+            log.error("Not found: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Error ending reading for slug {}: {}", slug, e.getMessage(), e);
-            throw new RuntimeException("Failed to end reading session", e);
+            throw e;
         }
     }
 
-    // Helper: Update reading session summary
     private void updateReadingSession(String sessionId, Integer endChapter) {
         try {
             ReadingSession session = sessionMapper.findBySessionId(sessionId);
@@ -862,21 +816,17 @@ public class BookChapterServiceImpl implements BookChapterService {
             session.setEndedAt(now);
             session.setEndChapter(endChapter);
 
-            // Calculate total duration
             if (session.getStartedAt() != null) {
                 int totalDuration = (int) ChronoUnit.SECONDS.between(session.getStartedAt(), now);
                 session.setTotalDurationSeconds(totalDuration);
             }
 
-            // Calculate chapters_read from activity logs
             Integer chaptersRead = activityMapper.countUniqueChaptersInSession(sessionId);
             session.setChaptersRead(chaptersRead != null ? chaptersRead : 0);
 
-            // Calculate total interactions
             Integer totalInteractions = activityMapper.sumInteractionsInSession(sessionId);
             session.setTotalInteractions(totalInteractions != null ? totalInteractions : 0);
 
-            // Calculate completion delta (progress made in this session)
             if (session.getStartChapter() != null && endChapter != null) {
                 BookChapter firstChapter = chapterMapper.findChapterByNumber(session.getBookId(), session.getStartChapter());
                 BookChapter lastChapter = chapterMapper.findChapterByNumber(session.getBookId(), endChapter);
@@ -904,7 +854,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // Helper: Calculate user reading patterns (placeholder for analytics)
     private void calculateUserReadingPattern(Long userId, Long bookId) {
         try {
             // This would ideally run as an async job or event-driven process
@@ -929,10 +878,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // READING HISTORY & PATTERNS
-    // ============================================
-
     @Override
     public DataResponse<ReadingHistoryResponse> getReadingHistory(String slug) {
         try {
@@ -940,7 +885,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
 
-            // Get activity summary per chapter
             List<Map<String, Object>> summaryData = activityMapper.getUserChapterActivitySummary(user.getId(), book.getId());
 
             List<ReadingActivitySummary> activities = summaryData.stream()
@@ -959,9 +903,8 @@ public class BookChapterServiceImpl implements BookChapterService {
 
                         return summary;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
-            // Get overall statistics
             Map<String, Object> stats = activityMapper.getUserBookStatistics(user.getId(), book.getId());
 
             ReadingStatistics statistics = new ReadingStatistics();
@@ -1058,13 +1001,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         return "Heavy";
     }
 
-    // ============================================
-    // SEARCH IN BOOK
-    // ============================================
-
     @Override
-    public DataResponse<SearchInBookResponse> searchInBook(
-            String slug, SearchInBookRequest request) {
+    public DataResponse<SearchInBookResponse> searchInBook(String slug, SearchInBookRequest request) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
@@ -1080,21 +1018,19 @@ public class BookChapterServiceImpl implements BookChapterService {
             int totalResults;
 
             try {
-                // Primary: Full-text search
                 results = searchMapper.searchInBook(book.getId(), searchQuery, offset, request.getLimit());
                 totalResults = searchMapper.countSearchResults(book.getId(), searchQuery);
 
                 log.info("Full-text search returned {} results for query: '{}'", totalResults, searchQuery);
             } catch (Exception e) {
                 log.warn("Full-text search failed, falling back to LIKE search: {}", e.getMessage());
-                // Fallback: Simple LIKE search
                 results = searchMapper.searchInBookSimple(book.getId(), searchQuery, offset, request.getLimit());
                 totalResults = searchMapper.countSearchResultsSimple(book.getId(), searchQuery);
             }
 
             List<ChapterSearchResultResponse> searchResults = results.stream()
                     .map(r -> mapToSearchResult(r, searchQuery))
-                    .collect(Collectors.toList());
+                    .toList();
 
             SearchInBookResponse response = new SearchInBookResponse();
             response.setQuery(request.getQuery());
@@ -1105,7 +1041,6 @@ public class BookChapterServiceImpl implements BookChapterService {
                     .count());
             response.setResults(searchResults);
 
-            // Save search history
             saveSearchHistory(getCurrentUserIdOrNull(), book.getId(), request.getQuery(), totalResults);
 
             return new DataResponse<>(SUCCESS, "Search completed", HttpStatus.OK.value(), response);
@@ -1119,26 +1054,17 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    /**
-     * Map database result ke ChapterSearchResultResponse DTO
-     */
     private ChapterSearchResultResponse mapToSearchResult(Map<String, Object> result, String query) {
-
         ChapterSearchResultResponse response = new ChapterSearchResultResponse();
-
-        // Basic chapter info
         response.setChapterId(getLongValue(result));
         response.setChapterNumber(getIntValue(result, CHAPTER_NUMBER));
         response.setChapterTitle((String) result.get(CHAPTER_TITLE));
         response.setChapterSlug((String) result.get("chapter_slug"));
         response.setChapterLevel(getIntValue(result, "chapter_level"));
         response.setParentSlug((String) result.get("parent_slug"));
-
-        // Search relevance
         response.setRelevanceScore(getFloatValue(result));
         response.setMatchCount(getIntValue(result, "match_count"));
 
-        // Extract matches from highlighted content
         String highlightedContent = (String) result.get("highlighted_content");
         String content = (String) result.get("content");
 
@@ -1148,9 +1074,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         return response;
     }
 
-    /**
-     * Extract individual search matches dengan context
-     */
     private List<SearchMatch> extractSearchMatches(String highlightedContent, String fullContent, String query) {
         List<SearchMatch> matches = new ArrayList<>();
 
@@ -1158,42 +1081,40 @@ public class BookChapterServiceImpl implements BookChapterService {
             return matches;
         }
 
-        // Parse highlighted content untuk extract matches
-        // Format: "text <mark>matched</mark> more text"
         Pattern pattern = Pattern.compile("<mark>(.*?)</mark>", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(highlightedContent);
 
         while (matcher.find() && matches.size() < 5) {
             String matchedText = matcher.group(1);
-
-            // Find position in original content
             int position = fullContent.toLowerCase().indexOf(matchedText.toLowerCase());
 
-            if (position >= 0) {
-                SearchMatch match = new SearchMatch();
-                match.setMatchText(matchedText);
-                match.setPosition(position);
-
-                // Extract context
-                int contextStart = Math.max(0, position - 50);
-                int contextEnd = Math.min(fullContent.length(), position + matchedText.length() + 50);
-
-                match.setContextBefore(fullContent.substring(contextStart, position).trim());
-                match.setContextAfter(fullContent.substring(position + matchedText.length(), contextEnd).trim());
-
-                // Create snippet with context
-                String snippet = (contextStart > 0 ? "..." : "") +
-                        match.getContextBefore() + " " +
-                        "<mark>" + matchedText + "</mark>" + " " +
-                        match.getContextAfter() +
-                        (contextEnd < fullContent.length() ? "..." : "");
-                match.setSnippet(snippet.trim());
-
-                matches.add(match);
+            if (position < 0) {
+                continue;
             }
+
+            SearchMatch match = new SearchMatch();
+            match.setMatchText(matchedText);
+            match.setPosition(position);
+
+            int contextStart = Math.max(0, position - 50);
+            int contextEnd = Math.min(fullContent.length(), position + matchedText.length() + 50);
+
+            match.setContextBefore(fullContent.substring(contextStart, position).trim());
+            match.setContextAfter(fullContent.substring(position + matchedText.length(), contextEnd).trim());
+
+            String prefix = contextStart > 0 ? "..." : "";
+            String suffix = contextEnd < fullContent.length() ? "..." : "";
+
+            String snippet = prefix +
+                    match.getContextBefore() + " " +
+                    "<mark>" + matchedText + "</mark>" + " " +
+                    match.getContextAfter() +
+                    suffix;
+            match.setSnippet(snippet.trim());
+
+            matches.add(match);
         }
 
-        // If no matches found from highlighting, create one from content
         if (matches.isEmpty() && fullContent != null) {
             SearchMatch match = createSimpleMatch(fullContent, query);
             if (match != null) {
@@ -1204,9 +1125,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         return matches;
     }
 
-    /**
-     * Create simple match when highlighting tidak tersedia
-     */
     private SearchMatch createSimpleMatch(String content, String query) {
         int position = content.toLowerCase().indexOf(query.toLowerCase());
 
@@ -1234,9 +1152,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         return match;
     }
 
-    /**
-     * Helper methods untuk type conversion
-     */
     private Long getLongValue(Map<String, Object> map) {
         Object value = map.get("chapter_id");
         return switch (value) {
@@ -1264,9 +1179,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         };
     }
 
-    /**
-     * Save search history
-     */
     private void saveSearchHistory(Long userId, Long bookId, String query, int resultsCount) {
         if (userId != null) {
             try {
@@ -1291,8 +1203,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             Book book = bookMapper.findBookBySlug(slug);
             validateBook(book);
 
-            List<SearchHistory> history = searchMapper.getUserBookSearchHistory(
-                    user.getId(), book.getId(), limit);
+            List<SearchHistory> history = searchMapper.getUserBookSearchHistory(user.getId(), book.getId(), limit);
 
             List<SearchHistoryResponse> responses = history.stream()
                     .map(h -> {
@@ -1303,10 +1214,9 @@ public class BookChapterServiceImpl implements BookChapterService {
                         r.setSearchedAt(h.getCreatedAt());
                         return r;
                     })
-                    .collect(Collectors.toList());
+                    .toList();
 
-            return new DataResponse<>(SUCCESS, "Search history retrieved",
-                    HttpStatus.OK.value(), responses);
+            return new DataResponse<>(SUCCESS, "Search history retrieved", HttpStatus.OK.value(), responses);
 
         } catch (Exception e) {
             log.error("Error getting search history: {}", e.getMessage(), e);
@@ -1320,8 +1230,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
     @Override
     @Transactional
-    public DataResponse<ExportAnnotationsResponse> exportAnnotations(
-            String slug, ExportAnnotationsRequest request) {
+    public DataResponse<ExportAnnotationsResponse> exportAnnotations(String slug, ExportAnnotationsRequest request) {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
@@ -1349,8 +1258,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             ExportAnnotationsResponse response = mapToExportResponse(export);
 
-            return new DataResponse<>(SUCCESS, "Export started",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Export started", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error exporting annotations: {}", e.getMessage(), e);
@@ -1382,8 +1290,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             }
 
             ExportAnnotationsResponse response = mapToExportResponse(export);
-            return new DataResponse<>(SUCCESS, "Export status retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Export status retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting export status: {}", e.getMessage(), e);
@@ -1406,24 +1313,21 @@ public class BookChapterServiceImpl implements BookChapterService {
             User user = getCurrentUser();
 
             int offset = (page - 1) * limit;
-            List<AnnotationExport> exports = exportMapper.findUserExports(
-                    user.getId(), offset, limit);
+            List<AnnotationExport> exports = exportMapper.findUserExports(user.getId(), offset, limit);
 
             List<ExportAnnotationsResponse> responses = exports.stream()
                     .map(this::mapToExportResponse)
-                    .collect(Collectors.toList());
+                    .toList();
 
             ExportHistoryResponse response = new ExportHistoryResponse();
             response.setExports(responses);
             response.setTotalExports(responses.size());
-            response.setTotalBytesExported(
-                    responses.stream()
-                            .filter(r -> r.getFileSize() != null)
-                            .mapToLong(ExportAnnotationsResponse::getFileSize)
-                            .sum());
+            response.setTotalBytesExported(responses.stream()
+                    .filter(r -> r.getFileSize() != null)
+                    .mapToLong(ExportAnnotationsResponse::getFileSize)
+                    .sum());
 
-            return new DataResponse<>(SUCCESS, "Export history retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Export history retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting export history: {}", e.getMessage(), e);
@@ -1448,8 +1352,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
 //            exportMapper.deleteExport(exportId);
 
-            return new DataResponse<>(SUCCESS, "Export deleted",
-                    HttpStatus.OK.value(), null);
+            return new DataResponse<>(SUCCESS, "Export deleted", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
             log.error("Error deleting export: {}", e.getMessage(), e);
@@ -1457,7 +1360,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-// ============================================
+    // ============================================
     // 🔥 BULK USER DATA - MOST IMPORTANT FOR DASHBOARD
     // ============================================
 
@@ -1483,7 +1386,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             List<ChapterRating> userRatings = ratingMapper.findUserBookRatings(user.getId(), book.getId());
             response.setRatings(userRatings.stream()
                     .map(this::mapToRatingResponse)
-                    .collect(Collectors.toList()));
+                    .toList());
 
             if (!userRatings.isEmpty()) {
                 double avgRating = userRatings.stream()
@@ -1510,8 +1413,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             log.info("Retrieved complete book data for user {} and book {}", user.getId(), slug);
 
-            return new DataResponse<>(SUCCESS, "User book data retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "User book data retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting user book data: {}", e.getMessage(), e);
@@ -1519,14 +1421,9 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // ANALYTICS FOR AUTHORS
-    // ============================================
-
     @Override
     @Cacheable(value = "book-analytics", key = "#slug + ':' + #dateFrom + ':' + #dateTo")
-    public DataResponse<BookAnalyticsResponse> getBookAnalytics(
-            String slug, String dateFrom, String dateTo) {
+    public DataResponse<BookAnalyticsResponse> getBookAnalytics(String slug, String dateFrom, String dateTo) {
         try {
             User user = getCurrentUser();
             Book book = bookMapper.findBookBySlug(slug);
@@ -1551,8 +1448,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setMostSkippedChapters(findMostSkippedChapters(book.getId()));
             response.setTrends(analyzeTrends(book.getId(), startDate, endDate));
 
-            return new DataResponse<>(SUCCESS, "Analytics retrieved",
-                    HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Analytics retrieved", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
             log.error("Error getting book analytics: {}", e.getMessage(), e);
@@ -1602,10 +1498,9 @@ public class BookChapterServiceImpl implements BookChapterService {
 
             List<ChapterAnalyticsResponse> analytics = chapters.stream()
                     .map(chapter -> buildChapterAnalytics(book, chapter))
-                    .collect(Collectors.toList());
+                    .toList();
 
-            return new DataResponse<>(SUCCESS, "Chapter analytics retrieved",
-                    HttpStatus.OK.value(), analytics);
+            return new DataResponse<>(SUCCESS, "Chapter analytics retrieved", HttpStatus.OK.value(), analytics);
 
         } catch (Exception e) {
             log.error("Error getting chapters analytics: {}", e.getMessage(), e);
@@ -1647,10 +1542,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-// HELPER METHODS - Chapter Operations
-// ============================================
-
     private BookChapter findChapterBySlugHierarchy(Long bookId, String[] slugParts) {
         Long currentParentId = null;
         BookChapter currentChapter = null;
@@ -1668,7 +1559,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         return currentChapter;
     }
 
-    // ✅ TAMBAH METHOD INI - Build full path dari chapter hierarchy
     private String buildFullChapterPath(BookChapter chapter) {
         if (chapter == null) {
             return "";
@@ -1677,9 +1567,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         List<String> pathSegments = new ArrayList<>();
         BookChapter current = chapter;
 
-        // Build path from bottom to top
         while (current != null) {
-            pathSegments.add(0, current.getSlug());
+            pathSegments.addFirst(current.getSlug());
 
             if (current.getParentChapterId() != null) {
                 current = chapterMapper.findChapterById(current.getParentChapterId());
@@ -1688,7 +1577,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             }
         }
 
-        // Join with "/"
         return String.join("/", pathSegments);
     }
 
@@ -1697,9 +1585,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         List<BookChapter> hierarchy = new ArrayList<>();
         BookChapter current = chapter;
 
-        // Collect all chapters in hierarchy
         while (current != null) {
-            hierarchy.add(0, current);
+            hierarchy.addFirst(current);
 
             if (current.getParentChapterId() != null) {
                 current = chapterMapper.findChapterById(current.getParentChapterId());
@@ -1708,7 +1595,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             }
         }
 
-        // Build breadcrumbs with full path for each level
         List<String> pathSegments = new ArrayList<>();
         for (BookChapter ch : hierarchy) {
             pathSegments.add(ch.getSlug());
@@ -1718,7 +1604,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             breadcrumb.setTitle(ch.getTitle());
             breadcrumb.setSlug(ch.getSlug());
             breadcrumb.setChapterLevel(ch.getChapterLevel());
-            breadcrumb.setFullPath(String.join("/", pathSegments)); // ✅ Set full path
+            breadcrumb.setFullPath(String.join("/", pathSegments));
 
             breadcrumbs.add(breadcrumb);
         }
@@ -1726,22 +1612,17 @@ public class BookChapterServiceImpl implements BookChapterService {
         return breadcrumbs;
     }
 
-    private void setChapterNavigation(ChapterReadingResponse response,
-                                      Long bookId, BookChapter currentChapter) {
-
-        // Previous
+    private void setChapterNavigation(ChapterReadingResponse response, Long bookId, BookChapter currentChapter) {
         BookChapter prevChapter = chapterMapper.findChapterByNumber(bookId, currentChapter.getChapterNumber() - 1);
         if (prevChapter != null) {
             response.setPreviousChapter(mapToNavigationInfo(prevChapter));
         }
 
-        // Next
         BookChapter nextChapter = chapterMapper.findChapterByNumber(bookId, currentChapter.getChapterNumber() + 1);
         if (nextChapter != null) {
             response.setNextChapter(mapToNavigationInfo(nextChapter));
         }
 
-        // Parent
         if (currentChapter.getParentChapterId() != null) {
             BookChapter parentChapter = chapterMapper.findChapterById(currentChapter.getParentChapterId());
             if (parentChapter != null) {
@@ -1756,11 +1637,8 @@ public class BookChapterServiceImpl implements BookChapterService {
         info.setTitle(chapter.getTitle());
         info.setChapterLevel(chapter.getChapterLevel());
         info.setSlug(chapter.getSlug());
-
-        // ✅ Build full path
         info.setFullPath(buildFullChapterPath(chapter));
 
-        // Set parent slug (for backward compatibility)
         if (chapter.getParentChapterId() != null) {
             BookChapter parent = chapterMapper.findChapterById(chapter.getParentChapterId());
             if (parent != null) {
@@ -1771,19 +1649,10 @@ public class BookChapterServiceImpl implements BookChapterService {
         return info;
     }
 
-    private List<ChapterSummaryResponse> buildChapterHierarchy(
-            List<BookChapter> chapters, Long bookId, Long userId) {
-
+    private List<ChapterSummaryResponse> buildChapterHierarchy(List<BookChapter> chapters, Long bookId, Long userId) {
         Map<Long, ChapterSummaryResponse> chapterMap = new HashMap<>();
-        Map<Long, BookChapter> chapterEntityMap = new HashMap<>();
         List<ChapterSummaryResponse> rootChapters = new ArrayList<>();
 
-        // First pass: create map of entities
-        for (BookChapter chapter : chapters) {
-            chapterEntityMap.put(chapter.getId(), chapter);
-        }
-
-        // Second pass: build responses
         for (BookChapter chapter : chapters) {
             ChapterSummaryResponse response = new ChapterSummaryResponse();
             response.setId(chapter.getId());
@@ -1795,8 +1664,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             response.setWordCount(chapter.getWordCount());
             response.setEstimatedReadTime(calculateReadTime(chapter.getWordCount()));
             response.setSubChapters(new ArrayList<>());
-
-            // ✅ Build full path
             response.setFullPath(buildFullChapterPath(chapter));
 
             if (userId != null) {
@@ -1809,7 +1676,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             chapterMap.put(chapter.getId(), response);
         }
 
-        // Build hierarchy
         for (BookChapter chapter : chapters) {
             ChapterSummaryResponse response = chapterMap.get(chapter.getId());
 
@@ -1827,9 +1693,6 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return rootChapters;
     }
-    // ============================================
-    // HELPER METHODS - Annotations
-    // ============================================
 
     private List<BookmarkResponse> getUserChapterBookmarks(Long userId, Long bookId, Integer chapterNumber) {
         List<Bookmark> bookmarks;
@@ -1842,7 +1705,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return bookmarks.stream()
                 .map(entityMapper::toBookmarkResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<HighlightResponse> getUserChapterHighlights(Long userId, Long bookId, Integer chapterNumber) {
@@ -1856,7 +1719,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return highlights.stream()
                 .map(entityMapper::toHighlightResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<NoteResponse> getUserChapterNotes(Long userId, Long bookId, Integer chapterNumber) {
@@ -1870,12 +1733,8 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return notes.stream()
                 .map(entityMapper::toNoteResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
-
-    // ============================================
-    // TEXT-TO-SPEECH SUPPORT
-    // ============================================
 
     @Override
     @Cacheable(value = "chapter-text", key = "#slug + ':' + #chapterNumber")
@@ -1925,11 +1784,11 @@ public class BookChapterServiceImpl implements BookChapterService {
                 throw new DataNotFoundException();
             }
 
-            org.jsoup.nodes.Document doc = Jsoup.parse(chapter.getHtmlContent());
+            Document doc = Jsoup.parse(chapter.getHtmlContent());
             List<String> paragraphs = doc.select("p").stream()
-                    .map(org.jsoup.nodes.Element::text)
+                    .map(Element::text)
                     .filter(text -> !text.trim().isEmpty())
-                    .collect(Collectors.toList());
+                    .toList();
 
             ChapterParagraphsResponse response = new ChapterParagraphsResponse();
             response.setChapterNumber(chapter.getChapterNumber());
@@ -1999,10 +1858,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         }
     }
 
-    // ============================================
-    // HELPER METHODS - Type Conversion
-    // ============================================
-
     private Integer safeConvertToInt(Object value) {
         switch (value) {
             case null -> {
@@ -2020,17 +1875,18 @@ public class BookChapterServiceImpl implements BookChapterService {
             case Number number -> {
                 return number.intValue();
             }
-            case String ignored -> {
+            case String s -> {
                 try {
-                    return Integer.parseInt((String) value);
+                    return Integer.parseInt(s);
                 } catch (NumberFormatException e) {
                     return 0;
                 }
             }
             default -> {
+                log.warn("Unable to convert {} to Integer, returning default value 0", value.getClass().getName());
+                return 0;
             }
         }
-        return 0;
     }
 
     private Long safeConvertToLong(Object value) {
@@ -2050,17 +1906,18 @@ public class BookChapterServiceImpl implements BookChapterService {
             case Number number -> {
                 return number.longValue();
             }
-            case String ignored -> {
+            case String s -> {
                 try {
-                    return Long.parseLong((String) value);
+                    return Long.parseLong(s);
                 } catch (NumberFormatException e) {
                     return 0L;
                 }
             }
             default -> {
+                log.warn("Unable to convert {} to Long, returning default value 0", value.getClass().getName());
+                return 0L;
             }
         }
-        return 0L;
     }
 
     private Double safeConvertToDouble(Object value) {
@@ -2080,22 +1937,19 @@ public class BookChapterServiceImpl implements BookChapterService {
             case Number number -> {
                 return number.doubleValue();
             }
-            case String ignored -> {
+            case String s -> {
                 try {
-                    return Double.parseDouble((String) value);
+                    return Double.parseDouble(s);
                 } catch (NumberFormatException e) {
                     return 0.0;
                 }
             }
             default -> {
+                log.warn("Unable to convert {} to Double, returning default value 0.0", value.getClass().getName());
+                return 0.0;
             }
         }
-        return 0.0;
     }
-
-    // ============================================
-    // HELPER METHODS - Reviews & Ratings
-    // ============================================
 
     private ChapterReviewResponse mapToChapterReviewResponse(ChapterReview review, Long currentUserId) {
         User reviewUser = userMapper.findUserById(review.getUserId());
@@ -2124,7 +1978,7 @@ public class BookChapterServiceImpl implements BookChapterService {
             List<ChapterReview> replies = chapterReviewMapper.findReplies(review.getId());
             response.setReplies(replies.stream()
                     .map(r -> mapToChapterReviewResponse(r, currentUserId))
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         return response;
@@ -2140,10 +1994,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         response.setUpdatedAt(rating.getUpdatedAt());
         return response;
     }
-
-    // ============================================
-    // HELPER METHODS - Bulk Data Building
-    // ============================================
 
     private ReadingProgressSummary buildReadingProgressSummary(Long userId, Book book) {
         ReadingProgressSummary summary = new ReadingProgressSummary();
@@ -2173,7 +2023,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         summary.setCompletedChapters(allProgress.stream()
                 .filter(ChapterProgress::getIsCompleted)
                 .map(ChapterProgress::getChapterNumber)
-                .collect(Collectors.toList()));
+                .toList());
 
         summary.setChaptersInProgress((int) allProgress.stream().filter(p -> !p.getIsCompleted() && p.getReadingTimeSeconds() > 0).count());
 
@@ -2222,7 +2072,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         int currentStreak = 1;
 
         for (int i = 1; i < dates.size(); i++) {
-            long daysBetween = java.time.Duration.between(dates.get(i-1), dates.get(i)).toDays();
+            long daysBetween = Duration.between(dates.get(i - 1), dates.get(i)).toDays();
 
             if (daysBetween == 1) {
                 currentStreak++;
@@ -2260,19 +2110,19 @@ public class BookChapterServiceImpl implements BookChapterService {
     private List<BookmarkResponse> getBookmarksList(Long userId, Long bookId) {
         return bookmarkMapper.findByUserAndBook(userId, bookId).stream()
                 .map(entityMapper::toBookmarkResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<HighlightResponse> getHighlightsList(Long userId, Long bookId) {
         return highlightMapper.findByUserAndBook(userId, bookId).stream()
                 .map(entityMapper::toHighlightResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<NoteResponse> getNotesList(Long userId, Long bookId) {
         return noteMapper.findByUserAndBook(userId, bookId).stream()
                 .map(entityMapper::toNoteResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<SearchHistoryResponse> getRecentSearches(Long userId, Long bookId) {
@@ -2286,7 +2136,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                     r.setWasClicked(s.getClickedAt() != null);
                     return r;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private UserReadingPatternResponse mapToPatternResponse(UserReadingPattern pattern, Book book) {
@@ -2308,10 +2158,6 @@ public class BookChapterServiceImpl implements BookChapterService {
         response.setLastCalculatedAt(pattern.getLastCalculatedAt());
         return response;
     }
-
-    // ============================================
-    // HELPER METHODS - Analytics Building
-    // ============================================
 
     private AnalyticsOverview buildAnalyticsOverview(Long bookId, LocalDateTime startDate, LocalDateTime endDate) {
         AnalyticsOverview overview = new AnalyticsOverview();
@@ -2373,7 +2219,7 @@ public class BookChapterServiceImpl implements BookChapterService {
         List<Map<String, Object>> topChapters = analyticsMapper.getTopEngagedChapters(bookId, 10);
         engagement.setTopEngagedChapters(topChapters.stream()
                 .map(this::mapToChapterEngagement)
-                .collect(Collectors.toList()));
+                .toList());
 
         int totalChapters = chapterMapper.countChaptersByBookId(bookId);
         if (totalChapters > 0) {
@@ -2388,7 +2234,7 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return data.stream()
                 .map(this::mapToPopularPassage)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<ChapterDropOffPoint> findDropOffPoints(Long bookId) {
@@ -2398,7 +2244,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .map(this::mapToDropOffPoint)
                 .filter(d -> d.getDropOffRate() > 20.0)
                 .sorted(Comparator.comparing(ChapterDropOffPoint::getDropOffRate).reversed())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<ChapterSkipAnalysis> findMostSkippedChapters(Long bookId) {
@@ -2415,13 +2261,13 @@ public class BookChapterServiceImpl implements BookChapterService {
                     analysis.setPossibleReason(inferSkipReason(analysis));
                     return analysis;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private TrendAnalysis analyzeTrends(Long bookId, LocalDateTime startDate, LocalDateTime endDate) {
         TrendAnalysis trends = new TrendAnalysis();
 
-        LocalDateTime previousStart = startDate.minusDays(java.time.Duration.between(startDate, endDate).toDays());
+        LocalDateTime previousStart = startDate.minusDays(Duration.between(startDate, endDate).toDays());
 
         Map<String, Object> currentMetrics = analyticsMapper.getBookOverviewMetrics(bookId, startDate, endDate);
         Map<String, Object> previousMetrics = analyticsMapper.getBookOverviewMetrics(bookId, previousStart, startDate);
@@ -2485,10 +2331,6 @@ public class BookChapterServiceImpl implements BookChapterService {
 
         return analytics;
     }
-
-    // ============================================
-    // HELPER METHODS - Mapping & Conversion
-    // ============================================
 
     private ChapterEngagement mapToChapterEngagement(Map<String, Object> data) {
         ChapterEngagement engagement = new ChapterEngagement();
@@ -2566,12 +2408,8 @@ public class BookChapterServiceImpl implements BookChapterService {
                     highlight.setPosition(safeConvertToInt(d.get("position")));
                     return highlight;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
-
-    // ============================================
-    // HELPER METHODS - Calculation & Logic
-    // ============================================
 
     private int calculateEngagementScore(ChapterAnalyticsResponse analytics) {
         int score = 0;
@@ -2649,7 +2487,7 @@ public class BookChapterServiceImpl implements BookChapterService {
                 .map(dt -> dt.toLocalDate().atStartOfDay())
                 .distinct()
                 .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
+                .toList();
 
         int streak = 0;
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1).toLocalDate().atStartOfDay();
@@ -2667,28 +2505,32 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     private List<String> parseArray(Object arrayObj) {
-        // Handle PostgreSQL array conversion
         switch (arrayObj) {
             case null -> {
                 return new ArrayList<>();
             }
-            case String[] strings -> {
-                return Arrays.asList(strings);
+            case String[] stringArray -> {
+                return Arrays.asList(stringArray);
             }
-            case List<?> ignored -> {
-                return (List<String>) arrayObj;
+            case List<?> list -> {
+                return list.stream()
+                        .filter(String.class::isInstance)
+                        .map(String.class::cast)
+                        .collect(Collectors.toCollection(ArrayList::new));
             }
             default -> {
+                String arrayStr = arrayObj.toString();
+                if (arrayStr.startsWith("{") && arrayStr.endsWith("}")) {
+                    String content = arrayStr.substring(1, arrayStr.length() - 1);
+                    if (content.isEmpty()) {
+                        return new ArrayList<>();
+                    }
+                    return Arrays.stream(content.split(","))
+                            .map(String::trim)
+                            .collect(Collectors.toCollection(ArrayList::new));
+                }
+                return new ArrayList<>();
             }
         }
-
-        // Parse string representation: {val1,val2,val3}
-        String arrayStr = arrayObj.toString();
-        if (arrayStr.startsWith("{") && arrayStr.endsWith("}")) {
-            arrayStr = arrayStr.substring(1, arrayStr.length() - 1);
-            return Arrays.asList(arrayStr.split(","));
-        }
-
-        return new ArrayList<>();
     }
 }
