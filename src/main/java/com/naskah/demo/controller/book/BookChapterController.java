@@ -65,10 +65,7 @@ public class BookChapterController {
     }
 
     @PostMapping("/{chapterNumber}/notes")
-    public ResponseEntity<DataResponse<NoteResponse>> addChapterNote(
-            @PathVariable String slug,
-            @PathVariable Integer chapterNumber,
-            @Valid @RequestBody ChapterNoteRequest request) {
+    public ResponseEntity<DataResponse<NoteResponse>> addChapterNote(@PathVariable String slug, @PathVariable Integer chapterNumber, @Valid @RequestBody ChapterNoteRequest request) {
         DataResponse<NoteResponse> response = chapterService.addChapterNote(slug, chapterNumber, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
