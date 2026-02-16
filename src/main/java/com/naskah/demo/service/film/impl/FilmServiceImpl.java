@@ -46,21 +46,62 @@ public class FilmServiceImpl implements FilmService {
     @Transactional
     @Override
     public Film saveFilm(FilmDetail filmDetail) {
+        // ==================== VALIDATION & SANITIZATION ====================
+
+        // Validate Wikidata QID
+        if (filmDetail.getWikidataQid() == null || filmDetail.getWikidataQid().trim().isEmpty()) {
+            throw new IllegalArgumentException("Wikidata QID cannot be null or empty");
+        }
+
+        // Extract and validate judul with fallback logic
+        String judul = filmDetail.getJudul();
+
+        // Fallback logic for missing or invalid judul
+        if (judul == null || judul.trim().isEmpty() || judul.equalsIgnoreCase("film")) {
+            System.err.println("⚠️  WARNING: judul is null/empty/invalid for " + filmDetail.getWikidataQid());
+
+            // Try to extract from description or use QID as fallback
+            String deskripsi = filmDetail.getDeskripsi();
+            if (deskripsi != null && !deskripsi.isEmpty()) {
+                // Use description as title if available
+                judul = deskripsi.length() > 100 ? deskripsi.substring(0, 97) + "..." : deskripsi;
+                System.err.println("    → Using description as title: " + judul);
+            } else {
+                // Last resort: use Wikidata QID
+                judul = "Film " + filmDetail.getWikidataQid();
+                System.err.println("    → Using QID as title: " + judul);
+            }
+        }
+
+        // Final validation
+        if (judul == null || judul.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Film title (judul) cannot be determined. Wikidata QID: " + filmDetail.getWikidataQid()
+            );
+        }
+
+        // Log untuk debugging
+        System.out.println("📝 Saving film: " + judul + " (" + filmDetail.getWikidataQid() + ")");
+
+        // ==================== FIND EXISTING FILM ====================
+
         Film existing = filmMapper.findByQid(filmDetail.getWikidataQid());
+
+        // ==================== PREPARE FILM ENTITY ====================
 
         Film film = new Film();
         film.setWikidataQid(filmDetail.getWikidataQid());
 
         // Generate slug for film
         String filmSlug = generateUniqueSlug(
-                filmDetail.getJudul(),
+                judul,
                 filmDetail.getTahunRilis() != null ? filmDetail.getTahunRilis().substring(0, 4) : null
         );
         film.setSlug(filmSlug);
         filmDetail.setSlug(filmSlug);
 
         // Set basic fields
-        film.setJudul(filmDetail.getJudul());
+        film.setJudul(judul);  // Use validated judul
         film.setTahunRilis(filmDetail.getTahunRilis());
         film.setJenis(filmDetail.getJenis());
         film.setDeskripsi(filmDetail.getDeskripsi());
@@ -68,7 +109,7 @@ public class FilmServiceImpl implements FilmService {
         film.setNegaraAsal(filmDetail.getNegaraAsal());
         film.setPosterUrl(filmDetail.getPosterUrl());
         film.setVideoUrl(filmDetail.getVideoUrl());
-        film.setTrailerUrl(filmDetail.getTrailerUrl());  // NEW: Save trailer URL
+        film.setTrailerUrl(filmDetail.getTrailerUrl());
         film.setSubtitleUrl(filmDetail.getSubtitleUrl());
 
         // Set technical fields
@@ -85,16 +126,26 @@ public class FilmServiceImpl implements FilmService {
         film.setFollowedBy(filmDetail.getFollowedBy());
         film.setPartOfSeries(filmDetail.getPartOfSeries());
 
-        // Insert or update film
+        // ==================== INSERT OR UPDATE FILM ====================
+
         if (existing == null) {
+            // Insert new film
             filmMapper.insert(film);
+            System.out.println("✅ Film inserted with ID: " + film.getId());
         } else {
+            // Update existing film
             film.setId(existing.getId());
-            filmMapper.update(film);
+
+            // Delete all old relations FIRST, before any updates
             deleteAllRelations(film.getId());
+
+            // Then update the film record
+            filmMapper.update(film);
+            System.out.println("✅ Film updated with ID: " + film.getId());
         }
 
-        // Save all relations
+        // ==================== SAVE ALL RELATIONS ====================
+
         saveGenres(film.getId(), filmDetail.getGenre());
         savePersons(film.getId(), filmDetail);
         saveCompanies(film.getId(), filmDetail);
@@ -151,7 +202,7 @@ public class FilmServiceImpl implements FilmService {
         // Media
         detail.setPosterUrl(film.getPosterUrl());
         detail.setVideoUrl(film.getVideoUrl());
-        detail.setTrailerUrl(film.getTrailerUrl());  // NEW: Load trailer URL
+        detail.setTrailerUrl(film.getTrailerUrl());
         detail.setSubtitleUrl(film.getSubtitleUrl());
 
         // Technical

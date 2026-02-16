@@ -164,7 +164,9 @@ public interface FilmMapper {
     // ==================== BOX OFFICE OPERATIONS ====================
 
     @Insert("INSERT INTO film_box_office (film_id, region, amount, currency) " +
-            "VALUES (#{filmId}, #{region}, #{amount}, #{currency})")
+            "VALUES (#{filmId}, #{region}, #{amount}, #{currency}) " +
+            "ON CONFLICT (film_id, region) " +
+            "DO UPDATE SET amount = EXCLUDED.amount, currency = EXCLUDED.currency")
     void insertBoxOffice(@Param("filmId") Long filmId,
                          @Param("region") String region,
                          @Param("amount") Long amount,
