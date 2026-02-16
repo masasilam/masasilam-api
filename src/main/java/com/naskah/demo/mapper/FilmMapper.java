@@ -1,11 +1,14 @@
 package com.naskah.demo.mapper;
 
-import com.naskah.demo.model.film.Company;
-import com.naskah.demo.model.film.Film;
-import com.naskah.demo.model.film.Person;
+import com.naskah.demo.model.film.*;
+import com.naskah.demo.model.film.FilmDetail.*;
 import org.apache.ibatis.annotations.*;
 import java.util.List;
 
+/**
+ * FilmMapper - MyBatis mapper for film database operations
+ * PostgreSQL Compatible Version with Trailer Support
+ */
 @Mapper
 public interface FilmMapper {
 
@@ -18,16 +21,21 @@ public interface FilmMapper {
     Film findBySlug(String slug);
 
     @Insert("INSERT INTO films (wikidata_qid, slug, judul, tahun_rilis, jenis, deskripsi, " +
-            "durasi, negara_asal, poster_url, video_url, subtitle_url) " +
+            "durasi, negara_asal, poster_url, video_url, trailer_url, subtitle_url, color, original_language, " +
+            "budget, budget_display, followed_by, part_of_series) " +
             "VALUES (#{wikidataQid}, #{slug}, #{judul}, #{tahunRilis}, #{jenis}, #{deskripsi}, " +
-            "#{durasi}, #{negaraAsal}, #{posterUrl}, #{videoUrl}, #{subtitleUrl})")
+            "#{durasi}, #{negaraAsal}, #{posterUrl}, #{videoUrl}, #{trailerUrl}, #{subtitleUrl}, #{color}, " +
+            "#{originalLanguage}, #{budget}, #{budgetDisplay}, #{followedBy}, #{partOfSeries})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Film film);
 
     @Update("UPDATE films SET slug = #{slug}, judul = #{judul}, tahun_rilis = #{tahunRilis}, " +
             "jenis = #{jenis}, deskripsi = #{deskripsi}, durasi = #{durasi}, " +
             "negara_asal = #{negaraAsal}, poster_url = #{posterUrl}, " +
-            "video_url = #{videoUrl}, subtitle_url = #{subtitleUrl}, " +
+            "video_url = #{videoUrl}, trailer_url = #{trailerUrl}, subtitle_url = #{subtitleUrl}, " +
+            "color = #{color}, original_language = #{originalLanguage}, " +
+            "budget = #{budget}, budget_display = #{budgetDisplay}, " +
+            "followed_by = #{followedBy}, part_of_series = #{partOfSeries}, " +
             "updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
     void update(Film film);
 
@@ -69,7 +77,7 @@ public interface FilmMapper {
     void insertPerson(Person person);
 
     @Update("UPDATE persons SET slug = #{slug}, name = #{name}, photo_url = #{photoUrl}, " +
-            "description = #{description} WHERE id = #{id}")
+            "description = #{description}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
     void updatePerson(Person person);
 
     // ==================== FILM-PERSON RELATION OPERATIONS ====================
@@ -83,11 +91,14 @@ public interface FilmMapper {
     @Select("SELECT p.* FROM persons p " +
             "INNER JOIN film_persons fp ON p.id = fp.person_id " +
             "WHERE fp.film_id = #{filmId} AND fp.role_type = #{role}")
-    List<Person> findPersonObjectsByFilmIdAndRole(@Param("filmId") Long filmId,
-                                                  @Param("role") String role);
+    List<Person> findPersonsByFilmIdAndRole(@Param("filmId") Long filmId,
+                                            @Param("role") String role);
 
     @Delete("DELETE FROM film_persons WHERE film_id = #{filmId}")
     void deletePersonsByFilmId(Long filmId);
+
+    @Delete("DELETE FROM film_persons WHERE film_id = #{filmId} AND role_type = #{roleType}")
+    void deletePersonsByFilmIdAndRole(@Param("filmId") Long filmId, @Param("roleType") String roleType);
 
     // ==================== COMPANY OPERATIONS ====================
 
@@ -103,7 +114,7 @@ public interface FilmMapper {
     void insertCompany(Company company);
 
     @Update("UPDATE companies SET slug = #{slug}, name = #{name}, logo_url = #{logoUrl}, " +
-            "description = #{description} WHERE id = #{id}")
+            "description = #{description}, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
     void updateCompany(Company company);
 
     // ==================== FILM-COMPANY RELATION OPERATIONS ====================
@@ -113,13 +124,105 @@ public interface FilmMapper {
     void insertFilmProductionCompany(@Param("filmId") Long filmId,
                                      @Param("companyId") Long companyId);
 
+    @Insert("INSERT INTO film_distributors (film_id, company_id) " +
+            "VALUES (#{filmId}, #{companyId})")
+    void insertFilmDistributor(@Param("filmId") Long filmId,
+                               @Param("companyId") Long companyId);
+
     @Select("SELECT c.* FROM companies c " +
             "INNER JOIN film_production_companies fpc ON c.id = fpc.company_id " +
             "WHERE fpc.film_id = #{filmId}")
-    List<Company> findCompanyObjectsByFilmId(@Param("filmId") Long filmId);
+    List<Company> findProductionCompaniesByFilmId(@Param("filmId") Long filmId);
+
+    @Select("SELECT c.* FROM companies c " +
+            "INNER JOIN film_distributors fd ON c.id = fd.company_id " +
+            "WHERE fd.film_id = #{filmId}")
+    List<Company> findDistributorsByFilmId(@Param("filmId") Long filmId);
 
     @Delete("DELETE FROM film_production_companies WHERE film_id = #{filmId}")
     void deleteProductionCompaniesByFilmId(Long filmId);
+
+    @Delete("DELETE FROM film_distributors WHERE film_id = #{filmId}")
+    void deleteDistributorsByFilmId(Long filmId);
+
+    // ==================== LOCATION OPERATIONS ====================
+
+    @Insert("INSERT INTO film_locations (film_id, location_type, location_name) " +
+            "VALUES (#{filmId}, #{locationType}, #{locationName})")
+    void insertLocation(@Param("filmId") Long filmId,
+                        @Param("locationType") String locationType,
+                        @Param("locationName") String locationName);
+
+    @Select("SELECT location_name FROM film_locations " +
+            "WHERE film_id = #{filmId} AND location_type = #{locationType}")
+    List<String> findLocationsByFilmIdAndType(@Param("filmId") Long filmId,
+                                              @Param("locationType") String locationType);
+
+    @Delete("DELETE FROM film_locations WHERE film_id = #{filmId}")
+    void deleteLocationsByFilmId(Long filmId);
+
+    // ==================== BOX OFFICE OPERATIONS ====================
+
+    @Insert("INSERT INTO film_box_office (film_id, region, amount, currency) " +
+            "VALUES (#{filmId}, #{region}, #{amount}, #{currency})")
+    void insertBoxOffice(@Param("filmId") Long filmId,
+                         @Param("region") String region,
+                         @Param("amount") Long amount,
+                         @Param("currency") String currency);
+
+    @Select("SELECT region, amount, currency FROM film_box_office WHERE film_id = #{filmId}")
+    @Results({
+            @Result(property = "region", column = "region"),
+            @Result(property = "amount", column = "amount"),
+            @Result(property = "currency", column = "currency")
+    })
+    List<BoxOfficeData> findBoxOfficeByFilmId(Long filmId);
+
+    @Delete("DELETE FROM film_box_office WHERE film_id = #{filmId}")
+    void deleteBoxOfficeByFilmId(Long filmId);
+
+    // ==================== REVIEW OPERATIONS ====================
+    // PostgreSQL compatible - uses :: casting syntax which handles NULL automatically
+
+    @Insert("INSERT INTO film_reviews (film_id, review_source, score_type, score_value, " +
+            "num_reviews, review_date) " +
+            "VALUES (#{filmId}, #{source}, #{scoreType}, #{value}, #{numReviews}, #{reviewDate}::date)")
+    void insertReview(@Param("filmId") Long filmId,
+                      @Param("source") String source,
+                      @Param("scoreType") String scoreType,
+                      @Param("value") String value,
+                      @Param("numReviews") Integer numReviews,
+                      @Param("reviewDate") String reviewDate);
+
+    @Select("SELECT review_source as source, score_type as scoreType, score_value as value, " +
+            "num_reviews as numReviews, review_date::text as reviewDate " +
+            "FROM film_reviews WHERE film_id = #{filmId}")
+    List<ReviewScore> findReviewsByFilmId(Long filmId);
+
+    @Delete("DELETE FROM film_reviews WHERE film_id = #{filmId}")
+    void deleteReviewsByFilmId(Long filmId);
+
+    // ==================== CONTENT RATING OPERATIONS ====================
+    // PostgreSQL compatible - uses :: casting syntax which handles NULL automatically
+
+    @Insert("INSERT INTO film_content_ratings (film_id, rating_system, rating_value, " +
+            "content_descriptors, start_date, distribution_format) " +
+            "VALUES (#{filmId}, #{system}, #{value}, #{descriptors}, #{startDate}::date, #{format})")
+    void insertContentRating(@Param("filmId") Long filmId,
+                             @Param("system") String system,
+                             @Param("value") String value,
+                             @Param("descriptors") String descriptors,
+                             @Param("startDate") String startDate,
+                             @Param("format") String format);
+
+    @Select("SELECT rating_system as system, rating_value as value, " +
+            "content_descriptors as contentDescriptors, start_date::text as startDate, " +
+            "distribution_format as distributionFormat " +
+            "FROM film_content_ratings WHERE film_id = #{filmId}")
+    List<ContentRating> findContentRatingsByFilmId(Long filmId);
+
+    @Delete("DELETE FROM film_content_ratings WHERE film_id = #{filmId}")
+    void deleteContentRatingsByFilmId(Long filmId);
 
     // ==================== ALIAS OPERATIONS ====================
 

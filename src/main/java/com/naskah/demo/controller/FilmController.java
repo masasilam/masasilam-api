@@ -3,10 +3,8 @@ package com.naskah.demo.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.naskah.demo.mapper.FilmMapper;
-import com.naskah.demo.model.film.Company;
-import com.naskah.demo.model.film.Film;
-import com.naskah.demo.model.film.FilmDetail;
-import com.naskah.demo.model.film.Person;
+import com.naskah.demo.model.film.*;
+import com.naskah.demo.model.film.FilmDetail.*;
 import com.naskah.demo.service.film.FilmService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -17,8 +15,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.text.NumberFormat;
 import java.util.*;
 
+/**
+ * FilmController - REST controller for film operations
+ */
 @RestController
 @RequestMapping("/api/films")
 @CrossOrigin(origins = "*")
@@ -33,17 +35,20 @@ public class FilmController {
     @Autowired
     private FilmMapper filmMapper;
 
+    /**
+     * Create headers for Wikidata requests
+     */
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "FilmApp/1.0 (https://github.com/yourusername/filmapp; your.email@example.com)");
+        headers.set("User-Agent", "FilmApp/1.0 (Enhanced Metadata Extractor)");
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         return headers;
     }
 
-    // ==================== SPECIFIC ROUTES FIRST! ====================
+    // ==================== SPECIFIC ROUTES FIRST ====================
 
     /**
-     * Search films - BEFORE /{slug} to avoid conflict
+     * Search films by query
      */
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> searchFilms(
@@ -65,7 +70,7 @@ public class FilmController {
     }
 
     /**
-     * GET person by SLUG - BEFORE /{slug} to avoid conflict
+     * GET person by SLUG
      */
     @GetMapping(value = "/person/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Person> getPersonBySlug(@PathVariable String slug) {
@@ -77,7 +82,7 @@ public class FilmController {
     }
 
     /**
-     * GET company by SLUG - BEFORE /{slug} to avoid conflict
+     * GET company by SLUG
      */
     @GetMapping(value = "/company/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Company> getCompanyBySlug(@PathVariable String slug) {
@@ -90,13 +95,17 @@ public class FilmController {
 
     /**
      * GET film from Wikidata and save to database
+     * This is the main endpoint for fetching complete film metadata
      */
     @GetMapping(value = "/wikidata/{qid}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FilmDetail> getFilmFromWikidata(@PathVariable String qid) {
         try {
+            System.out.println("=== FETCHING COMPLETE METADATA FOR: " + qid + " ===");
+
             // Check if already in database
             FilmDetail cached = filmService.getFilmDetailByQid(qid);
             if (cached != null) {
+                System.out.println("Found in cache");
                 return ResponseEntity.ok(cached);
             }
 
@@ -109,38 +118,86 @@ public class FilmController {
             JsonNode entityNode = root.path("entities").path(qid);
 
             FilmDetail filmDetail = new FilmDetail();
+
+            // ==================== BASIC INFO ====================
             filmDetail.setWikidataQid(qid);
             filmDetail.setJudul(getLabel(entityNode));
             filmDetail.setDeskripsi(getDescription(entityNode));
             filmDetail.setTahunRilis(extractDate(entityNode));
-            filmDetail.setJenis(extractEntityLabelWithFallback(entityNode, "P31"));
-            filmDetail.setGenre(extractEntityLabelsWithFallback(entityNode, "P136"));
+            filmDetail.setJenis(extractEntityLabel(entityNode, "P31"));
+            filmDetail.setGenre(extractGenres(entityNode));
+            System.out.println("✓ Basic info extracted");
+
+            // ==================== PEOPLE - CORE ROLES ====================
             filmDetail.setSutradara(extractPersonsWithDetails(entityNode, "P57"));
             filmDetail.setPenulisSkenario(extractPersonsWithDetails(entityNode, "P58"));
             filmDetail.setPemeran(extractPersonsWithDetails(entityNode, "P161"));
             filmDetail.setProduser(extractPersonsWithDetails(entityNode, "P162"));
+            System.out.println("✓ Core crew extracted");
+
+            // ==================== PEOPLE - ADDITIONAL CREW ====================
+            filmDetail.setFilmEditor(extractPersonsWithDetails(entityNode, "P1040"));
+            filmDetail.setCinematographer(extractPersonsWithDetails(entityNode, "P344"));
+            filmDetail.setComposer(extractPersonsWithDetails(entityNode, "P86"));
+            System.out.println("✓ Additional crew extracted");
+
+            // ==================== COMPANIES ====================
             filmDetail.setPerusahaanProduksi(extractCompaniesWithDetails(entityNode, "P272"));
-            filmDetail.setNegaraAsal(extractEntityLabelWithFallback(entityNode, "P495"));
+            filmDetail.setDistributor(extractCompaniesWithDetails(entityNode, "P750"));
+            System.out.println("✓ Companies extracted");
+
+            // ==================== LOCATIONS ====================
+            filmDetail.setNegaraAsal(extractEntityLabel(entityNode, "P495"));
+            filmDetail.setNarrativeLocation(extractEntityLabels(entityNode, "P840"));
+            filmDetail.setFilmingLocation(extractEntityLabels(entityNode, "P915"));
             filmDetail.setDurasi(extractDuration(entityNode));
+            System.out.println("✓ Location data extracted");
+
+            // ==================== TECHNICAL INFO ====================
+            filmDetail.setColor(extractColor(entityNode));
+            filmDetail.setOriginalLanguage(extractOriginalLanguage(entityNode));
             filmDetail.setPosterUrl(extractImageUrl(entityNode));
             filmDetail.setVideoUrl(extractVideoUrl(entityNode));
-            filmDetail.setAliasIndonesia(extractAliases(entityNode));
+            filmDetail.setTrailerUrl(extractTrailerUrl(entityNode));  // NEW: Extract trailer
             filmDetail.setSubtitleUrl(extractSubtitleUrl(filmDetail.getVideoUrl()));
+            System.out.println("✓ Technical info extracted");
+
+            // ==================== FINANCIAL DATA ====================
+            filmDetail.setBudget(extractBudget(entityNode));
+            filmDetail.setBoxOffice(extractBoxOffice(entityNode));
+            System.out.println("✓ Financial data extracted");
+
+            // ==================== RATINGS & REVIEWS ====================
+            filmDetail.setReviewScores(extractReviewScores(entityNode));
+            filmDetail.setContentRatings(extractContentRatings(entityNode));
+            System.out.println("✓ Ratings & Reviews extracted");
+
+            // ==================== RELATIONS ====================
+            filmDetail.setFollowedBy(extractFollowedBy(entityNode));
+            filmDetail.setPartOfSeries(extractPartOfSeries(entityNode));
+            System.out.println("✓ Relations extracted");
+
+            // ==================== ALIASES ====================
+            filmDetail.setAliasIndonesia(extractAliases(entityNode));
+            System.out.println("✓ Aliases extracted");
+
+            System.out.println("=== EXTRACTION COMPLETE ===");
 
             // Save to database
             Film savedFilm = filmService.saveFilm(filmDetail);
             filmDetail.setId(savedFilm.getId());
 
             return ResponseEntity.ok(filmDetail);
+
         } catch (Exception e) {
+            System.err.println("ERROR extracting metadata:");
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
     /**
-     * Proxy endpoint untuk subtitle
-     * CRITICAL: This MUST be before /{slug} route!
+     * Proxy endpoint for subtitle with SRT to VTT conversion
      */
     @GetMapping(value = "/{filmSlug}/subtitle", produces = "text/vtt")
     public ResponseEntity<String> getSubtitle(@PathVariable String filmSlug) {
@@ -148,58 +205,30 @@ public class FilmController {
             System.out.println("=== SUBTITLE REQUEST ===");
             System.out.println("Film Slug: " + filmSlug);
 
-            // Get film from database
             Film film = filmMapper.findBySlug(filmSlug);
-            if (film == null) {
-                System.out.println("Film not found: " + filmSlug);
+            if (film == null || film.getSubtitleUrl() == null) {
                 return ResponseEntity.notFound().build();
             }
 
-            System.out.println("Film found: " + film.getJudul());
-            System.out.println("Subtitle URL: " + film.getSubtitleUrl());
-
-            if (film.getSubtitleUrl() == null) {
-                System.out.println("No subtitle URL for this film");
-                return ResponseEntity.notFound().build();
-            }
-
-            // Parse subtitle URL to raw file URL
             String rawUrl = parseSubtitleUrl(film.getSubtitleUrl());
-            System.out.println("Raw URL: " + rawUrl);
-
             if (rawUrl == null) {
-                System.out.println("Failed to parse subtitle URL");
                 return ResponseEntity.notFound().build();
             }
 
-            // Fetch subtitle from Wikimedia
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "FilmApp/1.0 (Backend Proxy)");
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            System.out.println("Fetching from: " + rawUrl);
-            ResponseEntity<String> response = restTemplate.exchange(
-                    rawUrl,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-
-            System.out.println("Response status: " + response.getStatusCode());
-
+            ResponseEntity<String> response = restTemplate.exchange(rawUrl, HttpMethod.GET, entity, String.class);
             String subtitleContent = response.getBody();
+
             if (subtitleContent == null || subtitleContent.isEmpty()) {
-                System.out.println("Empty subtitle content");
                 return ResponseEntity.notFound().build();
             }
 
-            System.out.println("Content length: " + subtitleContent.length());
-
-            // ✅ KONVERSI SRT KE VTT
+            // Convert SRT to VTT
             String vttContent = convertSrtToVtt(subtitleContent);
-            System.out.println("Converted to VTT, length: " + vttContent.length());
 
-            // Return subtitle with proper headers
             HttpHeaders responseHeaders = new HttpHeaders();
             responseHeaders.setContentType(MediaType.valueOf("text/vtt; charset=UTF-8"));
             responseHeaders.set("Cache-Control", "public, max-age=86400");
@@ -214,139 +243,57 @@ public class FilmController {
     }
 
     /**
-     * Convert SRT subtitle format to WebVTT format
+     * GET video information with quality options
      */
-    private String convertSrtToVtt(String srtContent) {
-        // Add WEBVTT header
-        StringBuilder vtt = new StringBuilder("WEBVTT\n\n");
-
-        // Replace comma with dot in timestamps (SRT uses comma, VTT uses dot)
-        String converted = srtContent.replaceAll("(\\d{2}:\\d{2}:\\d{2}),(\\d{3})", "$1.$2");
-
-        // Split by double newline (subtitle blocks)
-        String[] blocks = converted.split("\\n\\n");
-
-        for (String block : blocks) {
-            if (block.trim().isEmpty()) continue;
-
-            // Split each block into lines
-            String[] lines = block.split("\\n");
-
-            if (lines.length < 2) continue;
-
-            // Skip the sequence number (first line) and only keep timestamp + text
-            // SRT format: 1\n00:00:01,000 --> 00:00:04,000\nText
-            // VTT format: 00:00:01.000 --> 00:00:04.000\nText
-
-            boolean timestampFound = false;
-            for (String line : lines) {
-                // Skip numeric sequence lines
-                if (line.matches("^\\d+$")) {
-                    continue;
-                }
-
-                // Keep timestamp and text lines
-                if (line.contains("-->")) {
-                    timestampFound = true;
-                    vtt.append(line).append("\n");
-                } else if (timestampFound) {
-                    vtt.append(line).append("\n");
-                }
-            }
-
-            // Add blank line between cues
-            if (timestampFound) {
-                vtt.append("\n");
-            }
-        }
-
-        return vtt.toString();
-    }
-
     @GetMapping(value = "/{filmSlug}/video-info", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> getVideoInfo(@PathVariable String filmSlug) {
         try {
-            System.out.println("=== VIDEO INFO REQUEST ===");
-            System.out.println("Film Slug: " + filmSlug);
-
-            // Get film from database
             Film film = filmMapper.findBySlug(filmSlug);
-            if (film == null) {
-                System.out.println("Film not found: " + filmSlug);
+            if (film == null || film.getVideoUrl() == null) {
                 return ResponseEntity.notFound().build();
             }
 
-            System.out.println("Film found: " + film.getJudul());
-            System.out.println("Video URL: " + film.getVideoUrl());
-
-            if (film.getVideoUrl() == null) {
-                System.out.println("No video URL for this film");
-                return ResponseEntity.notFound().build();
-            }
-
-            // Extract filename from video URL
             String filename = extractFilename(film.getVideoUrl());
             if (filename == null) {
-                System.out.println("Failed to extract filename");
                 return ResponseEntity.badRequest().build();
             }
 
-            System.out.println("Filename: " + filename);
-
-            // ✅ Build URL with UriComponentsBuilder to avoid double encoding
             String apiUrl = UriComponentsBuilder
                     .fromHttpUrl("https://commons.wikimedia.org/w/api.php")
                     .queryParam("action", "query")
-                    .queryParam("titles", "File:" + filename)  // Filename akan di-encode otomatis
+                    .queryParam("titles", "File:" + filename)
                     .queryParam("prop", "videoinfo")
                     .queryParam("viprop", "derivatives|url|size|mediatype")
                     .queryParam("format", "json")
                     .build()
                     .toUriString();
 
-            System.out.println("API URL: " + apiUrl);
-
             HttpHeaders headers = new HttpHeaders();
             headers.set("User-Agent", "FilmApp/1.0 (Video Info Request)");
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    apiUrl,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-
-            System.out.println("API Response status: " + response.getStatusCode());
-
-            // Parse response
+            ResponseEntity<String> response = restTemplate.exchange(apiUrl, HttpMethod.GET, entity, String.class);
             JsonNode root = mapper.readTree(response.getBody());
             JsonNode pages = root.path("query").path("pages");
 
-            // ✅ Handle case where pages might be empty
             if (!pages.elements().hasNext()) {
-                System.out.println("No pages found in response");
                 return ResponseEntity.notFound().build();
             }
 
-            // Get first page (there's only one)
             JsonNode page = pages.elements().next();
             JsonNode videoInfo = page.path("videoinfo");
 
             if (!videoInfo.isArray() || videoInfo.isEmpty()) {
-                System.out.println("No video info found in response");
                 return ResponseEntity.notFound().build();
             }
 
             JsonNode info = videoInfo.get(0);
 
-            // Build response with quality options
             Map<String, Object> result = new HashMap<>();
             result.put("originalUrl", info.path("url").asText());
             result.put("originalSize", info.path("size").asLong());
             result.put("mediaType", info.path("mediatype").asText());
 
-            // Extract derivatives (different quality options)
             List<Map<String, Object>> qualities = new ArrayList<>();
             JsonNode derivatives = info.path("derivatives");
 
@@ -357,37 +304,24 @@ public class FilmController {
                     quality.put("src", derivative.path("src").asText());
                     quality.put("width", derivative.path("width").asInt());
                     quality.put("height", derivative.path("height").asInt());
-
-                    // Calculate quality label (e.g., "360p", "720p")
-                    int height = derivative.path("height").asInt();
-                    quality.put("label", height + "p");
-
+                    quality.put("label", derivative.path("height").asInt() + "p");
                     qualities.add(quality);
                 }
             }
 
-            // Sort by height (quality)
-            qualities.sort((a, b) -> {
-                int heightA = (int) a.get("height");
-                int heightB = (int) b.get("height");
-                return Integer.compare(heightB, heightA); // Descending
-            });
-
+            qualities.sort((a, b) -> Integer.compare((int) b.get("height"), (int) a.get("height")));
             result.put("qualities", qualities);
-
-            System.out.println("Found " + qualities.size() + " quality options");
 
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            System.err.println("Error fetching video info:");
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     /**
-     * GET all films with pagination - BEFORE /{slug} to avoid conflict
+     * GET all films with pagination
      */
     @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> getAllFilms(
@@ -408,25 +342,344 @@ public class FilmController {
 
     /**
      * GET film by SLUG (SEO Friendly)
-     * THIS MUST BE LAST - it's a catch-all for any remaining /{slug} patterns
+     * THIS MUST BE LAST - catch-all route
      */
     @GetMapping(value = "/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<FilmDetail> getFilmBySlug(@PathVariable String slug) {
-        System.out.println("=== FILM DETAIL REQUEST ===");
-        System.out.println("Slug: " + slug);
-
         FilmDetail film = filmService.getFilmDetailBySlug(slug);
         if (film == null) {
-            System.out.println("Film not found");
             return ResponseEntity.notFound().build();
         }
-
-        System.out.println("Film found: " + film.getJudul());
         return ResponseEntity.ok(film);
     }
 
-    // ==================== HELPER METHODS ====================
+// ==================== EXTRACTION METHODS ====================
 
+    /**
+     * Extract genres and clean names
+     */
+    private List<String> extractGenres(JsonNode entity) {
+        List<String> genres = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path("P136");
+
+        for (JsonNode claim : claims) {
+            String id = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
+            String label = fetchLabelById(id);
+            if (label != null) {
+                // Clean genre name (remove "film" suffix)
+                label = label.replaceAll("(?i)\\s+films?$", "").trim();
+                if (!label.isEmpty()) {
+                    label = label.substring(0, 1).toUpperCase() + label.substring(1);
+                    genres.add(label);
+                }
+            }
+        }
+
+        return genres;
+    }
+
+    /**
+     * Extract persons with full details
+     */
+    private List<Person> extractPersonsWithDetails(JsonNode entity, String property) {
+        List<Person> result = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path(property);
+
+        for (JsonNode claim : claims) {
+            String qid = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
+            if (!qid.isEmpty()) {
+                Person person = fetchPersonDetails(qid);
+                if (person != null) {
+                    result.add(person);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Extract companies with full details
+     */
+    private List<Company> extractCompaniesWithDetails(JsonNode entity, String property) {
+        List<Company> result = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path(property);
+
+        for (JsonNode claim : claims) {
+            String qid = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
+            if (!qid.isEmpty()) {
+                Company company = fetchCompanyDetails(qid);
+                if (company != null) {
+                    result.add(company);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Extract color information
+     */
+    private String extractColor(JsonNode entity) {
+        JsonNode claims = entity.path("claims").path("P462");
+        if (claims.isArray() && !claims.isEmpty()) {
+            String colorId = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
+
+            if ("Q838368".equals(colorId)) return "black-and-white";
+            if ("Q22006653".equals(colorId)) return "color";
+
+            return fetchLabelById(colorId);
+        }
+        return null;
+    }
+
+    /**
+     * Extract original language
+     */
+    private String extractOriginalLanguage(JsonNode entity) {
+        JsonNode claims = entity.path("claims").path("P364");
+        if (claims.isArray() && !claims.isEmpty()) {
+            String langId = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
+            return fetchLabelById(langId);
+        }
+        return null;
+    }
+
+    /**
+     * Extract budget
+     */
+    private BudgetData extractBudget(JsonNode entity) {
+        JsonNode claims = entity.path("claims").path("P2130");
+
+        if (claims.isArray() && !claims.isEmpty()) {
+            String amount = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("amount").asText();
+
+            if (!amount.isEmpty()) {
+                amount = amount.replace("+", "");
+                try {
+                    BudgetData budget = new BudgetData();
+                    long cents = (long) (Double.parseDouble(amount) * 100);
+                    budget.setAmount(cents);
+                    budget.setCurrency("USD");
+                    budget.setDisplayValue(formatCurrency(cents, "USD"));
+                    return budget;
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract box office data with regions
+     */
+    private List<BoxOfficeData> extractBoxOffice(JsonNode entity) {
+        List<BoxOfficeData> results = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path("P2142");
+
+        for (JsonNode claim : claims) {
+            BoxOfficeData data = new BoxOfficeData();
+
+            String amount = claim.path("mainsnak").path("datavalue")
+                    .path("value").path("amount").asText();
+
+            if (!amount.isEmpty()) {
+                amount = amount.replace("+", "");
+                try {
+                    long cents = (long) (Double.parseDouble(amount) * 100);
+                    data.setAmount(cents);
+                    data.setCurrency("USD");
+                    data.setDisplayValue(formatCurrency(cents, "USD"));
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+            }
+
+            // Get region from qualifiers
+            JsonNode qualifiers = claim.path("qualifiers").path("P3005");
+            if (qualifiers.isArray() && !qualifiers.isEmpty()) {
+                String regionId = qualifiers.get(0).path("datavalue")
+                        .path("value").path("id").asText();
+                data.setRegion(fetchLabelById(regionId));
+            } else {
+                data.setRegion("worldwide");
+            }
+
+            results.add(data);
+        }
+
+        return results;
+    }
+
+    /**
+     * Extract review scores
+     */
+    private List<ReviewScore> extractReviewScores(JsonNode entity) {
+        List<ReviewScore> scores = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path("P444");
+
+        for (JsonNode claim : claims) {
+            ReviewScore score = new ReviewScore();
+
+            String value = claim.path("mainsnak").path("datavalue").path("value").asText();
+            score.setValue(value);
+
+            JsonNode qualifiers = claim.path("qualifiers");
+
+            // Review source
+            JsonNode reviewerNode = qualifiers.path("P447");
+            if (reviewerNode.isArray() && !reviewerNode.isEmpty()) {
+                String reviewerId = reviewerNode.get(0).path("datavalue")
+                        .path("value").path("id").asText();
+                score.setSource(fetchLabelById(reviewerId));
+            }
+
+            // Score type
+            JsonNode methodNode = qualifiers.path("P459");
+            if (methodNode.isArray() && !methodNode.isEmpty()) {
+                String methodId = methodNode.get(0).path("datavalue")
+                        .path("value").path("id").asText();
+                score.setScoreType(fetchLabelById(methodId));
+            }
+
+            // Number of reviews
+            JsonNode numReviewsNode = qualifiers.path("P3744");
+            if (numReviewsNode.isArray() && !numReviewsNode.isEmpty()) {
+                String numStr = numReviewsNode.get(0).path("datavalue")
+                        .path("value").path("amount").asText().replace("+", "");
+                try {
+                    score.setNumReviews(Integer.parseInt(numStr));
+                } catch (NumberFormatException e) {
+                    // Ignore
+                }
+            }
+
+            // Review date
+            JsonNode dateNode = qualifiers.path("P585");
+            if (dateNode.isArray() && !dateNode.isEmpty()) {
+                String date = dateNode.get(0).path("datavalue").path("value")
+                        .path("time").asText().replaceAll("\\+|T.*", "");
+                score.setReviewDate(date);
+            }
+
+            if (score.getSource() != null) {
+                scores.add(score);
+            }
+        }
+
+        return scores;
+    }
+
+    /**
+     * Extract content ratings from multiple rating systems
+     */
+    private List<ContentRating> extractContentRatings(JsonNode entity) {
+        List<ContentRating> ratings = new ArrayList<>();
+
+        // MPA (P1657), BBFC (P2758), FSK (P1981), EIRIN (P2980),
+        // CNC (P1562), RARS (P5458)
+        ratings.addAll(extractRatingByProperty(entity, "P1657", "MPA"));
+        ratings.addAll(extractRatingByProperty(entity, "P2758", "BBFC"));
+        ratings.addAll(extractRatingByProperty(entity, "P1981", "FSK"));
+        ratings.addAll(extractRatingByProperty(entity, "P2980", "EIRIN"));
+        ratings.addAll(extractRatingByProperty(entity, "P1562", "CNC"));
+        ratings.addAll(extractRatingByProperty(entity, "P5458", "RARS"));
+
+        return ratings;
+    }
+
+    /**
+     * Extract rating by property
+     */
+    private List<ContentRating> extractRatingByProperty(JsonNode entity, String property, String system) {
+        List<ContentRating> ratings = new ArrayList<>();
+        JsonNode claims = entity.path("claims").path(property);
+
+        for (JsonNode claim : claims) {
+            ContentRating rating = new ContentRating();
+            rating.setSystem(system);
+
+            String ratingId = claim.path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
+
+            if (!ratingId.isEmpty()) {
+                rating.setValue(fetchLabelById(ratingId));
+            }
+
+            JsonNode qualifiers = claim.path("qualifiers");
+
+            // Content descriptors
+            List<String> descriptors = new ArrayList<>();
+            JsonNode descriptorNodes = qualifiers.path("P2614");
+            for (JsonNode node : descriptorNodes) {
+                String descId = node.path("datavalue").path("value").path("id").asText();
+                if (!descId.isEmpty()) {
+                    descriptors.add(fetchLabelById(descId));
+                }
+            }
+            if (!descriptors.isEmpty()) {
+                rating.setContentDescriptors(String.join(", ", descriptors));
+            }
+
+            // Start date
+            JsonNode dateNode = qualifiers.path("P580");
+            if (dateNode.isArray() && !dateNode.isEmpty()) {
+                String date = dateNode.get(0).path("datavalue").path("value")
+                        .path("time").asText().replaceAll("\\+|T.*", "");
+                rating.setStartDate(date);
+            }
+
+            // Distribution format
+            JsonNode formatNode = qualifiers.path("P437");
+            if (formatNode.isArray() && !formatNode.isEmpty()) {
+                String formatId = formatNode.get(0).path("datavalue")
+                        .path("value").path("id").asText();
+                rating.setDistributionFormat(fetchLabelById(formatId));
+            }
+
+            ratings.add(rating);
+        }
+
+        return ratings;
+    }
+
+    /**
+     * Extract sequel information
+     */
+    private String extractFollowedBy(JsonNode entity) {
+        JsonNode claims = entity.path("claims").path("P156");
+        if (claims.isArray() && !claims.isEmpty()) {
+            String sequelId = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
+            return fetchLabelById(sequelId);
+        }
+        return null;
+    }
+
+    /**
+     * Extract series information
+     */
+    private String extractPartOfSeries(JsonNode entity) {
+        JsonNode claims = entity.path("claims").path("P179");
+        if (claims.isArray() && !claims.isEmpty()) {
+            String seriesId = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
+            return fetchLabelById(seriesId);
+        }
+        return null;
+    }
+
+    // ==================== WIKIDATA FETCHING METHODS ====================
+
+    /**
+     * Fetch person details from Wikidata
+     */
     private Person fetchPersonDetails(String qid) {
         try {
             String url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json";
@@ -451,6 +704,9 @@ public class FilmController {
         }
     }
 
+    /**
+     * Fetch company details from Wikidata
+     */
     private Company fetchCompanyDetails(String qid) {
         try {
             String url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json";
@@ -475,36 +731,9 @@ public class FilmController {
         }
     }
 
-    private List<Person> extractPersonsWithDetails(JsonNode entity, String property) {
-        List<Person> result = new ArrayList<>();
-        JsonNode claims = entity.path("claims").path(property);
-
-        for (JsonNode claim : claims) {
-            String qid = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
-            if (!qid.isEmpty()) {
-                Person person = fetchPersonDetails(qid);
-                result.add(person);
-            }
-        }
-
-        return result;
-    }
-
-    private List<Company> extractCompaniesWithDetails(JsonNode entity, String property) {
-        List<Company> result = new ArrayList<>();
-        JsonNode claims = entity.path("claims").path(property);
-
-        for (JsonNode claim : claims) {
-            String qid = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
-            if (!qid.isEmpty()) {
-                Company company = fetchCompanyDetails(qid);
-                result.add(company);
-            }
-        }
-
-        return result;
-    }
-
+    /**
+     * Fetch label by Wikidata ID
+     */
     private String fetchLabelById(String id) {
         try {
             String url = "https://www.wikidata.org/wiki/Special:EntityData/" + id + ".json";
@@ -518,67 +747,7 @@ public class FilmController {
         }
     }
 
-    private String extractSubtitleUrl(String videoUrl) {
-        if (videoUrl == null || !videoUrl.contains("/")) return null;
-        try {
-            String fileName = videoUrl.substring(videoUrl.lastIndexOf("/") + 1);
-            String subtitleIdUrl = "https://commons.wikimedia.org/wiki/TimedText:" + fileName + ".id.srt";
-            String subtitleEnUrl = "https://commons.wikimedia.org/wiki/TimedText:" + fileName + ".en.srt";
-            HttpEntity<String> entity = new HttpEntity<>(createHeaders());
-            ResponseEntity<String> responseId = restTemplate.exchange(subtitleIdUrl, HttpMethod.GET, entity, String.class);
-            if (responseId.getStatusCode() == HttpStatus.OK && responseId.getBody() != null && responseId.getBody().contains("<pre")) {
-                return subtitleIdUrl;
-            }
-            ResponseEntity<String> responseEn = restTemplate.exchange(subtitleEnUrl, HttpMethod.GET, entity, String.class);
-            if (responseEn.getStatusCode() == HttpStatus.OK && responseEn.getBody() != null && responseEn.getBody().contains("<pre")) {
-                return subtitleEnUrl;
-            }
-        } catch (Exception e) {}
-        return null;
-    }
-
-    /**
-     * Parse Wikimedia subtitle URL to raw file URL
-     */
-    private String parseSubtitleUrl(String url) {
-        if (url == null || url.isEmpty()) {
-            return null;
-        }
-
-        // If it's a wiki page URL, convert to raw file URL
-        if (url.contains("/wiki/TimedText:")) {
-            // Extract the title part
-            int startIndex = url.indexOf("/wiki/") + 6;
-            String title = url.substring(startIndex);
-
-            // Build raw file URL
-            return "https://commons.wikimedia.org/w/index.php?title=" + title + "&action=raw";
-        }
-
-        // If it's already a raw URL or direct file, return as is
-        if (url.contains("action=raw") || url.endsWith(".srt") || url.endsWith(".vtt")) {
-            return url;
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract filename from Wikimedia Commons URL
-     */
-    private String extractFilename(String url) {
-        if (url == null || !url.contains("/")) {
-            return null;
-        }
-
-        try {
-            // Extract filename from URL
-            String[] parts = url.split("/");
-            return parts[parts.length - 1];
-        } catch (Exception e) {
-            return null;
-        }
-    }
+    // ==================== BASIC EXTRACTION HELPERS ====================
 
     private String getLabel(JsonNode entity) {
         JsonNode labels = entity.path("labels").path("en");
@@ -593,7 +762,8 @@ public class FilmController {
     private String extractDate(JsonNode entity) {
         JsonNode claims = entity.path("claims").path("P577");
         if (claims.isArray() && !claims.isEmpty()) {
-            JsonNode timeValue = claims.get(0).path("mainsnak").path("datavalue").path("value").path("time");
+            JsonNode timeValue = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("time");
             if (!timeValue.isMissingNode()) {
                 return timeValue.asText().replaceAll("\\+|T.*", "");
             }
@@ -601,30 +771,35 @@ public class FilmController {
         return null;
     }
 
-    private String extractEntityLabelWithFallback(JsonNode entity, String property) {
+    private String extractEntityLabel(JsonNode entity, String property) {
         JsonNode claims = entity.path("claims").path(property);
         if (claims.isArray() && !claims.isEmpty()) {
-            String id = claims.get(0).path("mainsnak").path("datavalue").path("value").path("id").asText();
+            String id = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
             return fetchLabelById(id);
         }
         return null;
     }
 
-    private List<String> extractEntityLabelsWithFallback(JsonNode entity, String property) {
+    private List<String> extractEntityLabels(JsonNode entity, String property) {
         List<String> result = new ArrayList<>();
         JsonNode claims = entity.path("claims").path(property);
+
         for (JsonNode claim : claims) {
-            String id = claim.path("mainsnak").path("datavalue").path("value").path("id").asText();
+            String id = claim.path("mainsnak").path("datavalue")
+                    .path("value").path("id").asText();
             String label = fetchLabelById(id);
             if (label != null) result.add(label);
         }
+
         return result;
     }
 
     private String extractDuration(JsonNode entity) {
         JsonNode claims = entity.path("claims").path("P2047");
         if (claims.isArray() && !claims.isEmpty()) {
-            JsonNode amount = claims.get(0).path("mainsnak").path("datavalue").path("value").path("amount");
+            JsonNode amount = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").path("amount");
             if (!amount.isMissingNode()) {
                 String durationValue = amount.asText().replace("+", "");
                 return durationValue + " menit";
@@ -636,30 +811,55 @@ public class FilmController {
     private String extractImageUrl(JsonNode entity) {
         JsonNode claims = entity.path("claims").path("P18");
         if (claims.isArray() && !claims.isEmpty()) {
-            String filename = claims.get(0).path("mainsnak").path("datavalue").path("value").asText();
+            String filename = claims.get(0).path("mainsnak").path("datavalue")
+                    .path("value").asText();
             return generateCommonsUrl(filename);
         }
         return null;
     }
 
+    /**
+     * Extract full video URL (full film)
+     * Looks for P10 (video) with qualifier P3831=Q89347362 (full video available on Wikimedia Commons)
+     */
     private String extractVideoUrl(JsonNode entity) {
         JsonNode videoClaims = entity.path("claims").path("P10");
         if (videoClaims.isArray()) {
             for (JsonNode claim : videoClaims) {
                 JsonNode qualifiers = claim.path("qualifiers").path("P3831");
                 if (qualifiers.isArray() && !qualifiers.isEmpty()) {
-                    String roleId = qualifiers.get(0).path("datavalue").path("value").path("id").asText("");
-                    if ("Q89347362".equals(roleId)) {
-                        String filename = claim.path("mainsnak").path("datavalue").path("value").asText();
+                    String roleId = qualifiers.get(0).path("datavalue")
+                            .path("value").path("id").asText("");
+                    if ("Q89347362".equals(roleId)) {  // Full video
+                        String filename = claim.path("mainsnak").path("datavalue")
+                                .path("value").asText();
                         return generateCommonsUrl(filename);
                     }
                 }
             }
         }
-        JsonNode commonsCat = entity.path("claims").path("P373");
-        if (commonsCat.isArray() && !commonsCat.isEmpty()) {
-            String category = commonsCat.get(0).path("mainsnak").path("datavalue").path("value").asText();
-            return "https://commons.wikimedia.org/wiki/Category:" + category.replace(" ", "_");
+        return null;
+    }
+
+    /**
+     * Extract trailer URL (NEW METHOD)
+     * Looks for P10 (video) with qualifier P3831=Q622550 (trailer)
+     */
+    private String extractTrailerUrl(JsonNode entity) {
+        JsonNode videoClaims = entity.path("claims").path("P10");
+        if (videoClaims.isArray()) {
+            for (JsonNode claim : videoClaims) {
+                JsonNode qualifiers = claim.path("qualifiers").path("P3831");
+                if (qualifiers.isArray() && !qualifiers.isEmpty()) {
+                    String roleId = qualifiers.get(0).path("datavalue")
+                            .path("value").path("id").asText("");
+                    if ("Q622550".equals(roleId)) {  // Trailer
+                        String filename = claim.path("mainsnak").path("datavalue")
+                                .path("value").asText();
+                        return generateCommonsUrl(filename);
+                    }
+                }
+            }
         }
         return null;
     }
@@ -667,13 +867,52 @@ public class FilmController {
     private List<String> extractAliases(JsonNode entity) {
         List<String> aliases = new ArrayList<>();
         JsonNode aliasesNode = entity.path("aliases").path("id");
+
         for (JsonNode aliasNode : aliasesNode) {
             String alias = aliasNode.path("value").asText();
             if (!alias.isEmpty()) aliases.add(alias);
         }
+
         return aliases;
     }
 
+    private String extractSubtitleUrl(String videoUrl) {
+        if (videoUrl == null || !videoUrl.contains("/")) return null;
+
+        try {
+            String fileName = videoUrl.substring(videoUrl.lastIndexOf("/") + 1);
+            String subtitleIdUrl = "https://commons.wikimedia.org/wiki/TimedText:" + fileName + ".id.srt";
+            String subtitleEnUrl = "https://commons.wikimedia.org/wiki/TimedText:" + fileName + ".en.srt";
+
+            HttpEntity<String> entity = new HttpEntity<>(createHeaders());
+
+            ResponseEntity<String> responseId = restTemplate.exchange(
+                    subtitleIdUrl, HttpMethod.GET, entity, String.class);
+            if (responseId.getStatusCode() == HttpStatus.OK &&
+                    responseId.getBody() != null &&
+                    responseId.getBody().contains("<pre")) {
+                return subtitleIdUrl;
+            }
+
+            ResponseEntity<String> responseEn = restTemplate.exchange(
+                    subtitleEnUrl, HttpMethod.GET, entity, String.class);
+            if (responseEn.getStatusCode() == HttpStatus.OK &&
+                    responseEn.getBody() != null &&
+                    responseEn.getBody().contains("<pre")) {
+                return subtitleEnUrl;
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        return null;
+    }
+
+    // ==================== UTILITY METHODS ====================
+
+    /**
+     * Generate Wikimedia Commons URL from filename
+     */
     private String generateCommonsUrl(String filename) {
         try {
             String encodedFile = filename.replace(" ", "_");
@@ -684,9 +923,91 @@ public class FilmController {
                 sb.append(String.format("%02x", b));
             }
             String md5 = sb.toString();
-            return "https://upload.wikimedia.org/wikipedia/commons/" + md5.charAt(0) + "/" + md5.substring(0, 2) + "/" + encodedFile;
+            return "https://upload.wikimedia.org/wikipedia/commons/" +
+                    md5.charAt(0) + "/" + md5.substring(0, 2) + "/" + encodedFile;
         } catch (Exception e) {
             return "https://commons.wikimedia.org/wiki/File:" + filename.replace(" ", "_");
         }
+    }
+
+    /**
+     * Parse subtitle URL to raw format
+     */
+    private String parseSubtitleUrl(String url) {
+        if (url == null || url.isEmpty()) return null;
+
+        if (url.contains("/wiki/TimedText:")) {
+            int startIndex = url.indexOf("/wiki/") + 6;
+            String title = url.substring(startIndex);
+            return "https://commons.wikimedia.org/w/index.php?title=" + title + "&action=raw";
+        }
+
+        if (url.contains("action=raw") || url.endsWith(".srt") || url.endsWith(".vtt")) {
+            return url;
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert SRT to VTT format
+     */
+    private String convertSrtToVtt(String srtContent) {
+        StringBuilder vtt = new StringBuilder("WEBVTT\n\n");
+        String converted = srtContent.replaceAll("(\\d{2}:\\d{2}:\\d{2}),(\\d{3})", "$1.$2");
+        String[] blocks = converted.split("\\n\\n");
+
+        for (String block : blocks) {
+            if (block.trim().isEmpty()) continue;
+
+            String[] lines = block.split("\\n");
+            if (lines.length < 2) continue;
+
+            boolean timestampFound = false;
+            for (String line : lines) {
+                if (line.matches("^\\d+$")) continue;
+
+                if (line.contains("-->")) {
+                    timestampFound = true;
+                    vtt.append(line).append("\n");
+                } else if (timestampFound) {
+                    vtt.append(line).append("\n");
+                }
+            }
+
+            if (timestampFound) {
+                vtt.append("\n");
+            }
+        }
+
+        return vtt.toString();
+    }
+
+    /**
+     * Extract filename from URL
+     */
+    private String extractFilename(String url) {
+        if (url == null || !url.contains("/")) return null;
+
+        try {
+            String[] parts = url.split("/");
+            return parts[parts.length - 1];
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Format currency
+     */
+    private String formatCurrency(long amountInCents, String currency) {
+        double amount = amountInCents / 100.0;
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.US);
+
+        if ("USD".equals(currency)) {
+            return formatter.format(amount);
+        }
+
+        return currency + " " + String.format("%,.2f", amount);
     }
 }

@@ -1,21 +1,21 @@
 package com.naskah.demo.service.film.impl;
 
 import com.naskah.demo.mapper.FilmMapper;
-import com.naskah.demo.model.film.Company;
-import com.naskah.demo.model.film.Film;
-import com.naskah.demo.model.film.FilmDetail;
-import com.naskah.demo.model.film.Person;
+import com.naskah.demo.model.film.*;
+import com.naskah.demo.model.film.FilmDetail.*;
 import com.naskah.demo.service.film.FilmService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
-import java.util.List;
-import java.util.Locale;
+import java.text.NumberFormat;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
+/**
+ * FilmServiceImpl - Implementation of FilmService
+ */
 @Service
 public class FilmServiceImpl implements FilmService {
 
@@ -26,6 +26,8 @@ public class FilmServiceImpl implements FilmService {
     private static final Pattern NON_LATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
     private static final Pattern EDGES_DASHES = Pattern.compile("(^-|-$)");
+
+    // ==================== PUBLIC METHODS ====================
 
     @Override
     public FilmDetail getFilmDetailBySlug(String slug) {
@@ -57,6 +59,7 @@ public class FilmServiceImpl implements FilmService {
         film.setSlug(filmSlug);
         filmDetail.setSlug(filmSlug);
 
+        // Set basic fields
         film.setJudul(filmDetail.getJudul());
         film.setTahunRilis(filmDetail.getTahunRilis());
         film.setJenis(filmDetail.getJenis());
@@ -65,202 +68,43 @@ public class FilmServiceImpl implements FilmService {
         film.setNegaraAsal(filmDetail.getNegaraAsal());
         film.setPosterUrl(filmDetail.getPosterUrl());
         film.setVideoUrl(filmDetail.getVideoUrl());
+        film.setTrailerUrl(filmDetail.getTrailerUrl());  // NEW: Save trailer URL
         film.setSubtitleUrl(filmDetail.getSubtitleUrl());
 
+        // Set technical fields
+        film.setColor(filmDetail.getColor());
+        film.setOriginalLanguage(filmDetail.getOriginalLanguage());
+
+        // Set budget
+        if (filmDetail.getBudget() != null) {
+            film.setBudget(filmDetail.getBudget().getAmount());
+            film.setBudgetDisplay(filmDetail.getBudget().getDisplayValue());
+        }
+
+        // Set relations
+        film.setFollowedBy(filmDetail.getFollowedBy());
+        film.setPartOfSeries(filmDetail.getPartOfSeries());
+
+        // Insert or update film
         if (existing == null) {
             filmMapper.insert(film);
         } else {
             film.setId(existing.getId());
             filmMapper.update(film);
-            filmMapper.deleteGenresByFilmId(film.getId());
-            filmMapper.deletePersonsByFilmId(film.getId());
-            filmMapper.deleteProductionCompaniesByFilmId(film.getId());
-            filmMapper.deleteAliasesByFilmId(film.getId());
+            deleteAllRelations(film.getId());
         }
 
-        // Insert genres (clean genre names by removing "film" suffix)
-        if (filmDetail.getGenre() != null) {
-            for (String genre : filmDetail.getGenre()) {
-                String cleanGenre = cleanGenreName(genre);
-                filmMapper.insertGenre(film.getId(), cleanGenre);
-            }
-        }
-
-        // Insert persons with full details
-        if (filmDetail.getSutradara() != null) {
-            for (Person director : filmDetail.getSutradara()) {
-                Long personId = saveOrGetPerson(director);
-                if (personId != null) {
-                    filmMapper.insertFilmPerson(film.getId(), personId, "director");
-                }
-            }
-        }
-
-        if (filmDetail.getPenulisSkenario() != null) {
-            for (Person writer : filmDetail.getPenulisSkenario()) {
-                Long personId = saveOrGetPerson(writer);
-                if (personId != null) {
-                    filmMapper.insertFilmPerson(film.getId(), personId, "writer");
-                }
-            }
-        }
-
-        if (filmDetail.getPemeran() != null) {
-            for (Person actor : filmDetail.getPemeran()) {
-                Long personId = saveOrGetPerson(actor);
-                if (personId != null) {
-                    filmMapper.insertFilmPerson(film.getId(), personId, "actor");
-                }
-            }
-        }
-
-        if (filmDetail.getProduser() != null) {
-            for (Person producer : filmDetail.getProduser()) {
-                Long personId = saveOrGetPerson(producer);
-                if (personId != null) {
-                    filmMapper.insertFilmPerson(film.getId(), personId, "producer");
-                }
-            }
-        }
-
-        // Insert companies with full details
-        if (filmDetail.getPerusahaanProduksi() != null) {
-            for (Company company : filmDetail.getPerusahaanProduksi()) {
-                Long companyId = saveOrGetCompany(company);
-                if (companyId != null) {
-                    filmMapper.insertFilmProductionCompany(film.getId(), companyId);
-                }
-            }
-        }
-
-        if (filmDetail.getAliasIndonesia() != null) {
-            for (String alias : filmDetail.getAliasIndonesia()) {
-                filmMapper.insertAlias(film.getId(), alias, "id");
-            }
-        }
+        // Save all relations
+        saveGenres(film.getId(), filmDetail.getGenre());
+        savePersons(film.getId(), filmDetail);
+        saveCompanies(film.getId(), filmDetail);
+        saveLocations(film.getId(), filmDetail);
+        saveBoxOffice(film.getId(), filmDetail.getBoxOffice());
+        saveReviews(film.getId(), filmDetail.getReviewScores());
+        saveContentRatings(film.getId(), filmDetail.getContentRatings());
+        saveAliases(film.getId(), filmDetail.getAliasIndonesia());
 
         return film;
-    }
-
-    private Long saveOrGetPerson(Person person) {
-        if (person == null || person.getName() == null) {
-            return null;
-        }
-
-        if (person.getWikidataQid() == null || person.getWikidataQid().isEmpty()) {
-            person.setWikidataQid("TEMP_" + person.getName().replaceAll("[^a-zA-Z0-9]", "_"));
-        }
-
-        // Generate slug for person
-        if (person.getSlug() == null || person.getSlug().isEmpty()) {
-            person.setSlug(generateSlug(person.getName()));
-        }
-
-        Person existing = filmMapper.findPersonByQid(person.getWikidataQid());
-
-        if (existing == null) {
-            filmMapper.insertPerson(person);
-            return person.getId();
-        } else {
-            boolean needsUpdate = false;
-
-            if (person.getName() != null && !person.getName().equals(existing.getName())) {
-                existing.setName(person.getName());
-                needsUpdate = true;
-            }
-            if (person.getSlug() != null && !person.getSlug().equals(existing.getSlug())) {
-                existing.setSlug(person.getSlug());
-                needsUpdate = true;
-            }
-            if (person.getPhotoUrl() != null && !person.getPhotoUrl().equals(existing.getPhotoUrl())) {
-                existing.setPhotoUrl(person.getPhotoUrl());
-                needsUpdate = true;
-            }
-            if (person.getDescription() != null && !person.getDescription().equals(existing.getDescription())) {
-                existing.setDescription(person.getDescription());
-                needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-                filmMapper.updatePerson(existing);
-            }
-
-            return existing.getId();
-        }
-    }
-
-    private Long saveOrGetCompany(Company company) {
-        if (company == null || company.getName() == null) {
-            return null;
-        }
-
-        if (company.getWikidataQid() == null || company.getWikidataQid().isEmpty()) {
-            company.setWikidataQid("TEMP_" + company.getName().replaceAll("[^a-zA-Z0-9]", "_"));
-        }
-
-        // Generate slug for company
-        if (company.getSlug() == null || company.getSlug().isEmpty()) {
-            company.setSlug(generateSlug(company.getName()));
-        }
-
-        Company existing = filmMapper.findCompanyByQid(company.getWikidataQid());
-
-        if (existing == null) {
-            filmMapper.insertCompany(company);
-            return company.getId();
-        } else {
-            boolean needsUpdate = false;
-
-            if (company.getName() != null && !company.getName().equals(existing.getName())) {
-                existing.setName(company.getName());
-                needsUpdate = true;
-            }
-            if (company.getSlug() != null && !company.getSlug().equals(existing.getSlug())) {
-                existing.setSlug(company.getSlug());
-                needsUpdate = true;
-            }
-            if (company.getLogoUrl() != null && !company.getLogoUrl().equals(existing.getLogoUrl())) {
-                existing.setLogoUrl(company.getLogoUrl());
-                needsUpdate = true;
-            }
-            if (company.getDescription() != null && !company.getDescription().equals(existing.getDescription())) {
-                existing.setDescription(company.getDescription());
-                needsUpdate = true;
-            }
-
-            if (needsUpdate) {
-                filmMapper.updateCompany(existing);
-            }
-
-            return existing.getId();
-        }
-    }
-
-    private FilmDetail buildFilmDetail(Film film) {
-        FilmDetail detail = new FilmDetail();
-        detail.setId(film.getId());
-        detail.setWikidataQid(film.getWikidataQid());
-        detail.setSlug(film.getSlug());
-        detail.setJudul(film.getJudul());
-        detail.setTahunRilis(film.getTahunRilis());
-        detail.setJenis(film.getJenis());
-        detail.setDeskripsi(film.getDeskripsi());
-        detail.setDurasi(film.getDurasi());
-        detail.setNegaraAsal(film.getNegaraAsal());
-        detail.setPosterUrl(film.getPosterUrl());
-        detail.setVideoUrl(film.getVideoUrl());
-        detail.setSubtitleUrl(film.getSubtitleUrl());
-
-        // Get genres and clean them (no cleaning needed when reading from DB as they're already clean)
-        detail.setGenre(filmMapper.findGenresByFilmId(film.getId()));
-        detail.setSutradara(filmMapper.findPersonObjectsByFilmIdAndRole(film.getId(), "director"));
-        detail.setPenulisSkenario(filmMapper.findPersonObjectsByFilmIdAndRole(film.getId(), "writer"));
-        detail.setPemeran(filmMapper.findPersonObjectsByFilmIdAndRole(film.getId(), "actor"));
-        detail.setProduser(filmMapper.findPersonObjectsByFilmIdAndRole(film.getId(), "producer"));
-        detail.setPerusahaanProduksi(filmMapper.findCompanyObjectsByFilmId(film.getId()));
-        detail.setAliasIndonesia(filmMapper.findAliasesByFilmIdAndLanguage(film.getId(), "id"));
-
-        return detail;
     }
 
     @Override
@@ -287,17 +131,394 @@ public class FilmServiceImpl implements FilmService {
 
     // ==================== PRIVATE HELPER METHODS ====================
 
+    /**
+     * Build complete FilmDetail from Film entity
+     */
+    private FilmDetail buildFilmDetail(Film film) {
+        FilmDetail detail = new FilmDetail();
+
+        // Basic info
+        detail.setId(film.getId());
+        detail.setWikidataQid(film.getWikidataQid());
+        detail.setSlug(film.getSlug());
+        detail.setJudul(film.getJudul());
+        detail.setTahunRilis(film.getTahunRilis());
+        detail.setJenis(film.getJenis());
+        detail.setDeskripsi(film.getDeskripsi());
+        detail.setDurasi(film.getDurasi());
+        detail.setNegaraAsal(film.getNegaraAsal());
+
+        // Media
+        detail.setPosterUrl(film.getPosterUrl());
+        detail.setVideoUrl(film.getVideoUrl());
+        detail.setTrailerUrl(film.getTrailerUrl());  // NEW: Load trailer URL
+        detail.setSubtitleUrl(film.getSubtitleUrl());
+
+        // Technical
+        detail.setColor(film.getColor());
+        detail.setOriginalLanguage(film.getOriginalLanguage());
+
+        // Budget
+        if (film.getBudget() != null) {
+            BudgetData budget = new BudgetData();
+            budget.setAmount(film.getBudget());
+            budget.setCurrency("USD");
+            budget.setDisplayValue(film.getBudgetDisplay());
+            detail.setBudget(budget);
+        }
+
+        // Relations
+        detail.setFollowedBy(film.getFollowedBy());
+        detail.setPartOfSeries(film.getPartOfSeries());
+
+        // Load all relationships
+        detail.setGenre(filmMapper.findGenresByFilmId(film.getId()));
+
+        // People
+        detail.setSutradara(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "director"));
+        detail.setPenulisSkenario(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "writer"));
+        detail.setPemeran(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "actor"));
+        detail.setProduser(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "producer"));
+        detail.setFilmEditor(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "editor"));
+        detail.setCinematographer(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "cinematographer"));
+        detail.setComposer(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "composer"));
+
+        // Companies
+        detail.setPerusahaanProduksi(filmMapper.findProductionCompaniesByFilmId(film.getId()));
+        detail.setDistributor(filmMapper.findDistributorsByFilmId(film.getId()));
+
+        // Locations
+        detail.setNarrativeLocation(filmMapper.findLocationsByFilmIdAndType(film.getId(), "narrative"));
+        detail.setFilmingLocation(filmMapper.findLocationsByFilmIdAndType(film.getId(), "filming"));
+
+        // Financial & ratings
+        detail.setBoxOffice(loadBoxOffice(filmMapper.findBoxOfficeByFilmId(film.getId())));
+        detail.setReviewScores(filmMapper.findReviewsByFilmId(film.getId()));
+        detail.setContentRatings(filmMapper.findContentRatingsByFilmId(film.getId()));
+
+        // Aliases
+        detail.setAliasIndonesia(filmMapper.findAliasesByFilmIdAndLanguage(film.getId(), "id"));
+
+        return detail;
+    }
+
+    /**
+     * Load box office and format display values
+     */
+    private List<BoxOfficeData> loadBoxOffice(List<BoxOfficeData> boxOfficeList) {
+        if (boxOfficeList == null) return null;
+
+        for (BoxOfficeData bo : boxOfficeList) {
+            if (bo.getDisplayValue() == null && bo.getAmount() != null) {
+                bo.setDisplayValue(formatCurrency(bo.getAmount(), bo.getCurrency()));
+            }
+        }
+
+        return boxOfficeList;
+    }
+
+    /**
+     * Delete all film relations before update
+     */
+    private void deleteAllRelations(Long filmId) {
+        filmMapper.deleteGenresByFilmId(filmId);
+        filmMapper.deletePersonsByFilmId(filmId);
+        filmMapper.deleteProductionCompaniesByFilmId(filmId);
+        filmMapper.deleteDistributorsByFilmId(filmId);
+        filmMapper.deleteLocationsByFilmId(filmId);
+        filmMapper.deleteBoxOfficeByFilmId(filmId);
+        filmMapper.deleteReviewsByFilmId(filmId);
+        filmMapper.deleteContentRatingsByFilmId(filmId);
+        filmMapper.deleteAliasesByFilmId(filmId);
+    }
+
+    /**
+     * Save genres
+     */
+    private void saveGenres(Long filmId, List<String> genres) {
+        if (genres == null) return;
+
+        for (String genre : genres) {
+            String cleanGenre = cleanGenreName(genre);
+            filmMapper.insertGenre(filmId, cleanGenre);
+        }
+    }
+
+    /**
+     * Save all person relations
+     */
+    private void savePersons(Long filmId, FilmDetail filmDetail) {
+        savePersonList(filmId, filmDetail.getSutradara(), "director");
+        savePersonList(filmId, filmDetail.getPenulisSkenario(), "writer");
+        savePersonList(filmId, filmDetail.getPemeran(), "actor");
+        savePersonList(filmId, filmDetail.getProduser(), "producer");
+        savePersonList(filmId, filmDetail.getFilmEditor(), "editor");
+        savePersonList(filmId, filmDetail.getCinematographer(), "cinematographer");
+        savePersonList(filmId, filmDetail.getComposer(), "composer");
+    }
+
+    /**
+     * Save person list with role
+     */
+    private void savePersonList(Long filmId, List<Person> persons, String role) {
+        if (persons == null) return;
+
+        for (Person person : persons) {
+            Long personId = saveOrGetPerson(person);
+            if (personId != null) {
+                filmMapper.insertFilmPerson(filmId, personId, role);
+            }
+        }
+    }
+
+    /**
+     * Save or get existing person
+     */
+    private Long saveOrGetPerson(Person person) {
+        if (person == null || person.getName() == null) {
+            return null;
+        }
+
+        // Generate temp QID if missing
+        if (person.getWikidataQid() == null || person.getWikidataQid().isEmpty()) {
+            person.setWikidataQid("TEMP_" + person.getName().replaceAll("[^a-zA-Z0-9]", "_"));
+        }
+
+        // Generate slug
+        if (person.getSlug() == null || person.getSlug().isEmpty()) {
+            person.setSlug(generateSlug(person.getName()));
+        }
+
+        Person existing = filmMapper.findPersonByQid(person.getWikidataQid());
+
+        if (existing == null) {
+            filmMapper.insertPerson(person);
+            return person.getId();
+        } else {
+            // Update if there are changes
+            if (needsPersonUpdate(person, existing)) {
+                updatePersonFields(existing, person);
+                filmMapper.updatePerson(existing);
+            }
+            return existing.getId();
+        }
+    }
+
+    /**
+     * Check if person needs update
+     */
+    private boolean needsPersonUpdate(Person newPerson, Person existing) {
+        return (newPerson.getName() != null && !newPerson.getName().equals(existing.getName())) ||
+                (newPerson.getPhotoUrl() != null && !newPerson.getPhotoUrl().equals(existing.getPhotoUrl())) ||
+                (newPerson.getDescription() != null && !newPerson.getDescription().equals(existing.getDescription()));
+    }
+
+    /**
+     * Update person fields
+     */
+    private void updatePersonFields(Person existing, Person newPerson) {
+        if (newPerson.getName() != null) existing.setName(newPerson.getName());
+        if (newPerson.getSlug() != null) existing.setSlug(newPerson.getSlug());
+        if (newPerson.getPhotoUrl() != null) existing.setPhotoUrl(newPerson.getPhotoUrl());
+        if (newPerson.getDescription() != null) existing.setDescription(newPerson.getDescription());
+    }
+
+    /**
+     * Save all company relations
+     */
+    private void saveCompanies(Long filmId, FilmDetail filmDetail) {
+        saveProductionCompanies(filmId, filmDetail.getPerusahaanProduksi());
+        saveDistributors(filmId, filmDetail.getDistributor());
+    }
+
+    /**
+     * Save production companies
+     */
+    private void saveProductionCompanies(Long filmId, List<Company> companies) {
+        if (companies == null) return;
+
+        for (Company company : companies) {
+            Long companyId = saveOrGetCompany(company);
+            if (companyId != null) {
+                filmMapper.insertFilmProductionCompany(filmId, companyId);
+            }
+        }
+    }
+
+    /**
+     * Save distributors
+     */
+    private void saveDistributors(Long filmId, List<Company> companies) {
+        if (companies == null) return;
+
+        for (Company company : companies) {
+            Long companyId = saveOrGetCompany(company);
+            if (companyId != null) {
+                filmMapper.insertFilmDistributor(filmId, companyId);
+            }
+        }
+    }
+
+    /**
+     * Save or get existing company
+     */
+    private Long saveOrGetCompany(Company company) {
+        if (company == null || company.getName() == null) {
+            return null;
+        }
+
+        // Generate temp QID if missing
+        if (company.getWikidataQid() == null || company.getWikidataQid().isEmpty()) {
+            company.setWikidataQid("TEMP_" + company.getName().replaceAll("[^a-zA-Z0-9]", "_"));
+        }
+
+        // Generate slug
+        if (company.getSlug() == null || company.getSlug().isEmpty()) {
+            company.setSlug(generateSlug(company.getName()));
+        }
+
+        Company existing = filmMapper.findCompanyByQid(company.getWikidataQid());
+
+        if (existing == null) {
+            filmMapper.insertCompany(company);
+            return company.getId();
+        } else {
+            // Update if there are changes
+            if (needsCompanyUpdate(company, existing)) {
+                updateCompanyFields(existing, company);
+                filmMapper.updateCompany(existing);
+            }
+            return existing.getId();
+        }
+    }
+
+    /**
+     * Check if company needs update
+     */
+    private boolean needsCompanyUpdate(Company newCompany, Company existing) {
+        return (newCompany.getName() != null && !newCompany.getName().equals(existing.getName())) ||
+                (newCompany.getLogoUrl() != null && !newCompany.getLogoUrl().equals(existing.getLogoUrl())) ||
+                (newCompany.getDescription() != null && !newCompany.getDescription().equals(existing.getDescription()));
+    }
+
+    /**
+     * Update company fields
+     */
+    private void updateCompanyFields(Company existing, Company newCompany) {
+        if (newCompany.getName() != null) existing.setName(newCompany.getName());
+        if (newCompany.getSlug() != null) existing.setSlug(newCompany.getSlug());
+        if (newCompany.getLogoUrl() != null) existing.setLogoUrl(newCompany.getLogoUrl());
+        if (newCompany.getDescription() != null) existing.setDescription(newCompany.getDescription());
+    }
+
+    /**
+     * Save locations
+     */
+    private void saveLocations(Long filmId, FilmDetail filmDetail) {
+        // Narrative locations
+        if (filmDetail.getNarrativeLocation() != null) {
+            for (String location : filmDetail.getNarrativeLocation()) {
+                filmMapper.insertLocation(filmId, "narrative", location);
+            }
+        }
+
+        // Filming locations
+        if (filmDetail.getFilmingLocation() != null) {
+            for (String location : filmDetail.getFilmingLocation()) {
+                filmMapper.insertLocation(filmId, "filming", location);
+            }
+        }
+    }
+
+    /**
+     * Save box office data
+     */
+    private void saveBoxOffice(Long filmId, List<BoxOfficeData> boxOfficeList) {
+        if (boxOfficeList == null) return;
+
+        for (BoxOfficeData bo : boxOfficeList) {
+            filmMapper.insertBoxOffice(filmId, bo.getRegion(), bo.getAmount(), bo.getCurrency());
+        }
+    }
+
+    /**
+     * Save review scores
+     * Skip reviews with missing required fields
+     */
+    private void saveReviews(Long filmId, List<ReviewScore> reviews) {
+        if (reviews == null) return;
+
+        for (ReviewScore review : reviews) {
+            // Skip reviews without source or value - they're incomplete
+            if (review.getSource() == null || review.getSource().isEmpty() ||
+                    review.getValue() == null || review.getValue().isEmpty()) {
+                System.out.println("⚠️  Skipping review: " +
+                        (review.getSource() != null ? review.getSource() : "unknown") +
+                        " (missing required fields)");
+                continue;
+            }
+
+            filmMapper.insertReview(
+                    filmId,
+                    review.getSource(),
+                    review.getScoreType(),
+                    review.getValue(),
+                    review.getNumReviews(),
+                    review.getReviewDate()
+            );
+        }
+    }
+
+    /**
+     * Save content ratings
+     * Skip ratings with NULL values as they violate database constraints
+     */
+    private void saveContentRatings(Long filmId, List<ContentRating> ratings) {
+        if (ratings == null) return;
+
+        for (ContentRating rating : ratings) {
+            // Skip ratings without a value - they're incomplete and violate NOT NULL constraint
+            if (rating.getValue() == null || rating.getValue().isEmpty()) {
+                System.out.println("⚠️  Skipping content rating: " + rating.getSystem() + " (NULL value)");
+                continue;
+            }
+
+            filmMapper.insertContentRating(
+                    filmId,
+                    rating.getSystem(),
+                    rating.getValue(),
+                    rating.getContentDescriptors(),
+                    rating.getStartDate(),
+                    rating.getDistributionFormat()
+            );
+        }
+    }
+
+    /**
+     * Save aliases
+     */
+    private void saveAliases(Long filmId, List<String> aliases) {
+        if (aliases == null) return;
+
+        for (String alias : aliases) {
+            filmMapper.insertAlias(filmId, alias, "id");
+        }
+    }
+
+    // ==================== UTILITY METHODS ====================
+
+    /**
+     * Clean genre name (remove "film" suffix)
+     */
     private String cleanGenreName(String genre) {
         if (genre == null || genre.isEmpty()) {
             return genre;
         }
 
-        // Remove " film" suffix (case insensitive)
         String cleaned = genre.trim()
-                .replaceAll("(?i)\\s+films?$", "")  // Remove " film" or " films" at the end
+                .replaceAll("(?i)\\s+films?$", "")
                 .trim();
 
-        // Capitalize first letter
         if (!cleaned.isEmpty()) {
             cleaned = cleaned.substring(0, 1).toUpperCase() + cleaned.substring(1);
         }
@@ -305,36 +526,46 @@ public class FilmServiceImpl implements FilmService {
         return cleaned;
     }
 
+    /**
+     * Generate slug from text
+     */
     private String generateSlug(String input) {
         if (input == null || input.isEmpty()) {
             return "";
         }
 
         String slug = input.toLowerCase(Locale.ENGLISH);
-
-        // Normalize unicode characters (remove accents)
         slug = Normalizer.normalize(slug, Normalizer.Form.NFD);
-
-        // Replace whitespace with dashes
         slug = WHITESPACE.matcher(slug).replaceAll("-");
-
-        // Remove non-latin characters except dashes
         slug = NON_LATIN.matcher(slug).replaceAll("");
-
-        // Remove dashes from edges
         slug = EDGES_DASHES.matcher(slug).replaceAll("");
-
-        // Replace multiple consecutive dashes with single dash
         slug = slug.replaceAll("-+", "-");
 
         return slug;
     }
 
+    /**
+     * Generate unique slug with suffix
+     */
     private String generateUniqueSlug(String input, String suffix) {
         String baseSlug = generateSlug(input);
         if (suffix != null && !suffix.isEmpty()) {
             return baseSlug + "-" + suffix;
         }
         return baseSlug;
+    }
+
+    /**
+     * Format currency amount
+     */
+    private String formatCurrency(long amountInCents, String currency) {
+        double amount = amountInCents / 100.0;
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.US);
+
+        if ("USD".equals(currency)) {
+            return formatter.format(amount);
+        }
+
+        return currency + " " + String.format("%,.2f", amount);
     }
 }
