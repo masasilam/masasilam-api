@@ -1,13 +1,19 @@
 package com.naskah.demo.controller;
 
+import com.naskah.demo.model.dto.request.ChangePasswordRequest;
+import com.naskah.demo.model.dto.request.UpdateUserRequest;
 import com.naskah.demo.model.dto.response.DataResponse;
 import com.naskah.demo.model.dto.response.UserResponse;
-import com.naskah.demo.service.impl.UserService;
+import com.naskah.demo.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -20,7 +26,46 @@ public class UserController {
     @GetMapping
     public ResponseEntity<DataResponse<List<UserResponse>>> getAllUsers() {
         DataResponse<List<UserResponse>> response = userService.getAllUsers();
+        return ResponseEntity.ok(response);
+    }
 
+    @GetMapping("/{userId}")
+    public ResponseEntity<DataResponse<UserResponse>> getUserById(@PathVariable Long userId) {
+        DataResponse<UserResponse> response = userService.getUserById(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{userId}")
+    public ResponseEntity<DataResponse<UserResponse>> updateUser(
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateUserRequest request) {
+        DataResponse<UserResponse> response = userService.updateUser(userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{userId}/change-password")
+    public ResponseEntity<DataResponse<String>> changePassword(
+            @PathVariable Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        DataResponse<String> response = userService.changePassword(userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<DataResponse<String>> deleteUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "false") Boolean hardDelete) {
+        DataResponse<String> response = userService.deleteUser(userId, hardDelete);
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ TAMBAHKAN ENDPOINT UPLOAD PROFILE PICTURE
+    @PostMapping("/profile-picture")
+    public ResponseEntity<DataResponse<Map<String, String>>> uploadProfilePicture(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") Long userId) {
+
+        DataResponse<Map<String, String>> response = userService.uploadProfilePicture(file, userId);
         return ResponseEntity.ok(response);
     }
 }

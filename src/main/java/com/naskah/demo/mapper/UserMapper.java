@@ -29,4 +29,10 @@ public interface UserMapper {
     void verifyUserEmail(@Param("userId") Long userId);
     void deleteVerificationToken(@Param("userId") Long userId);
     List<UserResponse> findAllUsers();
+
+    // New methods
+    void updateUser(User user);
+    void softDeleteUser(@Param("userId") Long userId);
+    void hardDeleteUser(@Param("userId") Long userId);
+    void deleteUserRoles(@Param("userId") Long userId);
 }

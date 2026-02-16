@@ -131,4 +131,35 @@
         ORDER BY created_at DESC
     </select>
 
+    <!-- New Queries -->
+    <update id="updateUser" parameterType="com.naskah.demo.model.entity.User">
+        UPDATE users
+        <set>
+            <if test="fullName != null">full_name = #{fullName},</if>
+            <if test="bio != null">bio = #{bio},</if>
+            <if test="profilePictureUrl != null">profile_picture_url = #{profilePictureUrl},</if>
+            <if test="emailNotifications != null">email_notifications = #{emailNotifications},</if>
+            updated_at = #{updatedAt}
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteUser">
+        UPDATE users
+        SET is_active = false,
+        status = 'DELETED',
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+    </update>
+
+    <delete id="hardDeleteUser">
+        DELETE FROM users
+        WHERE id = #{userId}
+    </delete>
+
+    <delete id="deleteUserRoles">
+        DELETE FROM user_roles
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

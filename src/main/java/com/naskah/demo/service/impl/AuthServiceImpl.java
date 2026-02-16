@@ -65,13 +65,27 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
         LoginResponse loginResponse = new LoginResponse();
+        loginResponse.setId(user.getId());
         loginResponse.setToken(token);
         loginResponse.setRefreshToken(refreshToken);
         loginResponse.setTokenType("Bearer");
         loginResponse.setUsername(user.getUsername());
         loginResponse.setName(user.getFullName());
+        loginResponse.setEmail(user.getEmail());
         loginResponse.setRoles(roleNames.toArray(new String[0]));
         loginResponse.setExpiresIn(jwtExpiration);
+
+        // ✅ TAMBAHKAN SEMUA FIELD USER
+        loginResponse.setFullName(user.getFullName());
+        loginResponse.setProfilePictureUrl(user.getProfilePictureUrl());
+        loginResponse.setBio(user.getBio());
+        loginResponse.setEmailNotifications(user.getEmailNotifications());
+        loginResponse.setLevel(user.getLevel());
+        loginResponse.setTotalBooksRead(user.getTotalBooksRead());
+        loginResponse.setReadingStreakDays(user.getReadingStreakDays());
+        loginResponse.setContributedBooksCount(user.getContributedBooksCount());
+        loginResponse.setAverageRating(user.getAverageRating());
+        loginResponse.setExperiencePoints(user.getExperiencePoints());
 
         return new DataResponse<>("Success", "Login successful", HttpStatus.OK.value(), loginResponse);
     }
@@ -182,6 +196,7 @@ public class AuthServiceImpl implements AuthService {
 
                 // Set default values
                 user.setProfilePictureUrl(null);
+                user.setBio(null);
                 user.setTotalBooksRead(0);
                 user.setReadingStreakDays(0);
                 user.setStatus("ACTIVE");
@@ -217,13 +232,27 @@ public class AuthServiceImpl implements AuthService {
             String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
             LoginResponse loginResponse = new LoginResponse();
+            loginResponse.setId(user.getId());
             loginResponse.setToken(token);
             loginResponse.setRefreshToken(refreshToken);
             loginResponse.setTokenType("Bearer");
             loginResponse.setUsername(user.getUsername());
             loginResponse.setName(user.getFullName());
+            loginResponse.setEmail(user.getEmail());
             loginResponse.setRoles(roleNames.toArray(new String[0]));
             loginResponse.setExpiresIn(jwtExpiration);
+
+            // ✅ TAMBAHKAN SEMUA FIELD USER
+            loginResponse.setFullName(user.getFullName());
+            loginResponse.setProfilePictureUrl(user.getProfilePictureUrl());
+            loginResponse.setBio(user.getBio());
+            loginResponse.setEmailNotifications(user.getEmailNotifications());
+            loginResponse.setLevel(user.getLevel());
+            loginResponse.setTotalBooksRead(user.getTotalBooksRead());
+            loginResponse.setReadingStreakDays(user.getReadingStreakDays());
+            loginResponse.setContributedBooksCount(user.getContributedBooksCount());
+            loginResponse.setAverageRating(user.getAverageRating());
+            loginResponse.setExperiencePoints(user.getExperiencePoints());
 
             return new DataResponse<>("Success", "Google authentication successful", HttpStatus.OK.value(), loginResponse);
 
@@ -358,51 +387,4 @@ public class AuthServiceImpl implements AuthService {
 
         return new DataResponse<>("Success", "Token refreshed successfully", HttpStatus.OK.value(), response);
     }
-
-//    @Override
-//    public DataResponse<UserContributionResponse> getUserContributions(String username) {
-//        try {
-//            User user = userMapper.findUserByUsername(username);
-//            if (user == null) {
-//                throw new DataNotFoundException();
-//            }
-//
-//            List<BookContribution> contributions = userMapper.getUserContributions(user.getId());
-//            String contributorLevel = calculateContributorLevel(contributions.size());
-//            int contributionPoints = calculateContributionPoints(contributions);
-//
-//            UserContributionResponse response = new UserContributionResponse();
-//            response.setContributions(contributions);
-//            response.setTotalContributions(contributions.size());
-//            response.setContributorLevel(contributorLevel);
-//            response.setContributionPoints(contributionPoints);
-//
-//            return new DataResponse<>("Success", "Contributions retrieved successfully", HttpStatus.OK.value(), response);
-//        } catch (Exception e) {
-//            log.error("Error retrieving user contributions", e);
-//            throw new RuntimeException("Failed to retrieve contributions");
-//        }
-//    }
-//
-//    private String calculateContributorLevel(int contributionCount) {
-//        if (contributionCount >= 100) return "MASTER_CONTRIBUTOR";
-//        if (contributionCount >= 50) return "EXPERT_CONTRIBUTOR";
-//        if (contributionCount >= 20) return "ADVANCED_CONTRIBUTOR";
-//        if (contributionCount >= 5) return "REGULAR_CONTRIBUTOR";
-//        return "NOVICE_CONTRIBUTOR";
-//    }
-//
-//    private int calculateContributionPoints(List<BookContribution> contributions) {
-//        return contributions.stream()
-//                .mapToInt(c -> {
-//                    switch (c.getContributionType()) {
-//                        case "AUTHOR": return 100;
-//                        case "TRANSLATOR": return 75;
-//                        case "EDITOR": return 50;
-//                        case "REVIEWER": return 25;
-//                        default: return 10;
-//                    }
-//                })
-//                .sum();
-//    }
 }
