@@ -401,7 +401,7 @@ public class NewspaperServiceImpl implements NewspaperService {
                     .category(request.getCategory())
                     .publishDate(request.getPublishDate())
                     .title(request.getTitle())
-                    .content(plainText)  // Auto-generated
+                    .content(plainText)
                     .htmlContent(request.getHtmlContent())
                     .wordCount(wordCount)
                     .author(request.getAuthor())
@@ -419,8 +419,7 @@ public class NewspaperServiceImpl implements NewspaperService {
 
             log.info("Article created: {} (ID: {})", article.getTitle(), article.getId());
 
-            return new DataResponse<>(SUCCESS, "Article created successfully",
-                    HttpStatus.CREATED.value(), detail);
+            return new DataResponse<>(SUCCESS, "Article created successfully", HttpStatus.CREATED.value(), detail);
 
         } catch (Exception e) {
             log.error("Error creating article", e);

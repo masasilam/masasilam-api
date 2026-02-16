@@ -31,7 +31,7 @@ public class CreateArticleRequest {
     private String title;
 
     @NotBlank
-    private String htmlContent;  // Akan diisi dari file upload
+    private String htmlContent;
 
     private String author;
     private Integer pageNumber;

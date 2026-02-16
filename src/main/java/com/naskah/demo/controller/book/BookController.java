@@ -86,7 +86,6 @@ public class BookController {
                 .build();
 
         DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(page, limit, sortField, sortOrder, criteria);
-
         return ResponseEntity.ok(response);
     }
 
@@ -94,14 +93,12 @@ public class BookController {
     public ResponseEntity<DataResponse<Book>> updateBook(@RequestParam Long id, @RequestPart("ebook") @Valid Book book,
                                                          @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
         DataResponse<Book> response = bookService.update(id, book, file);
-
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<DefaultResponse> deleteBook(@PathVariable Long id) throws IOException {
         DefaultResponse response = bookService.delete(id);
-
         return ResponseEntity.ok(response);
     }
 
@@ -113,7 +110,6 @@ public class BookController {
     @GetMapping("/genres")
     public ResponseEntity<DataResponse<List<GenreResponse>>> getAllGenres(@RequestParam(defaultValue = "false") boolean includeBookCount) {
         DataResponse<List<GenreResponse>> response = bookService.getAllGenres(includeBookCount);
-
         return ResponseEntity.ok(response);
     }
 
@@ -123,7 +119,6 @@ public class BookController {
                                                                            @RequestParam(required = false) String search,
                                                                            @RequestParam(defaultValue = "name") String sortBy) {
         DatatableResponse<AuthorResponse> response = bookService.getAllAuthors(page, limit, search, sortBy);
-
         return ResponseEntity.ok(response);
     }
 
@@ -133,14 +128,12 @@ public class BookController {
                                                                                      @RequestParam(required = false) String role,
                                                                                      @RequestParam(required = false) String search) {
         DatatableResponse<ContributorResponse> response = bookService.getAllContributors(page, limit, role, search);
-
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{slug}/my-annotations")
     public ResponseEntity<DataResponse<ChapterAnnotationsResponse>> getMyBookAnnotations(@PathVariable String slug) {
         DataResponse<ChapterAnnotationsResponse> response = chapterService.getMyChapterAnnotations(slug);
-
         return ResponseEntity.ok(response);
     }
 }

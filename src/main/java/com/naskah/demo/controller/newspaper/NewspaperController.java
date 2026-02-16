@@ -188,8 +188,7 @@ public class NewspaperController {
                 .importance(importance)
                 .build();
 
-        DatatableResponse<NewspaperArticleResponse> response =
-                newspaperService.searchArticles(criteria, page, limit);
+        DatatableResponse<NewspaperArticleResponse> response = newspaperService.searchArticles(criteria, page, limit);
         return ResponseEntity.ok(response);
     }
 
@@ -204,28 +203,21 @@ public class NewspaperController {
         int targetMonth = month != null ? month : today.getMonthValue();
         int targetDay = day != null ? day : today.getDayOfMonth();
 
-        DatatableResponse<NewspaperArticleResponse> response =
-                newspaperService.getArticlesOnThisDay(targetMonth, targetDay, page, limit);
+        DatatableResponse<NewspaperArticleResponse> response = newspaperService.getArticlesOnThisDay(targetMonth, targetDay, page, limit);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/analytics/overview")
-    public ResponseEntity<DataResponse<NewspaperAnalyticsResponse>> getAnalyticsOverview(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-
-        DataResponse<NewspaperAnalyticsResponse> response =
-                newspaperService.getAnalyticsOverview(dateFrom, dateTo);
+    public ResponseEntity<DataResponse<NewspaperAnalyticsResponse>> getAnalyticsOverview(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                                                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        DataResponse<NewspaperAnalyticsResponse> response = newspaperService.getAnalyticsOverview(dateFrom, dateTo);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/trending")
-    public ResponseEntity<DataResponse<List<NewspaperArticleResponse>>> getTrendingArticles(
-            @RequestParam(defaultValue = "7") int days,
-            @RequestParam(defaultValue = "10") int limit) {
+    public ResponseEntity<DataResponse<List<NewspaperArticleResponse>>> getTrendingArticles(@RequestParam(defaultValue = "7") int days, @RequestParam(defaultValue = "10") int limit) {
 
-        DataResponse<List<NewspaperArticleResponse>> response =
-                newspaperService.getTrendingArticles(days, limit);
+        DataResponse<List<NewspaperArticleResponse>> response = newspaperService.getTrendingArticles(days, limit);
         return ResponseEntity.ok(response);
     }
 }
