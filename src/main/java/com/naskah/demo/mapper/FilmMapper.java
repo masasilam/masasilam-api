@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * FilmMapper - MyBatis mapper for film database operations
- * PostgreSQL Compatible Version with Trailer Support
+ * PostgreSQL Compatible Version with Trailer + Image URLs Support
  */
 @Mapper
 public interface FilmMapper {
@@ -21,17 +21,17 @@ public interface FilmMapper {
     Film findBySlug(String slug);
 
     @Insert("INSERT INTO films (wikidata_qid, slug, judul, tahun_rilis, jenis, deskripsi, " +
-            "durasi, negara_asal, poster_url, video_url, trailer_url, subtitle_url, color, original_language, " +
-            "budget, budget_display, followed_by, part_of_series) " +
+            "durasi, negara_asal, poster_url, image_urls, video_url, trailer_url, subtitle_url, " +
+            "color, original_language, budget, budget_display, followed_by, part_of_series) " +
             "VALUES (#{wikidataQid}, #{slug}, #{judul}, #{tahunRilis}, #{jenis}, #{deskripsi}, " +
-            "#{durasi}, #{negaraAsal}, #{posterUrl}, #{videoUrl}, #{trailerUrl}, #{subtitleUrl}, #{color}, " +
-            "#{originalLanguage}, #{budget}, #{budgetDisplay}, #{followedBy}, #{partOfSeries})")
+            "#{durasi}, #{negaraAsal}, #{posterUrl}, #{imageUrls}, #{videoUrl}, #{trailerUrl}, #{subtitleUrl}, " +
+            "#{color}, #{originalLanguage}, #{budget}, #{budgetDisplay}, #{followedBy}, #{partOfSeries})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Film film);
 
     @Update("UPDATE films SET slug = #{slug}, judul = #{judul}, tahun_rilis = #{tahunRilis}, " +
             "jenis = #{jenis}, deskripsi = #{deskripsi}, durasi = #{durasi}, " +
-            "negara_asal = #{negaraAsal}, poster_url = #{posterUrl}, " +
+            "negara_asal = #{negaraAsal}, poster_url = #{posterUrl}, image_urls = #{imageUrls}, " +
             "video_url = #{videoUrl}, trailer_url = #{trailerUrl}, subtitle_url = #{subtitleUrl}, " +
             "color = #{color}, original_language = #{originalLanguage}, " +
             "budget = #{budget}, budget_display = #{budgetDisplay}, " +
@@ -184,7 +184,6 @@ public interface FilmMapper {
     void deleteBoxOfficeByFilmId(Long filmId);
 
     // ==================== REVIEW OPERATIONS ====================
-    // PostgreSQL compatible - uses :: casting syntax which handles NULL automatically
 
     @Insert("INSERT INTO film_reviews (film_id, review_source, score_type, score_value, " +
             "num_reviews, review_date) " +
@@ -205,7 +204,6 @@ public interface FilmMapper {
     void deleteReviewsByFilmId(Long filmId);
 
     // ==================== CONTENT RATING OPERATIONS ====================
-    // PostgreSQL compatible - uses :: casting syntax which handles NULL automatically
 
     @Insert("INSERT INTO film_content_ratings (film_id, rating_system, rating_value, " +
             "content_descriptors, start_date, distribution_format) " +

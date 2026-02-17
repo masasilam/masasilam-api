@@ -43,6 +43,7 @@ public class FilmDetail {
     private String color;                   // black-and-white / color (P462)
     private String originalLanguage;        // Original language (P364)
     private String posterUrl;               // Poster image (P18)
+    private List<String> imageUrls;
     private String videoUrl;                // Full video file (P10 with role Q89347362)
     private String trailerUrl;              // Trailer video (P10 with role Q622550)
     private String subtitleUrl;             // Subtitle file

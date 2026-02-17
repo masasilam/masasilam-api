@@ -23,6 +23,7 @@ public class Film {
 
     // ==================== MEDIA ====================
     private String posterUrl;
+    private String imageUrls;
     private String videoUrl;        // Full video
     private String trailerUrl;      // Trailer video
     private String subtitleUrl;
