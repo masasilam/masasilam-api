@@ -70,9 +70,7 @@ public class FilmServiceImpl implements FilmService {
         }
 
         if (judul == null || judul.trim().isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Film title (judul) cannot be determined. Wikidata QID: " + filmDetail.getWikidataQid()
-            );
+            throw new IllegalArgumentException("Film title (judul) cannot be determined. Wikidata QID: " + filmDetail.getWikidataQid());
         }
 
         log.info("Saving film: {} ({})", judul, filmDetail.getWikidataQid());
@@ -85,11 +83,16 @@ public class FilmServiceImpl implements FilmService {
 
         Film film = new Film();
         film.setWikidataQid(filmDetail.getWikidataQid());
+        String slugSource = (filmDetail.getJudulSlug() != null && !filmDetail.getJudulSlug().isBlank()) ? filmDetail.getJudulSlug() : judul;
+        String tahunSuffix = filmDetail.getTahunRilis() != null ? filmDetail.getTahunRilis().substring(0, 4) : null;
 
-        String filmSlug = generateUniqueSlug(
-                judul,
-                filmDetail.getTahunRilis() != null ? filmDetail.getTahunRilis().substring(0, 4) : null
-        );
+        String filmSlug;
+        if (existing != null) {
+            filmSlug = existing.getSlug();
+        } else {
+            filmSlug = generateUniqueSlugSafe(slugSource, tahunSuffix, filmDetail.getWikidataQid());
+        }
+
         film.setSlug(filmSlug);
         filmDetail.setSlug(filmSlug);
 
@@ -100,15 +103,12 @@ public class FilmServiceImpl implements FilmService {
         film.setDeskripsi(filmDetail.getDeskripsi());
         film.setDurasi(filmDetail.getDurasi());
         film.setNegaraAsal(filmDetail.getNegaraAsal());
-
-        // Media fields
+        film.setTitleEng(filmDetail.getJudulSlug());
         film.setPosterUrl(filmDetail.getPosterUrl());
         film.setImageUrls(serializeImageUrls(filmDetail.getImageUrls()));
         film.setVideoUrl(filmDetail.getVideoUrl());
         film.setTrailerUrl(filmDetail.getTrailerUrl());
         film.setSubtitleUrl(filmDetail.getSubtitleUrl());
-
-        // Technical fields
         film.setColor(filmDetail.getColor());
         film.setOriginalLanguage(filmDetail.getOriginalLanguage());
 
@@ -126,12 +126,12 @@ public class FilmServiceImpl implements FilmService {
 
         if (existing == null) {
             filmMapper.insert(film);
-            log.info("Film inserted with ID: {}", film.getId());
+            log.info("Film inserted with ID: {}, slug: {}", film.getId(), film.getSlug());
         } else {
             film.setId(existing.getId());
             deleteAllRelations(film.getId());
             filmMapper.update(film);
-            log.info("Film updated with ID: {}", film.getId());
+            log.info("Film updated with ID: {}, slug: {}", film.getId(), film.getSlug());
         }
 
         // ==================== SAVE ALL RELATIONS ====================
@@ -170,37 +170,39 @@ public class FilmServiceImpl implements FilmService {
         return filmMapper.countSearch(query);
     }
 
+    @Override
+    public boolean existsByQid(String qid) {
+        return filmMapper.findByQid(qid) != null;
+    }
+
     // ==================== PRIVATE HELPER METHODS ====================
 
-    /**
-     * Build complete FilmDetail dari Film entity
-     */
     private FilmDetail buildFilmDetail(Film film) {
         FilmDetail detail = new FilmDetail();
 
-        // Basic info
         detail.setId(film.getId());
         detail.setWikidataQid(film.getWikidataQid());
         detail.setSlug(film.getSlug());
         detail.setJudul(film.getJudul());
+
+        // Kembalikan titleEng ke judulSlug agar frontend bisa menggunakannya
+        detail.setJudulSlug(film.getTitleEng());
+
         detail.setTahunRilis(film.getTahunRilis());
         detail.setJenis(film.getJenis());
         detail.setDeskripsi(film.getDeskripsi());
         detail.setDurasi(film.getDurasi());
         detail.setNegaraAsal(film.getNegaraAsal());
 
-        // Media
         detail.setPosterUrl(film.getPosterUrl());
         detail.setImageUrls(deserializeImageUrls(film.getImageUrls()));
         detail.setVideoUrl(film.getVideoUrl());
         detail.setTrailerUrl(film.getTrailerUrl());
         detail.setSubtitleUrl(film.getSubtitleUrl());
 
-        // Technical
         detail.setColor(film.getColor());
         detail.setOriginalLanguage(film.getOriginalLanguage());
 
-        // Budget
         if (film.getBudget() != null) {
             BudgetData budget = new BudgetData();
             budget.setAmount(film.getBudget());
@@ -209,14 +211,11 @@ public class FilmServiceImpl implements FilmService {
             detail.setBudget(budget);
         }
 
-        // Relations
         detail.setFollowedBy(film.getFollowedBy());
         detail.setPartOfSeries(film.getPartOfSeries());
 
-        // Genres
         detail.setGenre(filmMapper.findGenresByFilmId(film.getId()));
 
-        // People
         detail.setSutradara(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "director"));
         detail.setPenulisSkenario(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "writer"));
         detail.setPemeran(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "actor"));
@@ -225,28 +224,21 @@ public class FilmServiceImpl implements FilmService {
         detail.setCinematographer(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "cinematographer"));
         detail.setComposer(filmMapper.findPersonsByFilmIdAndRole(film.getId(), "composer"));
 
-        // Companies
         detail.setPerusahaanProduksi(filmMapper.findProductionCompaniesByFilmId(film.getId()));
         detail.setDistributor(filmMapper.findDistributorsByFilmId(film.getId()));
 
-        // Locations
         detail.setNarrativeLocation(filmMapper.findLocationsByFilmIdAndType(film.getId(), "narrative"));
         detail.setFilmingLocation(filmMapper.findLocationsByFilmIdAndType(film.getId(), "filming"));
 
-        // Financial & ratings
         detail.setBoxOffice(loadBoxOffice(filmMapper.findBoxOfficeByFilmId(film.getId())));
         detail.setReviewScores(filmMapper.findReviewsByFilmId(film.getId()));
         detail.setContentRatings(filmMapper.findContentRatingsByFilmId(film.getId()));
 
-        // Aliases
         detail.setAliasIndonesia(filmMapper.findAliasesByFilmIdAndLanguage(film.getId(), "id"));
 
         return detail;
     }
 
-    /**
-     * Serialize List<String> imageUrls ke TEXT column dengan delimiter "||"
-     */
     private String serializeImageUrls(List<String> imageUrls) {
         if (imageUrls == null || imageUrls.isEmpty()) return null;
 
@@ -260,9 +252,6 @@ public class FilmServiceImpl implements FilmService {
         return filtered.isEmpty() ? null : String.join(IMAGE_URL_DELIMITER, filtered);
     }
 
-    /**
-     * Deserialize TEXT column kembali ke List<String> imageUrls
-     */
     private List<String> deserializeImageUrls(String imageUrlsRaw) {
         if (imageUrlsRaw == null || imageUrlsRaw.trim().isEmpty()) {
             return new ArrayList<>();
@@ -279,9 +268,6 @@ public class FilmServiceImpl implements FilmService {
         return result;
     }
 
-    /**
-     * Load box office dan format display values
-     */
     private List<BoxOfficeData> loadBoxOffice(List<BoxOfficeData> boxOfficeList) {
         if (boxOfficeList == null) return null;
 
@@ -294,9 +280,6 @@ public class FilmServiceImpl implements FilmService {
         return boxOfficeList;
     }
 
-    /**
-     * Delete all film relations sebelum update
-     */
     private void deleteAllRelations(Long filmId) {
         filmMapper.deleteGenresByFilmId(filmId);
         filmMapper.deletePersonsByFilmId(filmId);
@@ -310,22 +293,21 @@ public class FilmServiceImpl implements FilmService {
         log.debug("All relations deleted for filmId: {}", filmId);
     }
 
-    /**
-     * Save genres
-     */
     private void saveGenres(Long filmId, List<String> genres) {
         if (genres == null) return;
 
+        int saved = 0;
         for (String genre : genres) {
+            if (genre == null || genre.trim().isEmpty()) continue;
             String cleanGenre = cleanGenreName(genre);
-            filmMapper.insertGenre(filmId, cleanGenre);
+            if (!cleanGenre.isEmpty()) {
+                filmMapper.insertGenre(filmId, cleanGenre);
+                saved++;
+            }
         }
-        log.debug("Saved {} genres for filmId: {}", genres.size(), filmId);
+        log.debug("Saved {} genres for filmId: {}", saved, filmId);
     }
 
-    /**
-     * Save all person relations
-     */
     private void savePersons(Long filmId, FilmDetail filmDetail) {
         savePersonList(filmId, filmDetail.getSutradara(), "director");
         savePersonList(filmId, filmDetail.getPenulisSkenario(), "writer");
@@ -336,14 +318,14 @@ public class FilmServiceImpl implements FilmService {
         savePersonList(filmId, filmDetail.getComposer(), "composer");
     }
 
-    /**
-     * Save person list dengan role
-     */
     private void savePersonList(Long filmId, List<Person> persons, String role) {
         if (persons == null) return;
 
         int saved = 0;
         for (Person person : persons) {
+            // Skip null person (terjadi ketika fetchPersonDetails gagal dan kembalikan null)
+            if (person == null) continue;
+
             Long personId = saveOrGetPerson(person);
             if (personId != null) {
                 filmMapper.insertFilmPerson(filmId, personId, role);
@@ -354,10 +336,25 @@ public class FilmServiceImpl implements FilmService {
     }
 
     /**
-     * Save or get existing person
+     * Save or get existing person.
+     *
+     * Urutan lookup:
+     *  1. Cari by QID → jika ketemu, pakai yang ada (update jika perlu)
+     *  2. Cari by slug → jika slug sudah dipakai person lain, PAKAI YANG ADA (jangan insert baru)
+     *  3. Jika benar-benar baru → insert
+     *
+     * PENTING: Person dengan nama berbentuk QID (misal "Q4096812") tidak di-insert,
+     * karena itu menandakan fetchPersonDetails gagal dari Wikidata.
      */
     private Long saveOrGetPerson(Person person) {
-        if (person == null || person.getName() == null) {
+        if (person == null || person.getName() == null || person.getName().trim().isEmpty()) {
+            return null;
+        }
+
+        // Guard: jika nama masih berbentuk QID (fetch gagal), jangan insert ke DB
+        // karena akan menghasilkan data sampah seperti nama = "Q4096812"
+        if (person.getName().matches("Q\\d+")) {
+            log.warn("Skipping person with QID-as-name: {}", person.getName());
             return null;
         }
 
@@ -365,24 +362,31 @@ public class FilmServiceImpl implements FilmService {
             person.setWikidataQid("TEMP_" + person.getName().replaceAll("[^a-zA-Z0-9]", "_"));
         }
 
-        if (person.getSlug() == null || person.getSlug().isEmpty()) {
-            person.setSlug(generateSlug(person.getName()));
-        }
-
-        Person existing = filmMapper.findPersonByQid(person.getWikidataQid());
-
-        if (existing == null) {
-            filmMapper.insertPerson(person);
-            log.debug("Person inserted: {} ({})", person.getName(), person.getWikidataQid());
-            return person.getId();
-        } else {
-            if (needsPersonUpdate(person, existing)) {
-                updatePersonFields(existing, person);
-                filmMapper.updatePerson(existing);
+        // Lookup 1: by QID
+        Person existingByQid = filmMapper.findPersonByQid(person.getWikidataQid());
+        if (existingByQid != null) {
+            if (needsPersonUpdate(person, existingByQid)) {
+                updatePersonFields(existingByQid, person);
+                filmMapper.updatePerson(existingByQid);
                 log.debug("Person updated: {} ({})", person.getName(), person.getWikidataQid());
             }
-            return existing.getId();
+            return existingByQid.getId();
         }
+
+        // Lookup 2: by slug — jika sudah ada, pakai yang ada tanpa insert baru
+        String candidateSlug = generateSlug(person.getName());
+        Person existingBySlug = filmMapper.findPersonBySlug(candidateSlug);
+        if (existingBySlug != null) {
+            log.debug("Slug '{}' already exists, reusing person id={} for: {} ({})",
+                    candidateSlug, existingBySlug.getId(), person.getName(), person.getWikidataQid());
+            return existingBySlug.getId();
+        }
+
+        // Insert baru
+        person.setSlug(candidateSlug);
+        filmMapper.insertPerson(person);
+        log.debug("Person inserted: {} ({})", person.getName(), person.getWikidataQid());
+        return person.getId();
     }
 
     private boolean needsPersonUpdate(Person newPerson, Person existing) {
@@ -398,9 +402,6 @@ public class FilmServiceImpl implements FilmService {
         if (newPerson.getDescription() != null) existing.setDescription(newPerson.getDescription());
     }
 
-    /**
-     * Save all company relations
-     */
     private void saveCompanies(Long filmId, FilmDetail filmDetail) {
         saveProductionCompanies(filmId, filmDetail.getPerusahaanProduksi());
         saveDistributors(filmId, filmDetail.getDistributor());
@@ -411,6 +412,7 @@ public class FilmServiceImpl implements FilmService {
 
         int saved = 0;
         for (Company company : companies) {
+            if (company == null) continue;
             Long companyId = saveOrGetCompany(company);
             if (companyId != null) {
                 filmMapper.insertFilmProductionCompany(filmId, companyId);
@@ -425,6 +427,7 @@ public class FilmServiceImpl implements FilmService {
 
         int saved = 0;
         for (Company company : companies) {
+            if (company == null) continue;
             Long companyId = saveOrGetCompany(company);
             if (companyId != null) {
                 filmMapper.insertFilmDistributor(filmId, companyId);
@@ -434,8 +437,19 @@ public class FilmServiceImpl implements FilmService {
         log.debug("Saved {} distributors for filmId: {}", saved, filmId);
     }
 
+    /**
+     * Save or get existing company.
+     * Logika identik dengan saveOrGetPerson — lookup by QID lalu by slug.
+     * Company dengan nama berbentuk QID juga di-skip.
+     */
     private Long saveOrGetCompany(Company company) {
-        if (company == null || company.getName() == null) {
+        if (company == null || company.getName() == null || company.getName().trim().isEmpty()) {
+            return null;
+        }
+
+        // Guard: jika nama masih berbentuk QID (fetch gagal), jangan insert ke DB
+        if (company.getName().matches("Q\\d+")) {
+            log.warn("Skipping company with QID-as-name: {}", company.getName());
             return null;
         }
 
@@ -443,24 +457,31 @@ public class FilmServiceImpl implements FilmService {
             company.setWikidataQid("TEMP_" + company.getName().replaceAll("[^a-zA-Z0-9]", "_"));
         }
 
-        if (company.getSlug() == null || company.getSlug().isEmpty()) {
-            company.setSlug(generateSlug(company.getName()));
-        }
-
-        Company existing = filmMapper.findCompanyByQid(company.getWikidataQid());
-
-        if (existing == null) {
-            filmMapper.insertCompany(company);
-            log.debug("Company inserted: {} ({})", company.getName(), company.getWikidataQid());
-            return company.getId();
-        } else {
-            if (needsCompanyUpdate(company, existing)) {
-                updateCompanyFields(existing, company);
-                filmMapper.updateCompany(existing);
+        // Lookup 1: by QID
+        Company existingByQid = filmMapper.findCompanyByQid(company.getWikidataQid());
+        if (existingByQid != null) {
+            if (needsCompanyUpdate(company, existingByQid)) {
+                updateCompanyFields(existingByQid, company);
+                filmMapper.updateCompany(existingByQid);
                 log.debug("Company updated: {} ({})", company.getName(), company.getWikidataQid());
             }
-            return existing.getId();
+            return existingByQid.getId();
         }
+
+        // Lookup 2: by slug — jika sudah ada, pakai yang ada tanpa insert baru
+        String candidateSlug = generateSlug(company.getName());
+        Company existingBySlug = filmMapper.findCompanyBySlug(candidateSlug);
+        if (existingBySlug != null) {
+            log.debug("Slug '{}' already exists, reusing company id={} for: {} ({})",
+                    candidateSlug, existingBySlug.getId(), company.getName(), company.getWikidataQid());
+            return existingBySlug.getId();
+        }
+
+        // Insert baru
+        company.setSlug(candidateSlug);
+        filmMapper.insertCompany(company);
+        log.debug("Company inserted: {} ({})", company.getName(), company.getWikidataQid());
+        return company.getId();
     }
 
     private boolean needsCompanyUpdate(Company newCompany, Company existing) {
@@ -476,19 +497,18 @@ public class FilmServiceImpl implements FilmService {
         if (newCompany.getDescription() != null) existing.setDescription(newCompany.getDescription());
     }
 
-    /**
-     * Save locations
-     */
     private void saveLocations(Long filmId, FilmDetail filmDetail) {
         int count = 0;
         if (filmDetail.getNarrativeLocation() != null) {
             for (String location : filmDetail.getNarrativeLocation()) {
+                if (location == null || location.trim().isEmpty()) continue;
                 filmMapper.insertLocation(filmId, "narrative", location);
                 count++;
             }
         }
         if (filmDetail.getFilmingLocation() != null) {
             for (String location : filmDetail.getFilmingLocation()) {
+                if (location == null || location.trim().isEmpty()) continue;
                 filmMapper.insertLocation(filmId, "filming", location);
                 count++;
             }
@@ -496,27 +516,24 @@ public class FilmServiceImpl implements FilmService {
         log.debug("Saved {} locations for filmId: {}", count, filmId);
     }
 
-    /**
-     * Save box office data
-     */
     private void saveBoxOffice(Long filmId, List<BoxOfficeData> boxOfficeList) {
         if (boxOfficeList == null) return;
 
         for (BoxOfficeData bo : boxOfficeList) {
-            filmMapper.insertBoxOffice(filmId, bo.getRegion(), bo.getAmount(), bo.getCurrency());
+            if (bo == null) continue;
+            String region = (bo.getRegion() != null && !bo.getRegion().isBlank()) ? bo.getRegion() : "worldwide";
+            filmMapper.insertBoxOffice(filmId, region, bo.getAmount(), bo.getCurrency());
         }
         log.debug("Saved {} box office entries for filmId: {}", boxOfficeList.size(), filmId);
     }
 
-    /**
-     * Save review scores — skip jika source atau value kosong
-     */
     private void saveReviews(Long filmId, List<ReviewScore> reviews) {
         if (reviews == null) return;
 
         int saved = 0;
         int skipped = 0;
         for (ReviewScore review : reviews) {
+            if (review == null) continue;
             if (review.getSource() == null || review.getSource().isEmpty() ||
                     review.getValue() == null || review.getValue().isEmpty()) {
                 log.warn("Skipping review with missing required fields (source: {})",
@@ -538,15 +555,13 @@ public class FilmServiceImpl implements FilmService {
         log.debug("Saved {} reviews, skipped {} for filmId: {}", saved, skipped, filmId);
     }
 
-    /**
-     * Save content ratings — skip jika value null (violate NOT NULL constraint)
-     */
     private void saveContentRatings(Long filmId, List<ContentRating> ratings) {
         if (ratings == null) return;
 
         int saved = 0;
         int skipped = 0;
         for (ContentRating rating : ratings) {
+            if (rating == null) continue;
             if (rating.getValue() == null || rating.getValue().isEmpty()) {
                 log.warn("Skipping content rating: {} (NULL value)", rating.getSystem());
                 skipped++;
@@ -566,13 +581,11 @@ public class FilmServiceImpl implements FilmService {
         log.debug("Saved {} ratings, skipped {} for filmId: {}", saved, skipped, filmId);
     }
 
-    /**
-     * Save aliases
-     */
     private void saveAliases(Long filmId, List<String> aliases) {
         if (aliases == null) return;
 
         for (String alias : aliases) {
+            if (alias == null || alias.trim().isEmpty()) continue;
             filmMapper.insertAlias(filmId, alias, "id");
         }
         log.debug("Saved {} aliases for filmId: {}", aliases.size(), filmId);
@@ -581,7 +594,7 @@ public class FilmServiceImpl implements FilmService {
     // ==================== UTILITY METHODS ====================
 
     private String cleanGenreName(String genre) {
-        if (genre == null || genre.isEmpty()) return genre;
+        if (genre == null || genre.isEmpty()) return "";
 
         String cleaned = genre.trim()
                 .replaceAll("(?i)\\s+films?$", "")
@@ -607,12 +620,44 @@ public class FilmServiceImpl implements FilmService {
         return slug;
     }
 
-    private String generateUniqueSlug(String input, String suffix) {
-        String baseSlug = generateSlug(input);
-        if (suffix != null && !suffix.isEmpty()) {
-            return baseSlug + "-" + suffix;
+    /**
+     * Generate slug unik yang aman untuk film baru.
+     *
+     * Urutan logika:
+     *  1. Base slug dari slugSource (sudah di-resolve ke EN oleh controller)
+     *  2. Tambahkan suffix tahun jika ada
+     *  3. Jika baseSlug kosong (misal input null/blank), fallback ke QID lowercase
+     *  4. Jika slug sudah ada di DB (collision), tambah counter (-2, -3, dst)
+     */
+    private String generateUniqueSlugSafe(String slugSource, String tahunSuffix, String qid) {
+
+        String baseSlug = generateSlug(slugSource);
+
+        if (baseSlug.isBlank()) {
+            log.warn("baseSlug kosong untuk input '{}', fallback ke QID: {}", slugSource, qid);
+            baseSlug = qid.toLowerCase();
         }
-        return baseSlug;
+
+        String candidate = (tahunSuffix != null && !tahunSuffix.isBlank())
+                ? baseSlug + "-" + tahunSuffix
+                : baseSlug;
+
+        String finalSlug = candidate;
+        int counter = 2;
+        while (filmMapper.findBySlug(finalSlug) != null) {
+            finalSlug = candidate + "-" + counter;
+            counter++;
+            if (counter > 999) {
+                finalSlug = candidate + "-" + qid.toLowerCase();
+                break;
+            }
+        }
+
+        if (!finalSlug.equals(candidate)) {
+            log.info("Slug collision pada '{}', menggunakan '{}'", candidate, finalSlug);
+        }
+
+        return finalSlug;
     }
 
     private String formatCurrency(long amountInCents, String currency) {

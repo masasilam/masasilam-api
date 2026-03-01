@@ -13,6 +13,7 @@ public class BlogCommentResponse {
     private Long userId;
     private String content;
     private Long parentId;
+    private Long likeCount;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;

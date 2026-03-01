@@ -10,6 +10,7 @@ public class BlogPostResponse {
     private Long id;
     private String title;
     private String slug;
+    private String content;
     private String excerpt;
     private String featuredImage;
     private String status;
@@ -26,17 +27,13 @@ public class BlogPostResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 
-    // Author information
     private String authorName;
     private String authorAvatar;
 
-    // Categories and Tags as comma-separated strings (from GROUP_CONCAT)
     private String categories;
     private String tags;
 
-    // Engagement data
-    private Boolean isLiked = false; // Will be set based on current user
+    private Boolean isLiked = false;
 
-    // Reading time estimation (in minutes)
     private Integer readingTime;
 }

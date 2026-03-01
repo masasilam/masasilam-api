@@ -33,12 +33,12 @@ public class FileUtil {
     private static final String STORAGE_ROOT = Paths.get(System.getProperty("user.dir"), "storage").toString();
     private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "epub", "pdf", "doc", "docx");
     private static final int WORDS_PER_MINUTE = 200;
-    private static final String TRANSFORMATION = "transformation";
-    private static final String AUTO_GOOD = "auto:good";
-    private static final String PAGE = " - Page ";
-    private static final String RESOURCE_TYPE = "resource_type";
-    private static final String BOOK_FILES = "book_files";
-    private static final String IMAGE = "image";
+    private static final String TRANSFORMATION  = "transformation";
+    private static final String AUTO_GOOD       = "auto:good";
+    private static final String PAGE            = " - Page ";
+    private static final String RESOURCE_TYPE   = "resource_type";
+    private static final String BOOK_FILES      = "book_files";
+    private static final String IMAGE           = "image";
 
     public FileUtil(Cloudinary cloudinary) {
         this.cloudinary = cloudinary;
@@ -85,9 +85,7 @@ public class FileUtil {
             if (paragraphs.isEmpty()) {
                 XWPFWordExtractor extractor = new XWPFWordExtractor(document);
                 String text = extractor.getText();
-                if (text != null && !text.trim().isEmpty()) {
-                    pages.add(text.trim());
-                }
+                if (text != null && !text.trim().isEmpty()) pages.add(text.trim());
                 extractor.close();
             } else {
                 StringBuilder currentPage = new StringBuilder();
@@ -97,12 +95,9 @@ public class FileUtil {
                 for (XWPFParagraph paragraph : paragraphs) {
                     String paragraphText = paragraph.getText();
                     if (paragraphText != null && !paragraphText.trim().isEmpty()) {
-                        if (!currentPage.isEmpty()) {
-                            currentPage.append("\n\n");
-                        }
+                        if (!currentPage.isEmpty()) currentPage.append("\n\n");
                         currentPage.append(paragraphText.trim());
                         paragraphCount++;
-
                         if (paragraphCount >= PARAGRAPHS_PER_PAGE) {
                             pages.add(currentPage.toString());
                             currentPage = new StringBuilder();
@@ -110,10 +105,7 @@ public class FileUtil {
                         }
                     }
                 }
-
-                if (!currentPage.isEmpty()) {
-                    pages.add(currentPage.toString());
-                }
+                if (!currentPage.isEmpty()) pages.add(currentPage.toString());
             }
 
             document.close();
@@ -128,49 +120,58 @@ public class FileUtil {
     // ==================== TEXT UTILITIES ====================
 
     public int countWords(String text) {
-        if (text == null || text.trim().isEmpty()) {
-            return 0;
-        }
-
-        String cleanText = text.trim().replaceAll("\\s+", " ");
-        String[] words = cleanText.split("\\s+");
-
-        return (int) Arrays.stream(words).filter(word -> !word.isEmpty() && word.matches(".*[\\p{L}\\p{N}].*")).count();
+        if (text == null || text.trim().isEmpty()) return 0;
+        String[] words = text.trim().replaceAll("\\s+", " ").split("\\s+");
+        return (int) Arrays.stream(words).filter(w -> !w.isEmpty() && w.matches(".*[\\p{L}\\p{N}].*")).count();
     }
 
     public String generatePreviewText(String content, int maxLength) {
-        if (content == null || content.isEmpty()) {
-            return "";
-        }
-
+        if (content == null || content.isEmpty()) return "";
         int previewLength = Math.min(maxLength, content.length());
         String preview = content.substring(0, previewLength);
-
         int lastPeriod = preview.lastIndexOf('.');
-        if (lastPeriod > maxLength / 2) {
-            preview = preview.substring(0, lastPeriod + 1);
-        } else {
-            preview = preview + "...";
-        }
-
-        return preview.trim();
+        return (lastPeriod > maxLength / 2 ? preview.substring(0, lastPeriod + 1) : preview + "...").trim();
     }
 
     public String uploadChapterImageFromBytes(byte[] imageData, Long bookId, String fileName) throws IOException {
-        // Remove extension untuk public_id
         String nameWithoutExt = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
-
-        String sanitizedName = sanitizeFilename(nameWithoutExt);
-        String publicId = String.format("books/%d/chapters/%s", bookId, sanitizedName);
+        String publicId = String.format("books/%d/chapters/%s", bookId, sanitizeFilename(nameWithoutExt));
 
         Map<String, Object> transformations = new HashMap<>();
         transformations.put(TRANSFORMATION, new Transformation<>()
-                .width(1000)              // Max width 1000px
-                .crop("limit")            // Don't crop, just resize if needed
-                .quality(AUTO_GOOD)     // Auto quality optimization
-                .fetchFormat("webp"));    // Convert to WebP for better compression
+                .width(1000).crop("limit").quality(AUTO_GOOD).fetchFormat("webp"));
 
         return uploadBytesToCloudinary(imageData, publicId, "book_chapters", transformations);
+    }
+
+    // ==================== ✅ BLOG IMAGE UPLOAD ========================
+
+    /**
+     * Upload gambar inline konten blog ke Cloudinary.
+     * Return URL Cloudinary permanen (https://res.cloudinary.com/...).
+     * Sama seperti uploadAuthorPhoto / uploadProductImage — bukan local disk.
+     *
+     * @param image  File gambar dari multipart request
+     * @param postId ID artikel blog (boleh null jika belum tersimpan)
+     * @return URL Cloudinary yang bisa langsung dipakai di src="" tag img
+     */
+    public String uploadBlogImage(MultipartFile image, Long postId) throws IOException {
+        String publicId = String.format("blog-images/%s/%d-%d",
+                postId != null ? postId.toString() : "draft",
+                System.currentTimeMillis(),
+                (int) (Math.random() * 10000));
+
+        Map<String, Object> transformations = new HashMap<>();
+        transformations.put(TRANSFORMATION, new Transformation<>()
+                .width(1200)
+                .crop("limit")       // Tidak crop, hanya resize jika melebihi 1200px
+                .quality(AUTO_GOOD)  // Auto quality optimization
+                .fetchFormat("webp")); // Convert ke WebP untuk efisiensi
+
+        log.info("Uploading blog image to Cloudinary: {}", publicId);
+        String url = uploadToCloudinary(image, publicId, "blog_images", transformations);
+        log.info("Blog image uploaded: {}", url);
+        return url;
     }
 
     // ==================== PROJECT PAGE CREATION ====================
@@ -214,7 +215,6 @@ public class FileUtil {
             page.setUpdatedAt(LocalDateTime.now());
             pages.add(page);
         }
-
         log.info("Created {} PDF pages with text", pages.size());
         return pages;
     }
@@ -233,7 +233,6 @@ public class FileUtil {
             page.setUpdatedAt(LocalDateTime.now());
             pages.add(page);
         }
-
         log.info("Created {} Word pages", pages.size());
         return pages;
     }
@@ -253,58 +252,43 @@ public class FileUtil {
     // ==================== FILE VALIDATION ====================
 
     public void validateFile(MultipartFile file, long maxSizeBytes) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
+        if (file.isEmpty()) throw new IllegalArgumentException("File is empty");
 
         String filename = file.getOriginalFilename();
-        if (filename == null || filename.trim().isEmpty()) {
+        if (filename == null || filename.trim().isEmpty())
             throw new IllegalArgumentException("Filename cannot be empty");
-        }
 
         String extension = getFileExtension(filename).toLowerCase();
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+        if (!ALLOWED_EXTENSIONS.contains(extension))
             throw new IllegalArgumentException("File type not supported: " + extension);
-        }
 
-        if (file.getSize() > maxSizeBytes) {
+        if (file.getSize() > maxSizeBytes)
             throw new IllegalArgumentException("File size exceeds maximum limit");
-        }
     }
 
     // ==================== FILE UTILITIES ====================
 
     public String getFileExtension(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "";
-        }
+        if (filename == null || !filename.contains(".")) return "";
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
     public FileType determineFileType(String extension) {
-        extension = extension.toLowerCase();
-        return switch (extension) {
-            case "pdf" -> FileType.PDF;
-            case "doc", "docx" -> FileType.WORD;
-            case "epub" -> FileType.EPUB;
+        return switch (extension.toLowerCase()) {
+            case "pdf"            -> FileType.PDF;
+            case "doc", "docx"   -> FileType.WORD;
+            case "epub"           -> FileType.EPUB;
             case "jpg", "jpeg", "png" -> FileType.IMAGE;
-            default -> FileType.OTHER;
+            default               -> FileType.OTHER;
         };
     }
 
     public long parseFileSize(String sizeStr) {
-        if (sizeStr == null || sizeStr.trim().isEmpty()) {
-            return 50L * 1024L * 1024L;
-        }
-
-        String cleanSize = sizeStr.trim().toUpperCase();
-        if (cleanSize.endsWith("MB")) {
-            return Long.parseLong(cleanSize.replace("MB", "")) * 1024 * 1024;
-        } else if (cleanSize.endsWith("KB")) {
-            return Long.parseLong(cleanSize.replace("KB", "")) * 1024;
-        } else {
-            return Long.parseLong(cleanSize);
-        }
+        if (sizeStr == null || sizeStr.trim().isEmpty()) return 50L * 1024L * 1024L;
+        String clean = sizeStr.trim().toUpperCase();
+        if (clean.endsWith("MB")) return Long.parseLong(clean.replace("MB", "")) * 1024 * 1024;
+        if (clean.endsWith("KB")) return Long.parseLong(clean.replace("KB", "")) * 1024;
+        return Long.parseLong(clean);
     }
 
     public String sanitizeFilename(String input) {
@@ -320,42 +304,34 @@ public class FileUtil {
 
     // ==================== CLOUDINARY UPLOAD ====================
 
-    private String uploadToCloudinary(MultipartFile file, String publicId, String folder, Map<String, Object> transformations) throws IOException {
-        Map<String, Object> uploadParams = new HashMap<>();
-        uploadParams.put("public_id", publicId);
-        uploadParams.put("folder", folder);
-        uploadParams.put("use_filename", false);
-        uploadParams.put("unique_filename", false);
-        uploadParams.put("overwrite", true);
+    private String uploadToCloudinary(MultipartFile file, String publicId, String folder,
+                                      Map<String, Object> transformations) throws IOException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("public_id", publicId);
+        params.put("folder", folder);
+        params.put("use_filename", false);
+        params.put("unique_filename", false);
+        params.put("overwrite", true);
+        if (transformations != null) params.putAll(transformations);
+        params.put(RESOURCE_TYPE, BOOK_FILES.equals(folder) ? "raw" : IMAGE);
 
-        if (transformations != null) {
-            uploadParams.putAll(transformations);
-        }
-
-        String resourceType = folder.equals(BOOK_FILES) ? "raw" : IMAGE;
-        uploadParams.put(RESOURCE_TYPE, resourceType);
-
-        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
-        return (String) uploadResult.get("secure_url");
+        Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), params);
+        return (String) result.get("secure_url");
     }
 
-    private String uploadBytesToCloudinary(byte[] bytes, String publicId, String folder, Map<String, Object> transformations) throws IOException {
-        Map<String, Object> uploadParams = new HashMap<>();
-        uploadParams.put("public_id", publicId);
-        uploadParams.put("folder", folder);
-        uploadParams.put("use_filename", false);
-        uploadParams.put("unique_filename", false);
-        uploadParams.put("overwrite", true);
+    private String uploadBytesToCloudinary(byte[] bytes, String publicId, String folder,
+                                           Map<String, Object> transformations) throws IOException {
+        Map<String, Object> params = new HashMap<>();
+        params.put("public_id", publicId);
+        params.put("folder", folder);
+        params.put("use_filename", false);
+        params.put("unique_filename", false);
+        params.put("overwrite", true);
+        if (transformations != null) params.putAll(transformations);
+        params.put(RESOURCE_TYPE, BOOK_FILES.equals(folder) ? "raw" : IMAGE);
 
-        if (transformations != null) {
-            uploadParams.putAll(transformations);
-        }
-
-        String resourceType = folder.equals(BOOK_FILES) ? "raw" : IMAGE;
-        uploadParams.put(RESOURCE_TYPE, resourceType);
-
-        Map<?, ?> uploadResult = cloudinary.uploader().upload(bytes, uploadParams);
-        return (String) uploadResult.get("secure_url");
+        Map<?, ?> result = cloudinary.uploader().upload(bytes, params);
+        return (String) result.get("secure_url");
     }
 
     // ==================== BOOK FILE UPLOADS ====================
@@ -364,24 +340,15 @@ public class FileUtil {
         String publicId = sanitizeFilename(bookTitle) + "-cover";
         Map<String, Object> transformations = new HashMap<>();
         transformations.put(TRANSFORMATION, new Transformation<>()
-                .width(800).height(1200)
-                .crop("fit")
-                .quality("auto:best")
-                .fetchFormat("webp"));
-
+                .width(800).height(1200).crop("fit").quality("auto:best").fetchFormat("webp"));
         return uploadToCloudinary(coverImage, publicId, "book_covers", transformations);
     }
 
     public String uploadBookCoverFromBytes(byte[] imageData, String bookTitle, Long bookId) throws IOException {
         String publicId = String.format("books/%d/cover-%s", bookId, sanitizeFilename(bookTitle));
-
         Map<String, Object> transformations = new HashMap<>();
         transformations.put(TRANSFORMATION, new Transformation<>()
-                .width(800).height(1200)
-                .crop("fit")
-                .quality(AUTO_GOOD)
-                .fetchFormat("webp"));
-
+                .width(800).height(1200).crop("fit").quality(AUTO_GOOD).fetchFormat("webp"));
         return uploadBytesToCloudinary(imageData, publicId, "book_covers", transformations);
     }
 
@@ -390,7 +357,6 @@ public class FileUtil {
         String fileExtension = originalFilename != null ?
                 originalFilename.substring(originalFilename.lastIndexOf('.')) : "";
         String publicId = sanitizeFilename(bookTitle) + "-book" + fileExtension;
-
         return uploadToCloudinary(bookFile, publicId, BOOK_FILES, null);
     }
 
@@ -398,20 +364,15 @@ public class FileUtil {
         String publicId = sanitizeFilename(authorName) + "-author";
         Map<String, Object> transformations = new HashMap<>();
         transformations.put(TRANSFORMATION, new Transformation<>()
-                .width(300).height(300)
-                .crop("fill").gravity("face")
-                .effect("brightness:20")
-                .quality(AUTO_GOOD)
-                .fetchFormat("webp"));
-
+                .width(300).height(300).crop("fill").gravity("face")
+                .effect("brightness:20").quality(AUTO_GOOD).fetchFormat("webp"));
         return uploadToCloudinary(photo, publicId, "author_photos", transformations);
     }
 
-    // ==================== LOCAL STORAGE ====================
+    // ==================== LOCAL STORAGE (untuk project files saja) ====================
 
     public Path saveFile(MultipartFile file, String uploadDir, Long projectId) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        String fileExtension = getFileExtension(originalFilename);
+        String fileExtension = getFileExtension(file.getOriginalFilename());
         String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
 
         Path projectDir = Paths.get(uploadDir, "projects", projectId.toString());
@@ -419,68 +380,49 @@ public class FileUtil {
 
         Path filePath = projectDir.resolve(uniqueFilename);
         Files.copy(file.getInputStream(), filePath);
-
         return filePath;
     }
 
     // ==================== FILE STORAGE WRAPPERS ====================
 
     public FileStorageResult saveAndUploadBookFile(MultipartFile bookFile, String title) throws IOException {
-        String cloudUrl = uploadBookFile(bookFile, title);
-        return new FileStorageResult(cloudUrl);
+        return new FileStorageResult(uploadBookFile(bookFile, title));
     }
 
     public FileStorageResult saveAndUploadAuthorPhoto(MultipartFile authorPhoto, String authorName) throws IOException {
-        String cloudUrl = uploadAuthorPhoto(authorPhoto, authorName);
-        return new FileStorageResult(cloudUrl);
+        return new FileStorageResult(uploadAuthorPhoto(authorPhoto, authorName));
     }
 
-    // ==================== PRODUCT IMAGE METHODS ====================
+    // ==================== PRODUCT IMAGE ====================
 
     public String uploadProductImage(MultipartFile image, String productName) throws IOException {
         String publicId = sanitizeFilename(productName) + "-product-" + System.currentTimeMillis();
         Map<String, Object> transformations = new HashMap<>();
         transformations.put(TRANSFORMATION, new Transformation<>()
-                .width(1000).height(1000)
-                .crop("limit")
-                .quality(AUTO_GOOD)
-                .fetchFormat("webp")
-                .effect("sharpen:100"));
-
+                .width(1000).height(1000).crop("limit")
+                .quality(AUTO_GOOD).fetchFormat("webp").effect("sharpen:100"));
         return uploadToCloudinary(image, publicId, "product_images", transformations);
     }
 
     public FileStorageResult saveAndUploadProductImage(MultipartFile image, String productName) throws IOException {
-        String cloudUrl = uploadProductImage(image, productName);
-        return new FileStorageResult(cloudUrl);
+        return new FileStorageResult(uploadProductImage(image, productName));
     }
 
     // ==================== FILE DELETION ====================
 
     public void deleteFile(String filePathOrUrl) {
-        if (filePathOrUrl == null || filePathOrUrl.trim().isEmpty()) {
-            return;
-        }
+        if (filePathOrUrl == null || filePathOrUrl.trim().isEmpty()) return;
 
         try {
-            if (filePathOrUrl.contains("cloudinary.com") || filePathOrUrl.contains("res.cloudinary.com")) {
-                String publicId = null;
-                String pattern = "cloudinary.com/[^/]+/(?:image|raw)/upload/(?:v\\d+/)?(.*?)(?:\\.[^.]+)?$";
-                java.util.regex.Pattern r = java.util.regex.Pattern.compile(pattern);
+            if (filePathOrUrl.contains("cloudinary.com")) {
+                java.util.regex.Pattern r = java.util.regex.Pattern.compile(
+                        "cloudinary.com/[^/]+/(?:image|raw)/upload/(?:v\\d+/)?(.*?)(?:\\.[^.]+)?$");
                 java.util.regex.Matcher m = r.matcher(filePathOrUrl);
-
                 if (m.find()) {
-                    publicId = m.group(1);
-                    if (publicId.contains(".")) {
-                        publicId = publicId.substring(0, publicId.lastIndexOf('.'));
-                    }
-                }
-
-                if (publicId != null) {
+                    String publicId = m.group(1);
+                    if (publicId.contains(".")) publicId = publicId.substring(0, publicId.lastIndexOf('.'));
                     String resourceType = filePathOrUrl.contains("/book_files/") ? "raw" : IMAGE;
-                    Map<String, Object> options = new HashMap<>();
-                    options.put(RESOURCE_TYPE, resourceType);
-                    cloudinary.uploader().destroy(publicId, options);
+                    cloudinary.uploader().destroy(publicId, Map.of(RESOURCE_TYPE, resourceType));
                     log.debug("Deleted Cloudinary file: {}", filePathOrUrl);
                 }
             } else {
@@ -491,7 +433,7 @@ public class FileUtil {
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to delete file: {} - Error: {}", filePathOrUrl, e.getMessage());
+            log.warn("Failed to delete file: {} - {}", filePathOrUrl, e.getMessage());
         }
     }
 
@@ -503,83 +445,51 @@ public class FileUtil {
         long totalWord = 0L;
         int totalPages = 0;
 
-        if (originalFilename != null && originalFilename.contains(".")) {
+        if (originalFilename != null && originalFilename.contains("."))
             fileFormat = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
-        }
-
-        String extractedText;
 
         if ("pdf".equals(fileFormat)) {
             try (InputStream is = bookFile.getInputStream();
                  PDDocument document = Loader.loadPDF(is.readAllBytes())) {
-
                 totalPages = document.getNumberOfPages();
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);
                 stripper.setShouldSeparateByBeads(true);
-                extractedText = stripper.getText(document);
-                totalWord = countWords(extractedText);
+                totalWord = countWords(stripper.getText(document));
             }
         }
 
-        log.debug("Extracted metadata - Words: {}, Pages: {}", totalWord, totalPages);
         return new BookMetadata(fileFormat, bookFile.getSize(), totalPages, totalWord);
     }
 
-    public String toTitleCase(String text) {
-        if (text == null || text.isEmpty()) {
-            return text;
-        }
+    // ==================== TEXT FORMATTING ====================
 
-        // Kata-kata yang tetap lowercase kecuali di awal kalimat
-        List<String> lowercaseWords = Arrays.asList(
-                // kata depan
+    public String toTitleCase(String text) {
+        if (text == null || text.isEmpty()) return text;
+
+        List<String> lowercase = Arrays.asList(
                 "di", "ke", "dari", "tentang",
-                // kata hubung
                 "dan", "atau", "karena", "yang",
-                // kata seru
                 "oh", "dong", "kok", "sih",
-                // kata sandang
-                "si", "sang",
-                // partikel
-                "pun", "per"
+                "si", "sang", "pun", "per"
         );
 
         String[] words = text.toLowerCase().split("\\s+");
         StringBuilder result = new StringBuilder();
 
         for (int i = 0; i < words.length; i++) {
-            if (i > 0) {
-                result.append(" ");
-            }
-
+            if (i > 0) result.append(" ");
             String word = words[i];
-
-            // ✅ Cek apakah kata adalah angka Romawi (I, II, III, IV, V, dst)
-            if (word.matches("^[ivxlcdm]+\\.?$")) {
-                result.append(word.toUpperCase());
-            }
-            // Kata pertama selalu dikapitalisasi
-            else if (i == 0) {
-                result.append(capitalizeFirstLetter(word));
-            }
-            // Kata dalam daftar lowercase tetap lowercase (kecuali kata pertama)
-            else if (lowercaseWords.contains(word)) {
-                result.append(word);
-            }
-            // Kata lainnya dikapitalisasi
-            else {
-                result.append(capitalizeFirstLetter(word));
-            }
+            if (word.matches("^[ivxlcdm]+\\.?$"))          result.append(word.toUpperCase());
+            else if (i == 0)                                result.append(capitalizeFirstLetter(word));
+            else if (lowercase.contains(word))              result.append(word);
+            else                                            result.append(capitalizeFirstLetter(word));
         }
-
         return result.toString();
     }
 
     private String capitalizeFirstLetter(String word) {
-        if (word == null || word.isEmpty()) {
-            return word;
-        }
+        if (word == null || word.isEmpty()) return word;
         return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 }

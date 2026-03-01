@@ -5,6 +5,7 @@ import com.naskah.demo.model.dto.response.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface BlogPostService {
 
@@ -51,4 +52,8 @@ public interface BlogPostService {
 
     // Statistics and Analytics
     DataResponse<BlogStatsResponse> getBlogStats();
+
+    DataResponse<BlogPostDetailResponse> getBlogPostByIdForAdmin(Long id);
+
+    DataResponse<Map<String, String>> uploadInlineImage(MultipartFile image, Long postId);
 }

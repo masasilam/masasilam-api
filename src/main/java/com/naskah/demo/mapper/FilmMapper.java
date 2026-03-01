@@ -7,7 +7,13 @@ import java.util.List;
 
 /**
  * FilmMapper - MyBatis mapper for film database operations
- * PostgreSQL Compatible Version with Trailer + Image URLs Support
+ * PostgreSQL Compatible Version
+ *
+ * Perubahan dari versi sebelumnya:
+ * 1. INSERT/UPDATE films sekarang menyertakan kolom title_eng
+ * 2. insertFilmPerson, insertFilmProductionCompany, insertFilmDistributor
+ *    menggunakan ON CONFLICT DO NOTHING untuk mencegah duplicate key error
+ *    ketika Wikidata memiliki claim duplikat untuk entitas yang sama
  */
 @Mapper
 public interface FilmMapper {
@@ -20,17 +26,17 @@ public interface FilmMapper {
     @Select("SELECT * FROM films WHERE slug = #{slug}")
     Film findBySlug(String slug);
 
-    @Insert("INSERT INTO films (wikidata_qid, slug, judul, tahun_rilis, jenis, deskripsi, " +
+    @Insert("INSERT INTO films (wikidata_qid, slug, judul, title_eng, tahun_rilis, jenis, deskripsi, " +
             "durasi, negara_asal, poster_url, image_urls, video_url, trailer_url, subtitle_url, " +
             "color, original_language, budget, budget_display, followed_by, part_of_series) " +
-            "VALUES (#{wikidataQid}, #{slug}, #{judul}, #{tahunRilis}, #{jenis}, #{deskripsi}, " +
+            "VALUES (#{wikidataQid}, #{slug}, #{judul}, #{titleEng}, #{tahunRilis}, #{jenis}, #{deskripsi}, " +
             "#{durasi}, #{negaraAsal}, #{posterUrl}, #{imageUrls}, #{videoUrl}, #{trailerUrl}, #{subtitleUrl}, " +
             "#{color}, #{originalLanguage}, #{budget}, #{budgetDisplay}, #{followedBy}, #{partOfSeries})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Film film);
 
-    @Update("UPDATE films SET slug = #{slug}, judul = #{judul}, tahun_rilis = #{tahunRilis}, " +
-            "jenis = #{jenis}, deskripsi = #{deskripsi}, durasi = #{durasi}, " +
+    @Update("UPDATE films SET slug = #{slug}, judul = #{judul}, title_eng = #{titleEng}, " +
+            "tahun_rilis = #{tahunRilis}, jenis = #{jenis}, deskripsi = #{deskripsi}, durasi = #{durasi}, " +
             "negara_asal = #{negaraAsal}, poster_url = #{posterUrl}, image_urls = #{imageUrls}, " +
             "video_url = #{videoUrl}, trailer_url = #{trailerUrl}, subtitle_url = #{subtitleUrl}, " +
             "color = #{color}, original_language = #{originalLanguage}, " +
@@ -45,16 +51,17 @@ public interface FilmMapper {
     @Select("SELECT COUNT(*) FROM films")
     int count();
 
-    @Select("SELECT * FROM films WHERE judul LIKE CONCAT('%', #{query}, '%') " +
+    @Select("SELECT * FROM films WHERE judul ILIKE CONCAT('%', #{query}, '%') OR title_eng ILIKE CONCAT('%', #{query}, '%') " +
             "ORDER BY created_at DESC LIMIT #{limit} OFFSET #{offset}")
     List<Film> search(@Param("query") String query, @Param("limit") int limit, @Param("offset") int offset);
 
-    @Select("SELECT COUNT(*) FROM films WHERE judul LIKE CONCAT('%', #{query}, '%')")
+    @Select("SELECT COUNT(*) FROM films WHERE judul ILIKE CONCAT('%', #{query}, '%') OR title_eng ILIKE CONCAT('%', #{query}, '%')")
     int countSearch(@Param("query") String query);
 
     // ==================== GENRE OPERATIONS ====================
 
-    @Insert("INSERT INTO film_genres (film_id, genre) VALUES (#{filmId}, #{genre})")
+    @Insert("INSERT INTO film_genres (film_id, genre) VALUES (#{filmId}, #{genre}) " +
+            "ON CONFLICT DO NOTHING")
     void insertGenre(@Param("filmId") Long filmId, @Param("genre") String genre);
 
     @Select("SELECT genre FROM film_genres WHERE film_id = #{filmId}")
@@ -82,8 +89,14 @@ public interface FilmMapper {
 
     // ==================== FILM-PERSON RELATION OPERATIONS ====================
 
+    /**
+     * ON CONFLICT DO NOTHING mencegah duplicate key error ketika Wikidata
+     * memiliki claim P57/P58/P161 dst yang sama lebih dari satu kali untuk entitas yang sama.
+     * Membutuhkan unique constraint: UNIQUE (film_id, person_id, role_type)
+     */
     @Insert("INSERT INTO film_persons (film_id, person_id, role_type) " +
-            "VALUES (#{filmId}, #{personId}, #{roleType})")
+            "VALUES (#{filmId}, #{personId}, #{roleType}) " +
+            "ON CONFLICT (film_id, person_id, role_type) DO NOTHING")
     void insertFilmPerson(@Param("filmId") Long filmId,
                           @Param("personId") Long personId,
                           @Param("roleType") String roleType);
@@ -119,13 +132,20 @@ public interface FilmMapper {
 
     // ==================== FILM-COMPANY RELATION OPERATIONS ====================
 
+    /**
+     * ON CONFLICT DO NOTHING mencegah duplicate jika Wikidata claim P272 memiliki
+     * entitas perusahaan yang sama lebih dari sekali.
+     * Membutuhkan unique constraint: UNIQUE (film_id, company_id) pada tabel masing-masing.
+     */
     @Insert("INSERT INTO film_production_companies (film_id, company_id) " +
-            "VALUES (#{filmId}, #{companyId})")
+            "VALUES (#{filmId}, #{companyId}) " +
+            "ON CONFLICT (film_id, company_id) DO NOTHING")
     void insertFilmProductionCompany(@Param("filmId") Long filmId,
                                      @Param("companyId") Long companyId);
 
     @Insert("INSERT INTO film_distributors (film_id, company_id) " +
-            "VALUES (#{filmId}, #{companyId})")
+            "VALUES (#{filmId}, #{companyId}) " +
+            "ON CONFLICT (film_id, company_id) DO NOTHING")
     void insertFilmDistributor(@Param("filmId") Long filmId,
                                @Param("companyId") Long companyId);
 
@@ -148,7 +168,8 @@ public interface FilmMapper {
     // ==================== LOCATION OPERATIONS ====================
 
     @Insert("INSERT INTO film_locations (film_id, location_type, location_name) " +
-            "VALUES (#{filmId}, #{locationType}, #{locationName})")
+            "VALUES (#{filmId}, #{locationType}, #{locationName}) " +
+            "ON CONFLICT DO NOTHING")
     void insertLocation(@Param("filmId") Long filmId,
                         @Param("locationType") String locationType,
                         @Param("locationName") String locationName);
@@ -187,7 +208,9 @@ public interface FilmMapper {
 
     @Insert("INSERT INTO film_reviews (film_id, review_source, score_type, score_value, " +
             "num_reviews, review_date) " +
-            "VALUES (#{filmId}, #{source}, #{scoreType}, #{value}, #{numReviews}, #{reviewDate}::date)")
+            "VALUES (#{filmId}, #{source}, #{scoreType}, #{value}, #{numReviews}, " +
+            "CAST(#{reviewDate} AS DATE)) " +
+            "ON CONFLICT DO NOTHING")
     void insertReview(@Param("filmId") Long filmId,
                       @Param("source") String source,
                       @Param("scoreType") String scoreType,
@@ -207,7 +230,9 @@ public interface FilmMapper {
 
     @Insert("INSERT INTO film_content_ratings (film_id, rating_system, rating_value, " +
             "content_descriptors, start_date, distribution_format) " +
-            "VALUES (#{filmId}, #{system}, #{value}, #{descriptors}, #{startDate}::date, #{format})")
+            "VALUES (#{filmId}, #{system}, #{value}, #{descriptors}, " +
+            "CAST(#{startDate} AS DATE), #{format}) " +
+            "ON CONFLICT DO NOTHING")
     void insertContentRating(@Param("filmId") Long filmId,
                              @Param("system") String system,
                              @Param("value") String value,
@@ -227,7 +252,8 @@ public interface FilmMapper {
     // ==================== ALIAS OPERATIONS ====================
 
     @Insert("INSERT INTO film_aliases (film_id, alias, language) " +
-            "VALUES (#{filmId}, #{alias}, #{language})")
+            "VALUES (#{filmId}, #{alias}, #{language}) " +
+            "ON CONFLICT DO NOTHING")
     void insertAlias(@Param("filmId") Long filmId,
                      @Param("alias") String alias,
                      @Param("language") String language);
