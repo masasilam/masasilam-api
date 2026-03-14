@@ -47,14 +47,12 @@ public class BlogPostServiceImpl implements BlogPostService {
 
     private void requireAdmin() {
         requireAuth();
-        if (headerHolder.getRoles() == null ||
-                !Arrays.asList(headerHolder.getRoles()).contains("ADMIN"))
+        if (headerHolder.getRoles() == null || !Arrays.asList(headerHolder.getRoles()).contains("ADMIN"))
             throw new ForbiddenException();
     }
 
     private boolean isAdmin() {
-        return headerHolder.getRoles() != null &&
-                Arrays.asList(headerHolder.getRoles()).contains("ADMIN");
+        return headerHolder.getRoles() != null && Arrays.asList(headerHolder.getRoles()).contains("ADMIN");
     }
 
     private User getCurrentUser() {

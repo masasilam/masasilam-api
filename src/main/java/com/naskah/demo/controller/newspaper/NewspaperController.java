@@ -11,10 +11,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -26,54 +23,25 @@ public class NewspaperController {
 
     private final NewspaperService newspaperService;
 
-    @PostMapping("/articles")
+    // ── CREATE ────────────────────────────────────────────────────────────────
+
+    @PostMapping
     public ResponseEntity<DataResponse<NewspaperArticleDetailResponse>> createArticle(
-            @RequestParam("sourceId") Long sourceId,
-            @RequestParam("slug") String slug,
-            @RequestParam("category") String category,
-            @RequestParam("publishDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate publishDate,
-            @RequestParam("title") String title,
-            @RequestParam("htmlFile") MultipartFile htmlFile,
-            @RequestParam(required = false) String author,
-            @RequestParam(required = false) Integer pageNumber,
-            @RequestParam(required = false) String importance,
-            @RequestParam(required = false) String imageUrl,
-            @RequestParam(required = false) Long parentArticleId,
-            @RequestParam(required = false) Integer articleLevel) throws IOException {
-
-        // Validate file
-        if (htmlFile.isEmpty()) {
-            throw new IllegalArgumentException("HTML file is required");
-        }
-
-        // Validate file type (optional but recommended)
-        String contentType = htmlFile.getContentType();
-        if (contentType != null && !contentType.equals("text/html") && !contentType.equals("text/plain")) {
-            throw new IllegalArgumentException("Only HTML or text files are allowed");
-        }
-
-        // Read HTML content from file
-        String htmlContent = new String(htmlFile.getBytes(), StandardCharsets.UTF_8);
-
-        // Build request object
-        CreateArticleRequest request = CreateArticleRequest.builder()
-                .sourceId(sourceId)
-                .slug(slug)
-                .category(category)
-                .publishDate(publishDate)
-                .title(title)
-                .htmlContent(htmlContent)
-                .author(author)
-                .pageNumber(pageNumber)
-                .importance(importance)
-                .imageUrl(imageUrl)
-                .parentArticleId(parentArticleId)
-                .articleLevel(articleLevel)
-                .build();
-
+            @Valid @RequestBody CreateArticleRequest request) {
         DataResponse<NewspaperArticleDetailResponse> response = newspaperService.createArticle(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    // ── READ by ID (untuk form edit dashboard) ────────────────────────────────
+
+    @GetMapping("/articles/{id}")
+    public ResponseEntity<DataResponse<NewspaperArticleDetailResponse>> getArticleById(
+            @PathVariable Long id) {
+        DataResponse<NewspaperArticleDetailResponse> response = newspaperService.getArticleById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // ── UPDATE ────────────────────────────────────────────────────────────────
 
     @PutMapping("/articles/{id}")
     public ResponseEntity<DataResponse<NewspaperArticleDetailResponse>> updateArticle(
@@ -83,10 +51,19 @@ public class NewspaperController {
         return ResponseEntity.ok(response);
     }
 
+    // ── DELETE (soft delete) ──────────────────────────────────────────────────
+
+    @DeleteMapping("/articles/{id}")
+    public ResponseEntity<DataResponse<Void>> deleteArticle(@PathVariable Long id) {
+        DataResponse<Void> response = newspaperService.deleteArticle(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // ── METADATA ──────────────────────────────────────────────────────────────
+
     @GetMapping("/categories")
     public ResponseEntity<DataResponse<List<NewspaperCategoryResponse>>> getAllCategories() {
-        DataResponse<List<NewspaperCategoryResponse>> response = newspaperService.getAllCategories();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(newspaperService.getAllCategories());
     }
 
     @GetMapping("/sources")
@@ -94,15 +71,15 @@ public class NewspaperController {
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) int limit,
             @RequestParam(required = false) String search) {
-        DatatableResponse<NewspaperSourceResponse> response = newspaperService.getAllSources(page, limit, search);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(newspaperService.getAllSources(page, limit, search));
     }
 
     @GetMapping("/stats")
     public ResponseEntity<DataResponse<NewspaperStatsResponse>> getStats() {
-        DataResponse<NewspaperStatsResponse> response = newspaperService.getOverallStats();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(newspaperService.getOverallStats());
     }
+
+    // ── BROWSE ────────────────────────────────────────────────────────────────
 
     @GetMapping("/categories/{categorySlug}")
     public ResponseEntity<DatatableResponse<NewspaperArticleResponse>> getArticlesByCategory(
@@ -117,16 +94,10 @@ public class NewspaperController {
             @RequestParam(required = false) String importance) {
 
         NewspaperSearchCriteria criteria = NewspaperSearchCriteria.builder()
-                .category(categorySlug)
-                .dateFrom(dateFrom)
-                .dateTo(dateTo)
-                .source(source)
-                .importance(importance)
-                .build();
-
-        DatatableResponse<NewspaperArticleResponse> response =
-                newspaperService.getArticlesByCategory(categorySlug, page, limit, sortBy, sortOrder, criteria);
-        return ResponseEntity.ok(response);
+                .category(categorySlug).dateFrom(dateFrom).dateTo(dateTo)
+                .source(source).importance(importance).build();
+        return ResponseEntity.ok(
+                newspaperService.getArticlesByCategory(categorySlug, page, limit, sortBy, sortOrder, criteria));
     }
 
     @GetMapping("/date/{date}")
@@ -136,10 +107,7 @@ public class NewspaperController {
             @RequestParam(defaultValue = "20") @Min(1) int limit,
             @RequestParam(defaultValue = "importance") String sortBy,
             @RequestParam(required = false) String category) {
-
-        DatatableResponse<NewspaperArticleResponse> response =
-                newspaperService.getArticlesByDate(date, page, limit, sortBy, category);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(newspaperService.getArticlesByDate(date, page, limit, sortBy, category));
     }
 
     @GetMapping("/{categorySlug}/{date}")
@@ -150,11 +118,11 @@ public class NewspaperController {
             @RequestParam(defaultValue = "20") @Min(1) int limit,
             @RequestParam(defaultValue = "importance") String sortBy,
             @RequestParam(required = false) String source) {
-
-        DatatableResponse<NewspaperArticleResponse> response =
-                newspaperService.getArticlesByCategoryAndDate(categorySlug, date, page, limit, sortBy, source);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                newspaperService.getArticlesByCategoryAndDate(categorySlug, date, page, limit, sortBy, source));
     }
+
+    // ── ARTICLE DETAIL ────────────────────────────────────────────────────────
 
     @GetMapping("/{categorySlug}/{date}/{articleSlug}")
     public ResponseEntity<DataResponse<NewspaperArticleDetailResponse>> getArticleDetail(
@@ -162,11 +130,11 @@ public class NewspaperController {
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @PathVariable String articleSlug,
             HttpServletRequest request) {
-
-        DataResponse<NewspaperArticleDetailResponse> response =
-                newspaperService.getArticleDetail(categorySlug, date, articleSlug, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                newspaperService.getArticleDetail(categorySlug, date, articleSlug, request));
     }
+
+    // ── SEARCH ────────────────────────────────────────────────────────────────
 
     @GetMapping("/search")
     public ResponseEntity<DatatableResponse<NewspaperArticleResponse>> searchArticles(
@@ -180,17 +148,12 @@ public class NewspaperController {
             @RequestParam(required = false) String importance) {
 
         NewspaperSearchCriteria criteria = NewspaperSearchCriteria.builder()
-                .searchQuery(q)
-                .category(category)
-                .dateFrom(dateFrom)
-                .dateTo(dateTo)
-                .source(source)
-                .importance(importance)
-                .build();
-
-        DatatableResponse<NewspaperArticleResponse> response = newspaperService.searchArticles(criteria, page, limit);
-        return ResponseEntity.ok(response);
+                .searchQuery(q).category(category).dateFrom(dateFrom)
+                .dateTo(dateTo).source(source).importance(importance).build();
+        return ResponseEntity.ok(newspaperService.searchArticles(criteria, page, limit));
     }
+
+    // ── ON THIS DAY ───────────────────────────────────────────────────────────
 
     @GetMapping("/on-this-day")
     public ResponseEntity<DatatableResponse<NewspaperArticleResponse>> getOnThisDay(
@@ -198,26 +161,25 @@ public class NewspaperController {
             @RequestParam(required = false) Integer day,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) int limit) {
-
         LocalDate today = LocalDate.now();
         int targetMonth = month != null ? month : today.getMonthValue();
-        int targetDay = day != null ? day : today.getDayOfMonth();
-
-        DatatableResponse<NewspaperArticleResponse> response = newspaperService.getArticlesOnThisDay(targetMonth, targetDay, page, limit);
-        return ResponseEntity.ok(response);
+        int targetDay   = day   != null ? day   : today.getDayOfMonth();
+        return ResponseEntity.ok(newspaperService.getArticlesOnThisDay(targetMonth, targetDay, page, limit));
     }
 
+    // ── ANALYTICS ─────────────────────────────────────────────────────────────
+
     @GetMapping("/analytics/overview")
-    public ResponseEntity<DataResponse<NewspaperAnalyticsResponse>> getAnalyticsOverview(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-                                                                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
-        DataResponse<NewspaperAnalyticsResponse> response = newspaperService.getAnalyticsOverview(dateFrom, dateTo);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<DataResponse<NewspaperAnalyticsResponse>> getAnalyticsOverview(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return ResponseEntity.ok(newspaperService.getAnalyticsOverview(dateFrom, dateTo));
     }
 
     @GetMapping("/trending")
-    public ResponseEntity<DataResponse<List<NewspaperArticleResponse>>> getTrendingArticles(@RequestParam(defaultValue = "7") int days, @RequestParam(defaultValue = "10") int limit) {
-
-        DataResponse<List<NewspaperArticleResponse>> response = newspaperService.getTrendingArticles(days, limit);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<DataResponse<List<NewspaperArticleResponse>>> getTrendingArticles(
+            @RequestParam(defaultValue = "7") int days,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(newspaperService.getTrendingArticles(days, limit));
     }
 }

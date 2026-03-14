@@ -60,7 +60,7 @@ public class BookServiceImpl implements BookService {
 
     // ============ BOOK CRUD OPERATIONS ============
     @Transactional
-    public DataResponse<BookResponse> createBook(BookRequest request){
+    public DataResponse<BookResponse> createBook(BookRequest request) {
         try {
             if (headerHolder.getUsername() == null || headerHolder.getUsername().isEmpty()) {
                 throw new UnauthorizedException();

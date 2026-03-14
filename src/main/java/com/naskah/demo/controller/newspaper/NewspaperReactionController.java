@@ -41,15 +41,11 @@ public class NewspaperReactionController {
      * POST /api/newspapers/olahraga/1945-01-01/awal-berdirinya-persebaya/rating
      */
     @PostMapping("/rating")
-    public ResponseEntity<DataResponse<ArticleRatingResponse>> rateArticle(
-            @PathVariable String categorySlug,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @PathVariable String articleSlug,
-            @Valid @RequestBody RatingRequest request) {
-
-        DataResponse<ArticleRatingResponse> response =
-                reactionService.addOrUpdateArticleRating(categorySlug, date, articleSlug, request);
-
+    public ResponseEntity<DataResponse<ArticleRatingResponse>> rateArticle(@PathVariable String categorySlug,
+                                                                           @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                                                                           @PathVariable String articleSlug,
+                                                                           @Valid @RequestBody RatingRequest request) {
+        DataResponse<ArticleRatingResponse> response = reactionService.addOrUpdateArticleRating(categorySlug, date, articleSlug, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

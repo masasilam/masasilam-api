@@ -63,6 +63,9 @@ public interface NewspaperMapper {
 
     NewspaperArticleDetailResponse getArticleDetailBySlug(@Param("slug") String slug);
 
+    // FIX: fetch detail by ID untuk form edit dashboard
+    NewspaperArticleDetailResponse getArticleDetailById(@Param("id") Long id);
+
     // ============================================
     // SEARCH
     // ============================================
@@ -146,6 +149,9 @@ public interface NewspaperMapper {
 
     void updateArticle(NewspaperArticle article);
 
+    // FIX: soft delete
+    void softDeleteArticle(@Param("id") Long id);
+
     boolean existsBySlug(@Param("slug") String slug);
 
     NewspaperArticle findById(@Param("id") Long id);
@@ -155,4 +161,14 @@ public interface NewspaperMapper {
     void decrementSaveCount(@Param("articleId") Long articleId);
 
     void incrementShareCount(@Param("articleId") Long articleId);
+
+    // ============================================
+    // SOURCE MANAGEMENT
+    // ============================================
+
+    Long findSourceIdByName(@Param("name") String name);
+
+    void insertSource(NewspaperSource source);
+
+    boolean existsBySlugExcluding(@Param("slug") String slug, @Param("excludeId") Long excludeId);
 }

@@ -1,5 +1,6 @@
 package com.naskah.demo.model.dto.newspaper;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,8 +19,21 @@ public class NewspaperArticleDetailResponse {
     private Long id;
     private String slug;
 
-    // Source
+    // ✅ FIX SOURCE: field "source" adalah nested object yang dibangun manual di service
+    // Diisi oleh enrichArticleDetailResponse() dari flat fields di bawah
     private NewspaperSourceResponse source;
+
+    // ✅ Flat source fields — diisi langsung oleh MyBatis dari query SQL alias
+    // (ns.id as sourceId, ns.name as sourceName, dst)
+    // JsonIgnore agar tidak duplikat di JSON response (sudah ada di "source")
+    @JsonIgnore
+    private Long sourceId;
+    @JsonIgnore
+    private String sourceName;
+    @JsonIgnore
+    private String sourceLocation;
+    @JsonIgnore
+    private String sourceDescription;
 
     // Category & Date
     private String category;
@@ -30,7 +44,7 @@ public class NewspaperArticleDetailResponse {
     // Content
     private String title;
     private String subtitle;
-    private String bodyOriginal;
+    private String bodyOriginal;   // mapped dari html_content
     private String bodyModern;
     private String excerpt;
 
@@ -39,6 +53,12 @@ public class NewspaperArticleDetailResponse {
     private Integer pageNumber;
     private Integer columnNumber;
     private String importance;
+    private Integer wordCount;
+    private String imageUrl;
+
+    // Hierarchy
+    private Long parentArticleId;
+    private Integer articleLevel;
 
     // Statistics
     private Long viewCount;

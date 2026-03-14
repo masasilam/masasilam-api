@@ -26,6 +26,7 @@ public class NewspaperSource {
     private Integer yearEnd;
     private Integer totalArticles;
     private Long totalViews;
+    private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

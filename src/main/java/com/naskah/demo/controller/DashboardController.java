@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * DashboardController - User Reading Dashboard
- *
+ * <p>
  * Menampilkan overview lengkap aktivitas membaca user:
  * - Total buku, waktu baca, completion
  * - Buku yang sedang dibaca
@@ -31,7 +31,7 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * MAIN DASHBOARD - Overview lengkap aktivitas membaca user
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Data yang ditampilkan:
      * ✅ Total Buku (yang pernah dibaca)
      * ✅ Waktu Baca (total jam membaca)
@@ -41,13 +41,12 @@ public class DashboardController {
      * ✅ Buku Sedang Dibaca (in-progress books)
      * ✅ Reading Streak (hari berturut-turut)
      * ✅ Annotations Summary (bookmarks, highlights, notes)
-     *
+     * <p>
      * GET /api/dashboard
      */
     @GetMapping
     public ResponseEntity<DataResponse<UserReadingDashboardResponse>> getMainDashboard() {
         DataResponse<UserReadingDashboardResponse> response = dashboardService.getUserReadingDashboard();
-
         return ResponseEntity.ok(response);
     }
 
@@ -55,20 +54,20 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * PERPUSTAKAAN SAYA - All books user has interacted with
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Menampilkan semua buku yang:
      * - Pernah dibaca (ada reading progress)
      * - Di-bookmark
      * - Di-highlight
      * - Di-note
      * - Di-rating/review
-     *
+     * <p>
      * Dengan filter:
      * - reading: sedang dibaca
      * - completed: sudah selesai
      * - bookmarked: ada bookmark
      * - all: semua
-     *
+     * <p>
      * GET /api/dashboard/library?filter=reading&page=1&limit=12&sortBy=last_read
      */
     @GetMapping("/library")
@@ -77,7 +76,6 @@ public class DashboardController {
                                                                                      @RequestParam(defaultValue = "12") int limit,
                                                                                      @RequestParam(defaultValue = "last_read") String sortBy) {
         DatatableResponse<BookLibraryItemResponse> response = dashboardService.getUserLibrary(filter, page, limit, sortBy);
-
         return ResponseEntity.ok(response);
     }
 
@@ -85,24 +83,20 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * RIWAYAT BACA - Reading activity timeline
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Menampilkan timeline aktivitas:
      * - Mulai membaca buku
      * - Selesai membaca chapter
      * - Menambahkan bookmark/highlight/note
      * - Memberikan rating/review
-     *
+     * <p>
      * GET /api/dashboard/history?days=7&page=1&limit=20
      */
     @GetMapping("/history")
-    public ResponseEntity<DatatableResponse<ReadingActivityResponse>> getReadingHistory(
-            @RequestParam(defaultValue = "7") int days,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
-
-        DatatableResponse<ReadingActivityResponse> response =
-                dashboardService.getReadingHistory(days, page, limit);
-
+    public ResponseEntity<DatatableResponse<ReadingActivityResponse>> getReadingHistory(@RequestParam(defaultValue = "7") int days,
+                                                                                        @RequestParam(defaultValue = "1") int page,
+                                                                                        @RequestParam(defaultValue = "20") int limit) {
+        DatatableResponse<ReadingActivityResponse> response = dashboardService.getReadingHistory(days, page, limit);
         return ResponseEntity.ok(response);
     }
 
@@ -110,20 +104,19 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * STATISTIK MEMBACA - Reading statistics & analytics
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Menampilkan:
      * - Daily/weekly reading time chart
      * - Books completed per month
      * - Reading speed trend
      * - Favorite genres
      * - Reading patterns (time of day, day of week)
-     *
+     * <p>
      * GET /api/dashboard/stats?period=30
      */
     @GetMapping("/stats")
     public ResponseEntity<DataResponse<ReadingStatisticsResponse>> getReadingStatistics(@RequestParam(defaultValue = "30") int period) {
         DataResponse<ReadingStatisticsResponse> response = dashboardService.getReadingStatistics(period);
-
         return ResponseEntity.ok(response);
     }
 
@@ -131,21 +124,17 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * ANNOTATIONS OVERVIEW - All user annotations
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * GET /api/dashboard/annotations?type=all&page=1&limit=20
-     *
+     * <p>
      * Types: all, bookmarks, highlights, notes
      */
     @GetMapping("/annotations")
-    public ResponseEntity<DatatableResponse<AnnotationItemResponse>> getAllAnnotations(
-            @RequestParam(defaultValue = "all") String type,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "recent") String sortBy) {
-
-        DatatableResponse<AnnotationItemResponse> response =
-                dashboardService.getAllAnnotations(type, page, limit, sortBy);
-
+    public ResponseEntity<DatatableResponse<AnnotationItemResponse>> getAllAnnotations(@RequestParam(defaultValue = "all") String type,
+                                                                                       @RequestParam(defaultValue = "1") int page,
+                                                                                       @RequestParam(defaultValue = "20") int limit,
+                                                                                       @RequestParam(defaultValue = "recent") String sortBy) {
+        DatatableResponse<AnnotationItemResponse> response = dashboardService.getAllAnnotations(type, page, limit, sortBy);
         return ResponseEntity.ok(response);
     }
 
@@ -153,17 +142,13 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * REVIEWS OVERVIEW - All user reviews
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * GET /api/dashboard/reviews?page=1&limit=10
      */
     @GetMapping("/reviews")
-    public ResponseEntity<DatatableResponse<UserReviewItemResponse>> getUserReviews(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int limit) {
-
-        DatatableResponse<UserReviewItemResponse> response =
-                dashboardService.getUserReviews(page, limit);
-
+    public ResponseEntity<DatatableResponse<UserReviewItemResponse>> getUserReviews(@RequestParam(defaultValue = "1") int page,
+                                                                                    @RequestParam(defaultValue = "10") int limit) {
+        DatatableResponse<UserReviewItemResponse> response = dashboardService.getUserReviews(page, limit);
         return ResponseEntity.ok(response);
     }
 
@@ -171,14 +156,12 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * READING GOALS - User's reading goals & progress
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * GET /api/dashboard/goals
      */
     @GetMapping("/goals")
     public ResponseEntity<DataResponse<ReadingGoalsResponse>> getReadingGoals() {
-        DataResponse<ReadingGoalsResponse> response =
-                dashboardService.getReadingGoals();
-
+        DataResponse<ReadingGoalsResponse> response = dashboardService.getReadingGoals();
         return ResponseEntity.ok(response);
     }
 
@@ -186,21 +169,19 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * RECOMMENDATIONS - Personalized book recommendations
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Based on:
      * - User's reading history
      * - Favorite genres
      * - Ratings
      * - Similar readers
-     *
+     * <p>
      * GET /api/dashboard/recommendations?limit=10
      */
     @GetMapping("/recommendations")
-    public ResponseEntity<DataResponse<List<BookRecommendationResponse>>> getRecommendations(
-            @RequestParam(defaultValue = "10") int limit) {
+    public ResponseEntity<DataResponse<List<BookRecommendationResponse>>> getRecommendations(@RequestParam(defaultValue = "10") int limit) {
 
         DataResponse<List<BookRecommendationResponse>> response = dashboardService.getPersonalizedRecommendations(limit);
-
         return ResponseEntity.ok(response);
     }
 
@@ -208,14 +189,12 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * QUICK STATS - Lightweight stats for widgets
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * GET /api/dashboard/quick-stats
      */
     @GetMapping("/quick-stats")
     public ResponseEntity<DataResponse<QuickStatsResponse>> getQuickStats() {
-        DataResponse<QuickStatsResponse> response =
-                dashboardService.getQuickStats();
-
+        DataResponse<QuickStatsResponse> response = dashboardService.getQuickStats();
         return ResponseEntity.ok(response);
     }
 
@@ -223,19 +202,18 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * READING CALENDAR - Calendar view of reading activity
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Contribution-style calendar showing:
      * - Days with reading activity
      * - Reading time per day
      * - Streaks
-     *
+     * <p>
      * GET /api/dashboard/calendar?year=2025&month=1
      */
     @GetMapping("/calendar")
     public ResponseEntity<DataResponse<ReadingCalendarResponse>> getReadingCalendar(@RequestParam(required = false) Integer year,
                                                                                     @RequestParam(required = false) Integer month) {
         DataResponse<ReadingCalendarResponse> response = dashboardService.getReadingCalendar(year, month);
-
         return ResponseEntity.ok(response);
     }
 
@@ -243,19 +221,18 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * ACHIEVEMENTS - User achievements & badges
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Achievements like:
      * - Read 10 books
      * - 7-day streak
      * - 100 hours reading
      * - etc.
-     *
+     * <p>
      * GET /api/dashboard/achievements
      */
     @GetMapping("/achievements")
     public ResponseEntity<DataResponse<List<AchievementResponse>>> getAchievements() {
         DataResponse<List<AchievementResponse>> response = dashboardService.getUserAchievements();
-
         return ResponseEntity.ok(response);
     }
 
@@ -263,21 +240,17 @@ public class DashboardController {
      * ═══════════════════════════════════════════════════════════
      * EXPORT DATA - Export user's reading data
      * ═══════════════════════════════════════════════════════════
-     *
+     * <p>
      * Export formats:
      * - JSON: complete data export
      * - CSV: reading log
      * - PDF: reading report
-     *
+     * <p>
      * POST /api/dashboard/export
      */
     @PostMapping("/export")
-    public ResponseEntity<DataResponse<ExportJobResponse>> exportUserData(
-            @RequestParam String format) {
-
-        DataResponse<ExportJobResponse> response =
-                dashboardService.exportUserReadingData(format);
-
+    public ResponseEntity<DataResponse<ExportJobResponse>> exportUserData(@RequestParam String format) {
+        DataResponse<ExportJobResponse> response = dashboardService.exportUserReadingData(format);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 }
