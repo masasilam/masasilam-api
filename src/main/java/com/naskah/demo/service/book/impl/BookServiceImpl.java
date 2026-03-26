@@ -163,7 +163,7 @@ public class BookServiceImpl implements BookService {
             book.setTotalPages(result.getTotalChapters());
             book.setEstimatedReadTime(fileUtil.calculateEstimatedReadTime(result.getTotalWords()));
             book.setCoverImageUrl(result.getCoverImageUrl());
-
+            book.setFileUrlArchive(book.getFileUrl());
             bookMapper.updateBook(book);
 
             genreProcessing(epubMeta, book);

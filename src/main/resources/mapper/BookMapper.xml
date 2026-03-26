@@ -132,7 +132,8 @@
         COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
         COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
         COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
-        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS
+        total_reactions,
         COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments,
         AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
         FROM reactions
@@ -337,7 +338,6 @@
         language_id = #{languageId},
         description = #{description},
         cover_image_url = #{coverImageUrl},
-        file_url = #{fileUrl},
         file_format = #{fileFormat},
         file_size = #{fileSize},
         total_word = #{totalWord},
@@ -352,6 +352,9 @@
         published_at = #{publishedAt},
         category = #{category},
         source = #{source},
+        epub_generated_at = #{epubGeneratedAt},
+        file_url_archive = #{fileUrlArchive},
+        file_url = #{fileUrl},
         updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
@@ -561,7 +564,8 @@
         COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
         COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
         COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
-        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS
+        total_reactions,
         COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments,
         AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
         FROM reactions
@@ -590,39 +594,7 @@
 
     <select id="findById" resultType="com.naskah.demo.model.entity.Book">
         SELECT
-        id,
-        title,
-        slug,
-        subtitle,
-        series_id,
-        series_order,
-        edition,
-        publication_year,
-        publisher,
-        language_id,
-        description,
-        summary,
-        cover_image_url,
-        file_url,
-        file_format,
-        file_size,
-        total_pages,
-        total_word,
-        estimated_read_time,
-        difficulty_level,
-        view_count,
-        read_count,
-        download_count,
-        is_featured,
-        is_active,
-        published_at,
-        category,
-        created_at,
-        updated_at,
-        copyright_status_id,
-        file_path,
-        cover_image_path,
-        source
+        *
         FROM books
         WHERE id = #{id}
     </select>

@@ -1,0 +1,713 @@
+/* ================================================================
+   MASA SILAM EPUB STYLESHEET
+   ================================================================ */
+@charset "utf-8";
+
+/* ================================================================
+   1️⃣ DASAR STRUKTUR & TATA LETAK GLOBAL
+   ================================================================ */
+html {
+  hyphens: auto;
+}
+body {
+  font-family: "Minion Pro", "Adobe Garamond Pro", "Garamond", "Times New Roman", "Liberation Serif", serif;
+  font-size: 1em;
+  line-height: 1.5;
+  margin: 0 auto;
+  padding: 0.25em;
+  max-width: 38em;
+  text-align: justify;
+  hyphens: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  background-color: #fff;
+  color: #111;
+}
+
+/* ================================================================
+   2️⃣ STRUKTUR TEKS UTAMA
+   ================================================================ */
+
+/* Judul */
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  text-align: center;
+  margin: 2.5em 0 0.25em 0;
+  hyphens: none;
+  page-break-after: avoid;
+}
+h1 { font-size: 1.5em; font-weight: 700; }
+h2 { font-size: 1.3em; font-weight: 650; }
+h3 { font-size: 1.2em; font-weight: 600; }
+h4 { font-size: 1.1em; font-weight: 550; }
+h5 { font-size: 1.05em; font-weight: 500; }
+h6 { font-size: 1em; font-weight: 450; }
+
+/* Paragraf */
+p {
+  margin: 0;
+  text-align: justify;
+  text-indent: 1.5em;
+  orphans: 2;
+  widows: 2;
+  hyphens: auto;
+  word-wrap: break-word;
+}
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+.first-paragraph,
+section > p:first-of-type {
+  text-indent: 0;
+  margin-top: 2em;
+}
+
+/* Separator / Ornament */
+p.separator, p.ornament, p.divider {
+  text-align: center !important;
+  text-indent: 0 !important;
+  margin: 2em 0 !important;
+  color: #666;
+}
+
+p.ornament-flower {
+  letter-spacing: 0.3em;
+  font-size: 1.1em;
+  text-align: center;
+  text-indent: 0;
+}
+
+/* ================================================================
+   3️⃣ ELEMEN KHUSUS TEKS
+   ================================================================ */
+
+/* Puisi */
+.poem {
+  margin: 2em 0;
+  text-align: left;
+  text-indent: 0;
+  hyphens: none;
+  line-height: 1.4;
+}
+.poem p, .poem div, .poem span {
+  text-align: left;
+  text-indent: 0;
+  margin: 0;
+  hyphens: none;
+}
+
+.poem .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.poem .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.poem .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.poem h1, .poem h2, .poem h3, .poem h4 {
+  text-align: center;
+  font-weight: 600;
+  margin: 1.5em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.poem .author {
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.1em;
+  margin: 2em 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.poem span { display: block; margin: 0; line-height: 1.4; }
+.poem div + div { margin-top: 1.5em; }
+.poem p:last-child {
+  text-align: right;
+  font-style: italic;
+  margin-top: 2em;
+  font-size: 0.9em;
+}
+.indent { margin-left: 2em; }
+
+/* ================================================================
+   4️⃣ DAFTAR, KUTIPAN, DAN FORMAT TEKS LAINNYA
+   ================================================================ */
+ol, ul {
+  margin: 0;
+  text-align: justify;
+  hyphens: auto;
+}
+
+ul.dash-list {
+  list-style: none;
+  padding-left: 1.5em;
+  margin: 0;
+}
+ul.dash-list li {
+  text-indent: -0.7em;
+  margin: 0;
+}
+ul.dash-list li::before {
+  content: "– ";
+}
+
+/* Kutipan & teks */
+strong, b { font-weight: 600; }
+em, i { font-style: italic; }
+q::before { content: open-quote; }
+q::after { content: close-quote; }
+
+blockquote {
+  margin: 0.25em 0;
+  padding: 0 0.25em;
+  border-left: 3px solid #ccc;
+  font-style: italic;
+  hyphens: auto;
+}
+blockquote p { text-indent: 0; }
+blockquote p + p { text-indent: 1.5em; }
+
+blockquote .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+  border-left: none !important;
+  font-style: normal !important;
+}
+
+blockquote .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+blockquote .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  font-style: normal !important;
+}
+
+a {
+  text-decoration: underline;
+  hyphens: none;
+}
+a:hover { opacity: 0.8; }
+
+/* ================================================================
+   5️⃣ NAVIGASI, HALAMAN ISI & HALAMAN KHUSUS
+   ================================================================ */
+nav {
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+}
+nav h1 { margin: 2.5em 0 0.25em 0; }
+nav ol, nav li {
+  list-style: none;
+  margin: 0;
+  text-align: left;
+  text-indent: 0;
+}
+nav a {
+  text-decoration: none;
+  display: block;
+  line-height: 1.6;
+  padding: 0.2em 0;
+  hyphens: none;
+}
+nav a:hover { text-decoration: underline; opacity: 0.8; }
+
+.titlepage {
+  text-align: center;
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.titlepage h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 2.5em 0 0.25em 0;
+}
+/* Subtitle khusus untuk titlepage */
+.titlepage .subtitle {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0 2em 0;
+  text-align: center;
+}
+.titlepage h2 {
+  font-size: 1.3em;
+  font-weight: 650;
+  margin: 2.5em 0 0.25em 0;
+}
+.titlepage h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 2.5em 0 0.25em 0;
+}
+.chapter, .colophon, .imprint, .uncopyright {
+  padding: 0.25em;
+  max-width: 38em;
+  margin: 0.25em auto;
+}
+
+.colophon p { text-indent: 0; }
+.colophon > p:first-of-type { text-align: center; }
+
+.colophon, .imprint, .uncopyright {
+  text-align: justify;
+}
+
+.info-box p,
+.info-box p:first-of-type {
+  text-align: left !important;
+  text-indent: 0 !important;
+}
+
+/* ================================================================
+   6️⃣ GAMBAR & TATA LETAK RESPONSIF
+   ================================================================ */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Gambar inline di tengah teks */
+.image-inline {
+  display: inline;
+  vertical-align: middle;
+  height: 2em;
+  width: auto;
+  margin: 0 0.3em;
+}
+
+/* Gambar dengan caption */
+.image-with-caption {
+  margin: 2em auto;
+  text-align: center;
+}
+
+.image-with-caption img {
+  margin: 0 auto;
+}
+
+.image-caption {
+  text-align: center;
+  font-size: 0.9em;
+  margin: 0.5em 0 0 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* Logo di colophon/imprint */
+section.colophon img,
+section.imprint img,
+.colophon img,
+.imprint img {
+  max-width: 150px !important;
+  max-height: 150px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto 2em auto !important;
+  object-fit: contain;
+}
+
+/* Gambar/ornamen di chapter */
+.image-small {
+  max-width: 120px !important;
+  max-height: 120px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.image-medium {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  width: auto;
+  height: auto;
+  margin: 1em auto !important;
+  object-fit: contain;
+}
+
+.image-container {
+  margin: 0.25em 0;
+  overflow: hidden;
+  clear: both;
+}
+.image-left { float: left; margin: 0 0.5em 0.25em 0; max-width: 45%; }
+.image-right { float: right; margin: 0 0 0.25em 0.5em; max-width: 45%; }
+.image-top, .image-bottom { display: block; margin: 0.25em auto; max-width: 100%; }
+.image-container::after { content: ""; display: table; clear: both; }
+
+@media screen and (max-width: 600px) {
+  .image-left, .image-right {
+    float: none;
+    display: block;
+    margin: 0.25em auto;
+    max-width: 90%;
+  }
+  .indent { margin-left: 1em; }
+}
+
+/* ================================================================
+   7️⃣ FORMAT SURAT
+   ================================================================ */
+.letter {
+  margin: 3em auto;
+  padding: 2em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fdfcf8;
+  max-width: 36em;
+  line-height: 1.6;
+  hyphens: auto;
+}
+.letter p {
+  margin: 0;
+  text-align: justify;
+}
+
+.letter .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  position: relative;
+  font-size: 0.9em;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.letter .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.letter .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.letter .date {
+  text-align: right;
+  font-style: italic;
+  margin-bottom: 2em;
+  text-indent: 0;
+}
+.letter .salutation {
+  margin-bottom: 1.5em;
+  text-indent: 0;
+  font-weight: 500;
+}
+.letter .body {
+  text-indent: 1.5em;
+  text-align: justify;
+}
+.letter .body:first-of-type {
+  text-indent: 0;
+  margin-top: 0;
+}
+.letter .closing {
+  margin-top: 2em;
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+.letter .signature {
+  text-align: right;
+  font-weight: 600;
+  margin-top: 0.5em;
+  text-indent: 0;
+}
+
+.letter-date {
+  text-align: right;
+  font-style: italic;
+  text-indent: 0;
+}
+
+/* ================================================================
+   8️⃣ UNSUR TAMBAHAN & GAYA KHUSUS
+   ================================================================ */
+.epigraph {
+  font-style: italic;
+  text-align: center;
+  margin: 3em auto;
+  max-width: 32em;
+  hyphens: none;
+}
+.epigraph cite {
+  display: block;
+  margin-top: 1em;
+  font-size: 0.9em;
+  text-align: right;
+  font-style: normal;
+}
+
+.subtitle {
+  font-size: 1.1em;
+  text-align: center;
+  margin: 1.5em 0;
+}
+
+.dialog { margin: 1em 0; text-indent: 0; }
+.dialog p { margin: 0.2em 0; text-indent: -1em; padding-left: 1em; }
+.dialog .speaker { font-weight: 600; }
+
+.dialog .note {
+  margin: 2.5em 0 1.5em 0 !important;
+  padding-top: 1em !important;
+  padding-left: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+.dialog .note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.dialog .note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+  padding-left: 0 !important;
+}
+
+.scene-break {
+  text-align: center;
+  margin: 2em 0;
+  letter-spacing: 0.3em;
+  color: #666;
+}
+.scene-break::before { content: "⁂"; }
+
+/* ================================================================
+   🎯 NOTE & INFO-BOX
+   ================================================================ */
+
+/* Info-box */
+.info-box {
+  padding: 0.5em 1em;
+  margin: 1.5em 0;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-box p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.info-box p:first-child {
+  margin-top: 0 !important;
+}
+
+.info-box p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Note/catatan kaki */
+.note {
+  margin: 2.5em 0 1.5em 0;
+  padding-top: 1em;
+  position: relative;
+  font-size: 0.9em;
+}
+
+/* Garis pemisah otomatis di atas note */
+.note::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 0;
+  border-top: 1px solid #999;
+}
+
+.note p {
+  text-align: left !important;
+  text-indent: 0 !important;
+  margin: 0.5em 0 !important;
+}
+
+.note p:first-child {
+  margin-top: 0 !important;
+}
+
+.note p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* ================================================================
+   🎯 FORMULA LIST - RESPONSIVE
+   ================================================================ */
+.formula-list {
+  margin-left: 2em;
+  max-width: 30em;
+}
+
+.formula-list p {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.5em 1em;
+  align-items: baseline;
+}
+
+/* ================================================================
+   9️⃣ TABEL, KODE, DAN TEKS KHUSUS
+   ================================================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  hyphens: none;
+}
+th {
+  background-color: #f0f0f0;
+  font-weight: 600;
+}
+code, pre {
+  font-family: "Courier New", monospace;
+  background-color: #f6f6f6;
+  border-radius: 4px;
+}
+pre {
+  padding: 0.5em;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+.smallcaps { font-variant: small-caps; letter-spacing: 0.05em; }
+.uppercase { text-transform: uppercase; }
+
+/* ================================================================
+   🔟 MODE GELAP
+   ================================================================ */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+  blockquote {
+    border-left-color: #666;
+  }
+  .letter {
+    background-color: #1e1e1e;
+    border-color: #444;
+  }
+  th {
+    background-color: #222;
+  }
+  td, th {
+    border-color: #444;
+  }
+  pre {
+    background-color: #1e1e1e;
+  }
+
+  .info-box {
+    background-color: #2d2d2d;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .note::before {
+    border-top-color: #666;
+  }
+
+  img {
+    filter: invert(1);
+  }
+
+  .image-inline {
+    filter: invert(1);
+    opacity: 0.9;
+  }
+
+  img.photo,
+  img.illustration,
+  img.colored,
+  .chapter img.no-invert {
+    filter: none;
+    opacity: 0.9;
+  }
+
+  .image-caption {
+    color: #aaa;
+  }
+
+  p.separator, p.ornament, p.divider {
+    color: #999;
+  }
+
+  .scene-break {
+    color: #999;
+  }
+}
+
+/* ================================================================
+   1️⃣1️⃣ RESPONSIVE ADJUSTMENTS FOR MOBILE
+   ================================================================ */
+@media screen and (max-width: 600px) {
+  .formula-list {
+    margin-left: 0.5em;
+  }
+
+  .formula-list p {
+    grid-template-columns: auto auto 1fr;
+    gap: 0.3em 0.5em;
+    font-size: 0.9em;
+  }
+}

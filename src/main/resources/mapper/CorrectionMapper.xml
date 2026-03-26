@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.CorrectionMapper">
+
+    <resultMap id="CorrectionResultMap" type="com.naskah.demo.model.entity.ContentCorrection">
+        <id property="id" column="id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="submittedBy" column="submitted_by"/>
+        <result property="originalText" column="original_text"/>
+        <result property="correctedText" column="corrected_text"/>
+        <result property="contextBefore" column="context_before"/>
+        <result property="contextAfter" column="context_after"/>
+        <result property="startPosition" column="start_position"/>
+        <result property="endPosition" column="end_position"/>
+        <result property="userNote" column="user_note"/>
+        <result property="status" column="status"/>
+        <result property="reviewedBy" column="reviewed_by"/>
+        <result property="reviewNote" column="review_note"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="reviewedAt" column="reviewed_at"/>
+        <result property="chapterTitle" column="chapter_title"/>
+        <result property="chapterNumber" column="chapter_number"/>
+        <result property="bookTitle" column="book_title"/>
+        <result property="submittedByUsername" column="submitted_by_username"/>
+    </resultMap>
+
+    <insert id="insertCorrection"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO content_correction (
+        book_id, chapter_id, submitted_by,
+        original_text, corrected_text,
+        context_before, context_after,
+        start_position, end_position,
+        user_note, status, created_at
+        ) VALUES (
+        #{bookId}, #{chapterId}, #{submittedBy},
+        #{originalText}, #{correctedText},
+        #{contextBefore}, #{contextAfter},
+        #{startPosition}, #{endPosition},
+        #{userNote}, 'PENDING', NOW()
+        )
+    </insert>
+
+    <select id="findById" resultMap="CorrectionResultMap">
+        SELECT
+        cc.*,
+        bc.title AS chapter_title,
+        bc.chapter_number,
+        b.title AS book_title,
+        u.username AS submitted_by_username
+        FROM content_correction cc
+        JOIN book_chapters bc ON cc.chapter_id = bc.id
+        JOIN books b ON cc.book_id = b.id
+        JOIN users u ON cc.submitted_by = u.id
+        WHERE cc.id = #{id}
+    </select>
+
+    <select id="findByStatus" resultMap="CorrectionResultMap">
+        SELECT
+        cc.*,
+        bc.title AS chapter_title,
+        bc.chapter_number,
+        b.title AS book_title,
+        u.username AS submitted_by_username
+        FROM content_correction cc
+        JOIN book_chapters bc ON cc.chapter_id = bc.id
+        JOIN books b ON cc.book_id = b.id
+        JOIN users u ON cc.submitted_by = u.id
+        WHERE cc.status = CAST(#{status} AS correction_status)
+        ORDER BY
+        CASE WHEN #{status} = 'PENDING' THEN cc.created_at END ASC,
+        CASE WHEN #{status} != 'PENDING' THEN cc.reviewed_at END DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*)
+        FROM content_correction
+        WHERE status = CAST(#{status} AS correction_status)
+    </select>
+
+    <select id="findPendingByChapterId" resultMap="CorrectionResultMap">
+        SELECT
+        cc.*,
+        bc.title AS chapter_title,
+        bc.chapter_number,
+        b.title AS book_title,
+        u.username AS submitted_by_username
+        FROM content_correction cc
+        JOIN book_chapters bc ON cc.chapter_id = bc.id
+        JOIN books b ON cc.book_id = b.id
+        JOIN users u ON cc.submitted_by = u.id
+        WHERE cc.chapter_id = #{chapterId}
+        AND cc.status = 'PENDING'
+        ORDER BY cc.start_position ASC
+    </select>
+
+    <select id="findPendingPositionsByChapterId" resultType="java.lang.Integer">
+        SELECT start_position
+        FROM content_correction
+        WHERE chapter_id = #{chapterId}
+        AND status = 'PENDING'
+        AND start_position IS NOT NULL
+        ORDER BY start_position ASC
+    </select>
+
+    <select id="countDuplicateByUserAndChapter" resultType="int">
+        SELECT COUNT(*)
+        FROM content_correction
+        WHERE submitted_by = #{submittedBy}
+        AND chapter_id = #{chapterId}
+        AND original_text = #{originalText}
+        AND status = 'PENDING'
+    </select>
+
+    <update id="updateCorrection">
+        UPDATE content_correction
+        SET
+        status = CAST(#{status} AS correction_status),
+        reviewed_by = #{reviewedBy},
+        review_note = #{reviewNote},
+        reviewed_at = #{reviewedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ═══════════════════════════════════════════════════
+         Ambil nama user yang approve correction untuk buku ini.
+         Dipakai EpubRebuildService untuk inject editor
+         ke kolofon html dan content.opf.
+    ═══════════════════════════════════════════════════ -->
+    <select id="findApprovedEditorsByBookId" resultType="java.lang.String">
+        SELECT DISTINCT u.full_name
+        FROM content_correction cc
+        JOIN users u ON cc.reviewed_by = u.id
+        WHERE cc.book_id = #{bookId}
+        AND cc.status = 'APPROVED'
+        AND cc.reviewed_by IS NOT NULL
+        ORDER BY u.full_name ASC
+    </select>
+
+</mapper>

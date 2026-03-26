@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.EpubBookmarkMapper">
+
+    <resultMap id="EpubBookmarkRM" type="com.naskah.demo.model.entity.EpubBookmark">
+        <id     property="id"        column="id"/>
+        <result property="userId"    column="user_id"/>
+        <result property="bookId"    column="book_id"/>
+        <result property="cfi"       column="cfi"/>
+        <result property="label"     column="label"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findByUserAndBook" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findById" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO epub_bookmarks
+        (user_id, book_id, cfi, label, created_at)
+        VALUES (#{userId}, #{bookId}, #{cfi}, #{label}, #{createdAt})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM epub_bookmarks
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

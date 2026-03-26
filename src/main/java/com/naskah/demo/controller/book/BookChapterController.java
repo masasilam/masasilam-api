@@ -3,6 +3,7 @@ package com.naskah.demo.controller.book;
 import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
+import com.naskah.demo.service.CorrectionService;
 import com.naskah.demo.service.book.BookChapterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookChapterController {
     private final BookChapterService chapterService;
+    private final CorrectionService  correctionService;  // ← tambah inject
 
     @GetMapping("/**")
     public ResponseEntity<DataResponse<ChapterReadingResponse>> readChapterByPath(@PathVariable String slug, HttpServletRequest request) {
@@ -241,6 +243,58 @@ public class BookChapterController {
     @GetMapping("/{chapterNumber}/stats")
     public ResponseEntity<DataResponse<ChapterStatsResponse>> getChapterStats(@PathVariable String slug, @PathVariable Integer chapterNumber) {
         DataResponse<ChapterStatsResponse> response = chapterService.getChapterStats(slug, chapterNumber);
+        return ResponseEntity.ok(response);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // CONTENT CORRECTIONS (Lapor Typo) — Ditambahkan
+    // ════════════════════════════════════════════════════════════
+
+    /**
+     * User melaporkan typo di chapter ini.
+     *
+     * POST /api/books/{slug}/chapters/{chapterNumber}/corrections
+     *
+     * Request body: SubmitCorrectionRequest
+     *  - originalText  : teks yang salah (dari selection)
+     *  - correctedText : usulan perbaikan
+     *  - contextBefore : 50 char sebelum (untuk presisi)
+     *  - contextAfter  : 50 char sesudah (untuk presisi)
+     *  - startPosition : character offset
+     *  - endPosition   : character offset
+     *  - userNote      : catatan opsional
+     *
+     * Auth: Wajib login (user biasa bisa submit)
+     */
+    @PostMapping("/{chapterNumber}/corrections")
+    public ResponseEntity<DataResponse<CorrectionResponse>> submitCorrection(
+            @PathVariable String slug,
+            @PathVariable Integer chapterNumber,
+            @Valid @RequestBody SubmitCorrectionRequest request) {
+
+        DataResponse<CorrectionResponse> response = correctionService.submitCorrection(slug, chapterNumber, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Ambil posisi (integer) semua koreksi PENDING di chapter ini.
+     * Dipakai frontend untuk render indikator ✎ di atas teks yang dilaporkan.
+     *
+     * GET /api/books/{slug}/chapters/{chapterNumber}/corrections/pending-positions
+     *
+     * Response: List<Integer> (startPosition dari setiap koreksi pending)
+     *
+     * Auth: Tidak wajib login — guest pun bisa lihat indikator
+     */
+    @GetMapping("/{chapterNumber}/corrections/pending-positions")
+    public ResponseEntity<DataResponse<List<Integer>>> getPendingCorrectionPositions(
+            @PathVariable String slug,
+            @PathVariable Integer chapterNumber) {
+
+        DataResponse<List<Integer>> response =
+                correctionService.getPendingPositions(slug, chapterNumber);
+
         return ResponseEntity.ok(response);
     }
 }

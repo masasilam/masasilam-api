@@ -96,8 +96,7 @@ public class KiosServiceImpl implements KiosService {
         productMapper.insertProduct(product);
 
         // Create initial stock history
-        createStockHistory(product.getId(), product.getStockQuantity(),
-                "INITIAL", "Initial stock", null);
+        createStockHistory(product.getId(), product.getStockQuantity(),"INITIAL", "Initial stock", null);
 
         KiosProductResponse response = productMapper.getProductDetailById(product.getId());
         return new DataResponse<>(SUCCESS, ResponseMessage.DATA_CREATED, HttpStatus.CREATED.value(), response);

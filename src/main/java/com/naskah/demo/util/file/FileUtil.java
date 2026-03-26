@@ -492,4 +492,106 @@ public class FileUtil {
         if (word == null || word.isEmpty()) return word;
         return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
+
+    // ============================================================
+// TAMBAHAN untuk FileUtil.java
+// Tambahkan dua method ini ke dalam class FileUtil yang sudah ada
+// ============================================================
+
+    // ==================== EPUB REBUILD UPLOAD ====================
+
+    /**
+     * Upload file .epub ke Cloudinary dengan OVERWRITE.
+     *
+     * Ini adalah method kunci untuk fitur koreksi typo.
+     * Menggunakan public_id yang KONSISTEN berdasarkan slug buku,
+     * sehingga URL file tidak berubah setelah rebuild.
+     *
+     * Kenapa URL harus sama:
+     *  - EpubReaderPage pakai book.fileUrl langsung
+     *  - Kalau URL berubah, perlu update DB + invalidate frontend cache
+     *  - Dengan URL sama + overwrite, EpubReaderPage otomatis dapat file baru
+     *
+     * Cloudinary behavior saat overwrite=true + invalidate=true:
+     *  1. File lama di-replace di storage
+     *  2. CDN cache di-invalidate (file baru langsung ter-serve)
+     *  3. URL tetap sama
+     *
+     * @param epubBytes  bytes file .epub yang sudah di-generate
+     * @param bookSlug   slug buku (dipakai sebagai public_id)
+     * @return           URL Cloudinary (sama dengan sebelumnya)
+     */
+    public String uploadEpubOverwrite(byte[] epubBytes, String bookSlug)
+            throws IOException {
+
+        // public_id konsisten: "books/epub/{slug}"
+        // Slug sudah di-sanitize saat buku dibuat, jadi aman dipakai di sini
+        String publicId = "books/epub/" + sanitizeFilename(bookSlug);
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("public_id",       publicId);
+        params.put("resource_type",   "raw");        // epub = raw file
+        params.put("format",          "epub");
+        params.put("overwrite",       true);         // ← replace file lama
+        params.put("invalidate",      true);         // ← invalidate CDN cache
+        params.put("use_filename",    false);
+        params.put("unique_filename", false);
+
+        log.info("Uploading rebuilt epub to Cloudinary: public_id={}, size={}KB",
+                publicId, epubBytes.length / 1024);
+
+        Map<?, ?> result = cloudinary.uploader().upload(epubBytes, params);
+        String url = (String) result.get("secure_url");
+
+        log.info("Epub uploaded successfully: {}", url);
+        return url;
+    }
+
+    /**
+     * Download file dari URL eksternal (Cloudinary) ke byte array.
+     *
+     * Dipakai oleh EpubRebuildServiceImpl untuk:
+     *  - Download cover image dari Cloudinary
+     *  - Embed cover ke dalam epub yang di-rebuild
+     *
+     * Timeout: 30 detik (cover biasanya < 200KB, tidak perlu lebih)
+     *
+     * @param url  URL file yang akan di-download
+     * @return     bytes konten file
+     */
+    public byte[] downloadFromUrl(String url) throws IOException {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("URL cannot be blank");
+        }
+
+        log.debug("Downloading from URL: {}", url);
+
+        java.net.HttpURLConnection connection = null;
+        try {
+            java.net.URL urlObj = new java.net.URL(url);
+            connection = (java.net.HttpURLConnection) urlObj.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10_000);  // 10 detik connect timeout
+            connection.setReadTimeout(30_000);      // 30 detik read timeout
+            connection.setRequestProperty("User-Agent", "MasasilamEpubBuilder/1.0");
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != java.net.HttpURLConnection.HTTP_OK) {
+                throw new IOException(
+                        "Failed to download from " + url +
+                                " — HTTP " + responseCode);
+            }
+
+            try (java.io.InputStream is = connection.getInputStream()) {
+                byte[] bytes = is.readAllBytes();
+                log.debug("Downloaded {} bytes from {}", bytes.length, url);
+                return bytes;
+            }
+
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
 }
