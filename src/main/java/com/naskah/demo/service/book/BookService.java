@@ -1,6 +1,7 @@
 package com.naskah.demo.service.book;
 
 import com.naskah.demo.model.dto.BookSearchCriteria;
+import com.naskah.demo.model.dto.CompleteEpubMetadata;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.Book;
@@ -25,4 +26,5 @@ public interface BookService {
     DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder, BookSearchCriteria criteria);
     List<Book> getAllBooksForSitemap();
     List<String> getChapterPaths(String slug);
+    DataResponse<BookResponse> updateExistingBook(Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException;
 }

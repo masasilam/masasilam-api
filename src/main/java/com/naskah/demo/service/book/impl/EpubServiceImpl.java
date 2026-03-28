@@ -1,5 +1,6 @@
 package com.naskah.demo.service.book.impl;
 
+import com.naskah.demo.config.ClearChapterCache;
 import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.model.dto.ChapterHierarchy;
 import com.naskah.demo.model.dto.EpubProcessResult;
@@ -37,6 +38,7 @@ public class EpubServiceImpl implements EpubService {
     private final FileUtil fileUtil;
 
     @Override
+    @ClearChapterCache
     public EpubProcessResult processEpubFile(MultipartFile epubFile, Book book) throws IOException {
         log.info("Processing EPUB for book: {} (ID: {})", book.getTitle(), book.getId());
 
@@ -567,6 +569,7 @@ public class EpubServiceImpl implements EpubService {
     // ==================== PROCESS EPUB FOR UPDATE ====================
 
     @Override
+    @ClearChapterCache
     public EpubProcessResult processEpubFileForUpdate(MultipartFile epubFile, Book book) throws IOException {
         log.info("Processing EPUB for UPDATE - book: {} (ID: {})", book.getTitle(), book.getId());
 

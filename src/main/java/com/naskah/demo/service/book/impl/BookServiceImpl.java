@@ -1,6 +1,7 @@
 package com.naskah.demo.service.book.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.naskah.demo.config.ClearChapterCache;
 import com.naskah.demo.exception.custom.DataNotFoundException;
 import com.naskah.demo.exception.custom.ForbiddenException;
 import com.naskah.demo.exception.custom.InternalServerErrorException;
@@ -60,6 +61,7 @@ public class BookServiceImpl implements BookService {
 
     // ============ BOOK CRUD OPERATIONS ============
     @Transactional
+    @ClearChapterCache
     public DataResponse<BookResponse> createBook(BookRequest request) {
         try {
             if (headerHolder.getUsername() == null || headerHolder.getUsername().isEmpty()) {
@@ -231,7 +233,8 @@ public class BookServiceImpl implements BookService {
      * ✅ UPDATE EXISTING BOOK WITH NEW FILE AND METADATA
      */
     @Transactional
-    private DataResponse<BookResponse> updateExistingBook(Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException {
+    @ClearChapterCache
+    public DataResponse<BookResponse> updateExistingBook(Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException {
         log.info("Updating existing book ID: {} - {}", existingBook.getId(), existingBook.getTitle());
 
         // 1. DELETE OLD FILES

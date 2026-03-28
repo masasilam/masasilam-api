@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.naskah.demo.mapper.BookMapper">
 
+    <!-- ══════════════════════════════════════════════════════════
+         BOOK CREATION
+    ══════════════════════════════════════════════════════════ -->
+
     <select id="countBySlug" resultType="int">
-        SELECT COUNT(*) FROM books
-        WHERE slug = #{slug}
+        SELECT COUNT(*) FROM books WHERE slug = #{slug}
     </select>
 
-    <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO books (
         title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
@@ -15,8 +21,7 @@
         total_word, total_pages, estimated_read_time,
         copyright_status_id, view_count, read_count, download_count,
         is_featured, is_active, published_at, category,
-        source,
-        created_at, updated_at
+        source, created_at, updated_at
         ) VALUES (
         #{title}, #{slug}, #{subtitle}, #{seriesId}, #{seriesOrder}, #{edition},
         #{publicationYear}, #{publisher}, #{languageId}, #{description},
@@ -24,8 +29,7 @@
         #{totalWord}, #{totalPages}, #{estimatedReadTime},
         #{copyrightStatusId}, #{viewCount}, #{readCount}, #{downloadCount},
         #{isFeatured}, #{isActive}, #{publishedAt}, #{category},
-        #{source}, <!-- ✅ NEW -->
-        #{createdAt}, #{updatedAt}
+        #{source}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -49,166 +53,340 @@
         VALUES (#{bookId}, #{contributorId}, #{role})
     </insert>
 
-    <select id="getBookDetailBySlug" resultType="com.naskah.demo.model.dto.response.BookResponse">
+    <!-- ══════════════════════════════════════════════════════════
+         BOOK RETRIEVAL
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="findById" resultType="com.naskah.demo.model.entity.Book">
+        SELECT * FROM books WHERE id = #{id}
+    </select>
+
+    <select id="findBySlug" resultType="com.naskah.demo.model.entity.Book">
         SELECT
-        DISTINCT b.id,
-        b.title,
-        b.slug,
-        b.subtitle,
-        b.edition,
-        b.cover_image_url,
-        b.publisher,
-        b.publication_year,
-        b.file_url,
-        b.file_format,
-        b.file_size,
-        b.total_pages,
-        b.description,
-        b.estimated_read_time,
-        l.name AS language,
-        b.total_word,
-        b.difficulty_level,
-        b.view_count,
-        b.read_count,
-        b.download_count,
-        b.series_id,
-        b.series_order,
-        b.source,
+        id, title, slug, subtitle, series_id, series_order, edition,
+        publication_year, publisher, language_id, description,
+        file_url, cover_image_url, source, file_format, file_size,
+        total_pages, total_word, estimated_read_time,
+        copyright_status_id, view_count, read_count, download_count,
+        is_active, is_featured, published_at, category,
+        epub_generated_at, file_url_archive,
+        created_at, updated_at
+        FROM books
+        WHERE slug = #{slug}
+    </select>
+
+    <select id="findBookBySlug" resultType="com.naskah.demo.model.entity.Book">
+        SELECT * FROM books WHERE slug = #{slug}
+    </select>
+
+    <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
+        SELECT
+        id, title, slug, subtitle, series_id, series_order, edition,
+        publication_year, publisher, language_id, description,
+        cover_image_url, file_url, file_format, file_size,
+        total_word, total_pages, estimated_read_time,
+        copyright_status_id, view_count, read_count, download_count,
+        is_featured, is_active, published_at, category,
+        created_at, updated_at
+        FROM books
+        WHERE id = #{id}
+    </select>
+
+    <select id="getBookIdBySlug" resultType="java.lang.Long">
+        SELECT id FROM books WHERE slug = #{slug}
+    </select>
+
+    <select id="findAllBooksForSitemap" resultType="com.naskah.demo.model.entity.Book">
+        SELECT id, title, slug, cover_image_url, updated_at, created_at, is_active
+        FROM books
+        WHERE is_active = true
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="getChapterPathsForSitemap" resultType="java.lang.String">
+        WITH RECURSIVE chapter_paths AS (
+        SELECT
+        c.id, c.book_id, c.slug, c.parent_chapter_id,
+        c.slug::TEXT AS full_path
+        FROM book_chapters c
+        INNER JOIN books b ON c.book_id = b.id
+        WHERE b.slug = #{bookSlug} AND c.parent_chapter_id IS NULL
+        UNION ALL
+        SELECT
+        c.id, c.book_id, c.slug, c.parent_chapter_id,
+        (cp.full_path || '/' || c.slug)::TEXT
+        FROM book_chapters c
+        INNER JOIN chapter_paths cp ON c.parent_chapter_id = cp.id
+        WHERE c.book_id = cp.book_id
+        )
+        SELECT full_path FROM chapter_paths ORDER BY id ASC
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOOK DETAIL RESPONSE
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="getBookDetailBySlug" resultType="com.naskah.demo.model.dto.response.BookResponse">
+        SELECT DISTINCT
+        b.id, b.title, b.slug, b.subtitle, b.edition,
+        b.cover_image_url, b.publisher, b.publication_year,
+        b.file_url, b.file_format, b.file_size, b.total_pages,
+        b.description, b.estimated_read_time,
+        l.name AS language, b.total_word, b.difficulty_level,
+        b.view_count, b.read_count, b.download_count,
+        b.series_id, b.series_order, b.source,
         cs.name AS copyright_status,
-        b.published_at,
-        b.category,
-        b.created_at,
-        b.updated_at,
-        b.is_active,
-        b.is_featured,
-        (
-        SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id
-        ) AS author_names,
-        (
-        SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id
-        ) AS author_slugs,
-        (
-        SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name)
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id
-        ) AS author_photo_urls,
-        (
-        SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
-        FROM book_contributors bc
-        JOIN contributors c ON bc.contributor_id = c.id
-        WHERE bc.book_id = b.id
-        ) AS contributors,
-        (
-        SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
-        FROM book_genres bg
-        JOIN genres g ON bg.genre_id = g.id
-        WHERE bg.book_id = b.id
-        ) AS genres,
-        COALESCE(rs.total_ratings, 0) AS total_ratings,
-        COALESCE(rs.total_angry, 0) AS total_angry,
-        COALESCE(rs.total_likes, 0) AS total_likes,
-        COALESCE(rs.total_loves, 0) AS total_loves,
-        COALESCE(rs.total_dislikes, 0) AS total_dislikes,
-        COALESCE(rs.total_sad, 0) AS total_sad,
-        COALESCE(rs.total_comments, 0) AS total_comments,
-        COALESCE(rs.average_rating, 0.0) AS average_rating,
-        COALESCE(rs.total_reactions, 0) AS total_reactions
+        b.published_at, b.category,
+        b.created_at, b.updated_at, b.is_active, b.is_featured,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_slugs,
+        (SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name)
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_photo_urls,
+        (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
+        FROM book_contributors bc JOIN contributors c ON bc.contributor_id = c.id
+        WHERE bc.book_id = b.id) AS contributors,
+        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
+        FROM book_genres bg JOIN genres g ON bg.genre_id = g.id
+        WHERE bg.book_id = b.id) AS genres,
+        COALESCE(rs.total_ratings,   0)   AS total_ratings,
+        COALESCE(rs.total_angry,     0)   AS total_angry,
+        COALESCE(rs.total_likes,     0)   AS total_likes,
+        COALESCE(rs.total_loves,     0)   AS total_loves,
+        COALESCE(rs.total_dislikes,  0)   AS total_dislikes,
+        COALESCE(rs.total_sad,       0)   AS total_sad,
+        COALESCE(rs.total_comments,  0)   AS total_comments,
+        COALESCE(rs.average_rating,  0.0) AS average_rating,
+        COALESCE(rs.total_reactions, 0)   AS total_reactions
         FROM books b
-        JOIN languages l ON b.language_id = l.id
+        JOIN languages l          ON b.language_id         = l.id
         JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
         LEFT JOIN (
         SELECT
         book_id,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) AS total_ratings,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) AS total_angry,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) AS total_likes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING'  THEN 1 END) AS total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY'   THEN 1 END) AS total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE'    THEN 1 END) AS total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE'    THEN 1 END) AS total_loves,
         COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
-        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS
-        total_reactions,
-        COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD'     THEN 1 END) AS total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type)
+        IN ('SAD','ANGRY','LIKE','LOVE','DISLIKE')    THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN comment IS NOT NULL
+        AND parent_id IS NULL                         THEN 1 END) AS total_comments,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END)             AS average_rating
         FROM reactions
         GROUP BY book_id
         ) rs ON b.id = rs.book_id
         WHERE b.slug = #{slug}
     </select>
 
-    <select id="getBookListWithFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
-        SELECT DISTINCT
-        b.id,
-        b.title,
-        b.slug,
-        b.edition,
-        b.cover_image_url,
-        b.publisher,
-        b.publication_year,
-        b.file_url,
-        b.file_format,
-        b.file_size,
-        b.total_pages,
-        b.description,
-        b.estimated_read_time,
-        l.name as language,
-        b.total_word,
-        b.difficulty_level,
-        b.view_count,
-        b.read_count,
-        b.download_count,
-        b.subtitle,
-        b.series_id,
-        b.series_order,
-        cs.name as copyright_status,
-        b.published_at,
-        b.category,
-        (SELECT STRING_AGG(a.name, ', ')
-        FROM authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) as author_names,
-        (SELECT STRING_AGG(a.slug, ', ')
-        FROM authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) as author_slugs,
+    <!-- ══════════════════════════════════════════════════════════
+         BOOK LIST
+    ══════════════════════════════════════════════════════════ -->
+
+    <sql id="advancedSearchConditions">
+        <where>
+            b.is_active = TRUE
+            <if test="criteria.searchTitle != null and criteria.searchTitle != ''">
+                AND LOWER(b.title) LIKE CONCAT('%', LOWER(#{criteria.searchTitle}), '%')
+            </if>
+            <if test="criteria.searchInBook != null and criteria.searchInBook != ''">
+                AND (LOWER(b.title) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
+                OR LOWER(b.description) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%'))
+            </if>
+            <if test="criteria.authorName != null and criteria.authorName != ''">
+                AND EXISTS (
+                SELECT 1 FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+                WHERE ba.book_id = b.id
+                AND (LOWER(a.slug) = LOWER(#{criteria.authorName})
+                OR LOWER(a.name) LIKE CONCAT('%', LOWER(#{criteria.authorName}), '%'))
+                )
+            </if>
+            <if test="criteria.genre != null and criteria.genre != ''">
+                AND EXISTS (
+                SELECT 1 FROM book_genres bg JOIN genres g ON bg.genre_id = g.id
+                WHERE bg.book_id = b.id
+                AND (LOWER(g.slug) = LOWER(#{criteria.genre})
+                OR LOWER(g.name) LIKE CONCAT('%', LOWER(#{criteria.genre}), '%'))
+                )
+            </if>
+            <if test="criteria.contributor != null and criteria.contributor != ''">
+                AND EXISTS (
+                SELECT 1 FROM book_contributors bc JOIN contributors c ON bc.contributor_id = c.id
+                WHERE bc.book_id = b.id
+                AND LOWER(c.name) LIKE CONCAT('%', LOWER(#{criteria.contributor}), '%')
+                )
+            </if>
+            <if test="criteria.minPages != null">
+                AND b.total_pages >= #{criteria.minPages}
+            </if>
+            <if test="criteria.maxPages != null">
+                AND b.total_pages &lt;= #{criteria.maxPages}
+            </if>
+            <if test="criteria.minFileSize != null">
+                AND b.file_size >= #{criteria.minFileSize}
+            </if>
+            <if test="criteria.maxFileSize != null">
+                AND b.file_size &lt;= #{criteria.maxFileSize}
+            </if>
+            <if test="criteria.publicationYearFrom != null">
+                AND b.publication_year >= #{criteria.publicationYearFrom}
+            </if>
+            <if test="criteria.publicationYearTo != null">
+                AND b.publication_year &lt;= #{criteria.publicationYearTo}
+            </if>
+            <if test="criteria.difficultyLevel != null and criteria.difficultyLevel != ''">
+                AND UPPER(b.difficulty_level) = UPPER(#{criteria.difficultyLevel})
+            </if>
+            <if test="criteria.fileFormat != null and criteria.fileFormat != ''">
+                AND UPPER(b.file_format) = UPPER(#{criteria.fileFormat})
+            </if>
+            <if test="criteria.isFeatured != null">
+                AND b.is_featured = #{criteria.isFeatured}
+            </if>
+            <if test="criteria.languageId != null">
+                AND b.language_id = #{criteria.languageId}
+            </if>
+            <if test="criteria.minRating != null">
+                AND EXISTS (
+                SELECT 1 FROM (
+                SELECT book_id, AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS avg_rating
+                FROM reactions WHERE book_id = b.id GROUP BY book_id
+                ) r WHERE r.avg_rating >= #{criteria.minRating}
+                )
+            </if>
+            <if test="criteria.minViewCount != null">
+                AND b.view_count >= #{criteria.minViewCount}
+            </if>
+            <if test="criteria.minReadCount != null">
+                AND b.read_count >= #{criteria.minReadCount}
+            </if>
+        </where>
+    </sql>
+
+    <select id="getBookListWithAdvancedFilters"
+            resultType="com.naskah.demo.model.dto.response.BookResponse">
+        SELECT
+        b.id, b.title, b.slug, b.subtitle, b.edition,
+        b.cover_image_url, b.publisher, b.publication_year,
+        b.file_url, b.file_format, b.file_size, b.total_pages,
+        b.description, b.estimated_read_time,
+        l.name AS language, b.total_word, b.difficulty_level,
+        b.view_count, b.read_count, b.download_count,
+        b.series_id, b.series_order, b.source,
+        cs.name AS copyright_status,
+        b.published_at, b.category,
+        b.created_at, b.updated_at, b.is_active, b.is_featured,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_slugs,
         (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
-        FROM book_contributors bc
-        JOIN contributors c ON bc.contributor_id = c.id
-        WHERE bc.book_id = b.id) as contributors,
-        (SELECT STRING_AGG(g.name, ', ')
-        FROM book_genres bg
-        JOIN genres g ON bg.genre_id = g.id
-        WHERE bg.book_id = b.id) as genres,
-        COALESCE(rs.total_ratings, 0) as total_ratings,
-        COALESCE(rs.total_angry, 0) as total_angry,
-        COALESCE(rs.total_likes, 0) as total_likes,
-        COALESCE(rs.total_loves, 0) as total_loves,
-        COALESCE(rs.total_dislikes, 0) as total_dislikes,
-        COALESCE(rs.total_sad, 0) as total_sad,
-        COALESCE(rs.total_comments, 0) as total_comments,
-        COALESCE(rs.average_rating, 0.0) as average_rating
+        FROM book_contributors bc JOIN contributors c ON bc.contributor_id = c.id
+        WHERE bc.book_id = b.id) AS contributors,
+        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
+        FROM book_genres bg JOIN genres g ON bg.genre_id = g.id
+        WHERE bg.book_id = b.id) AS genres,
+        COALESCE(rs.total_ratings,   0)   AS total_ratings,
+        COALESCE(rs.total_angry,     0)   AS total_angry,
+        COALESCE(rs.total_likes,     0)   AS total_likes,
+        COALESCE(rs.total_loves,     0)   AS total_loves,
+        COALESCE(rs.total_dislikes,  0)   AS total_dislikes,
+        COALESCE(rs.total_sad,       0)   AS total_sad,
+        COALESCE(rs.total_comments,  0)   AS total_comments,
+        COALESCE(rs.average_rating,  0.0) AS average_rating,
+        COALESCE(rs.total_reactions, 0)   AS total_reactions
         FROM books b
-        JOIN languages l ON b.language_id = l.id
-        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        JOIN languages l           ON b.language_id          = l.id
+        JOIN copyright_statuses cs  ON b.copyright_status_id  = cs.id
         LEFT JOIN (
         SELECT
         book_id,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) as total_ratings,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) as total_angry,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) as total_likes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) as total_loves,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) as total_dislikes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) as total_sad,
-        COUNT(CASE WHEN comment IS NOT NULL THEN 1 END) as total_comments,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) as average_rating
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING'  THEN 1 END) AS total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY'   THEN 1 END) AS total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE'    THEN 1 END) AS total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE'    THEN 1 END) AS total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD'     THEN 1 END) AS total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type)
+        IN ('SAD','ANGRY','LIKE','LOVE','DISLIKE')    THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN comment IS NOT NULL
+        AND parent_id IS NULL                         THEN 1 END) AS total_comments,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END)             AS average_rating
         FROM reactions
         GROUP BY book_id
+        ) rs ON b.id = rs.book_id
+        <include refid="advancedSearchConditions"/>
+        ORDER BY ${sortColumn} ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countBooksWithAdvancedFilters" resultType="int">
+        SELECT COUNT(DISTINCT b.id)
+        FROM books b
+        JOIN languages l           ON b.language_id          = l.id
+        JOIN copyright_statuses cs  ON b.copyright_status_id  = cs.id
+        LEFT JOIN (
+        SELECT book_id,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
+        FROM reactions GROUP BY book_id
+        ) rs ON b.id = rs.book_id
+        <include refid="advancedSearchConditions"/>
+    </select>
+
+    <select id="getBookListWithFilters"
+            resultType="com.naskah.demo.model.dto.response.BookResponse">
+        SELECT DISTINCT
+        b.id, b.title, b.slug, b.edition, b.cover_image_url,
+        b.publisher, b.publication_year, b.file_url,
+        b.file_format, b.file_size, b.total_pages, b.description,
+        b.estimated_read_time, l.name AS language,
+        b.total_word, b.difficulty_level,
+        b.view_count, b.read_count, b.download_count,
+        b.subtitle, b.series_id, b.series_order,
+        cs.name AS copyright_status, b.published_at, b.category,
+        (SELECT STRING_AGG(a.name, ', ')
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ')
+        FROM book_authors ba JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_slugs,
+        (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
+        FROM book_contributors bc JOIN contributors c ON bc.contributor_id = c.id
+        WHERE bc.book_id = b.id) AS contributors,
+        (SELECT STRING_AGG(g.name, ', ')
+        FROM book_genres bg JOIN genres g ON bg.genre_id = g.id
+        WHERE bg.book_id = b.id) AS genres,
+        COALESCE(rs.total_ratings,  0)   AS total_ratings,
+        COALESCE(rs.total_angry,    0)   AS total_angry,
+        COALESCE(rs.total_likes,    0)   AS total_likes,
+        COALESCE(rs.total_loves,    0)   AS total_loves,
+        COALESCE(rs.total_dislikes, 0)   AS total_dislikes,
+        COALESCE(rs.total_sad,      0)   AS total_sad,
+        COALESCE(rs.total_comments, 0)   AS total_comments,
+        COALESCE(rs.average_rating, 0.0) AS average_rating
+        FROM books b
+        JOIN languages l           ON b.language_id          = l.id
+        JOIN copyright_statuses cs  ON b.copyright_status_id  = cs.id
+        LEFT JOIN (
+        SELECT
+        book_id,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING'  THEN 1 END) AS total_ratings,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY'   THEN 1 END) AS total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE'    THEN 1 END) AS total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE'    THEN 1 END) AS total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD'     THEN 1 END) AS total_sad,
+        COUNT(CASE WHEN comment IS NOT NULL               THEN 1 END) AS total_comments,
+        AVG(CASE WHEN rating IS NOT NULL THEN rating END)             AS average_rating
+        FROM reactions GROUP BY book_id
         ) rs ON b.id = rs.book_id
         <where>
             <if test="searchTitle != null and searchTitle != ''">
@@ -231,385 +409,240 @@
                 )
             </if>
         </where>
-        ORDER BY b.id,
+        ORDER BY
         <choose>
-            <when test="sortColumn == 'PUBLISHED_AT'">
-                b.published_at ${sortType}
-            </when>
-            <when test="sortColumn == 'ESTIMATED_READ_TIME'">
-                b.estimated_read_time ${sortType}
-            </when>
-            <when test="sortColumn == 'TOTAL_WORD'">
-                b.total_word ${sortType}
-            </when>
-            <when test="sortColumn == 'AVERAGE_RATING'">
-                rs.average_rating ${sortType}
-            </when>
-            <when test="sortColumn == 'VIEW_COUNT'">
-                b.view_count ${sortType}
-            </when>
-            <otherwise>
-                b.title ${sortType}
-            </otherwise>
+            <when test="sortColumn == 'PUBLISHED_AT'">b.published_at</when>
+            <when test="sortColumn == 'ESTIMATED_READ_TIME'">b.estimated_read_time</when>
+            <when test="sortColumn == 'TOTAL_WORD'">b.total_word</when>
+            <when test="sortColumn == 'AVERAGE_RATING'">rs.average_rating</when>
+            <when test="sortColumn == 'VIEW_COUNT'">b.view_count</when>
+            <otherwise>b.title</otherwise>
         </choose>
+        ${sortType}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="findBookBySlug" resultType="com.naskah.demo.model.entity.Book">
-        SELECT *
-        FROM books
-        WHERE slug = #{slug}
-    </select>
-
-    <!-- Fixed increment read count method -->
-    <update id="incrementReadCount">
-        UPDATE books
-        SET read_count = read_count + 1
-        WHERE id = #{bookId}
-    </update>
-
-    <!-- Fixed getDetailEbook method with Long parameter -->
-    <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
-        SELECT
-        id, title, slug, subtitle, series_id, series_order, edition,
-        publication_year, publisher, language_id, description,
-        cover_image_url, cover_image_path, file_url, file_path,
-        file_format, file_size, total_word, total_pages, estimated_read_time,
-        difficulty_level, copyright_status_id, view_count, read_count,
-        download_count, average_rating, total_reviews, is_featured,
-        is_active, published_at, category, created_at, updated_at
-        FROM books
-        WHERE id = #{id}
-    </select>
-
-    <!-- Fixed updateEbook method -->
-    <update id="updateEbook" parameterType="com.naskah.demo.model.entity.Book">
-        UPDATE books
-        SET
-        <trim suffixOverrides=",">
-            <if test="title != null">title = #{title},</if>
-            <if test="slug != null">slug = #{slug},</if>
-            <if test="subtitle != null">subtitle = #{subtitle},</if>
-            <if test="seriesId != null">series_id = #{seriesId},</if>
-            <if test="seriesOrder != null">series_order = #{seriesOrder},</if>
-            <if test="edition != null">edition = #{edition},</if>
-            <if test="publicationYear != null">publication_year = #{publicationYear},</if>
-            <if test="publisher != null">publisher = #{publisher},</if>
-            <if test="languageId != null">language_id = #{languageId},</if>
-            <if test="description != null">description = #{description},</if>
-            <if test="coverImageUrl != null">cover_image_url = #{coverImageUrl},</if>
-            <if test="coverImagePath != null">cover_image_path = #{coverImagePath},</if>
-            <if test="fileUrl != null">file_url = #{fileUrl},</if>
-            <if test="filePath != null">file_path = #{filePath},</if>
-            <if test="fileFormat != null">file_format = #{fileFormat},</if>
-            <if test="fileSize != null">file_size = #{fileSize},</if>
-            <if test="totalWord != null">total_word = #{totalWord},</if>
-            <if test="totalPages != null">total_pages = #{totalPages},</if>
-            <if test="estimatedReadTime != null">estimated_read_time = #{estimatedReadTime},</if>
-            <if test="difficultyLevel != null">difficulty_level = #{difficultyLevel},</if>
-            <if test="copyrightStatusId != null">copyright_status_id = #{copyrightStatusId},</if>
-            <if test="viewCount != null">view_count = #{viewCount},</if>
-            <if test="readCount != null">read_count = #{readCount},</if>
-            <if test="downloadCount != null">download_count = #{downloadCount},</if>
-            <if test="isFeatured != null">is_featured = #{isFeatured},</if>
-            <if test="isActive != null">is_active = #{isActive},</if>
-            <if test="publishedAt != null">published_at = #{publishedAt},</if>
-            <if test="category != null">category = #{category},</if>
-            updated_at = CURRENT_TIMESTAMP,
-        </trim>
-        WHERE id = #{id}
-    </update>
-
-    <!-- Fixed deleteEbook method -->
-    <delete id="deleteEbook">
-        DELETE FROM books
-        WHERE id = #{id}
-    </delete>
+    <!-- ══════════════════════════════════════════════════════════
+         BOOK UPDATE / DELETE
+    ══════════════════════════════════════════════════════════ -->
 
     <update id="updateBook" parameterType="com.naskah.demo.model.entity.Book">
-        UPDATE books
-        SET
-        title = #{title},
-        slug = #{slug},
-        subtitle = #{subtitle},
-        edition = #{edition},
-        publication_year = #{publicationYear},
-        publisher = #{publisher},
-        language_id = #{languageId},
-        description = #{description},
-        cover_image_url = #{coverImageUrl},
-        file_format = #{fileFormat},
-        file_size = #{fileSize},
-        total_word = #{totalWord},
-        total_pages = #{totalPages},
-        estimated_read_time = #{estimatedReadTime},
-        copyright_status_id = #{copyrightStatusId},
-        view_count = #{viewCount},
-        read_count = #{readCount},
-        download_count = #{downloadCount},
-        is_featured = #{isFeatured},
-        is_active = #{isActive},
-        published_at = #{publishedAt},
-        category = #{category},
-        source = #{source},
-        epub_generated_at = #{epubGeneratedAt},
-        file_url_archive = #{fileUrlArchive},
-        file_url = #{fileUrl},
-        updated_at = CURRENT_TIMESTAMP
+        UPDATE books SET
+        title                = #{title},
+        slug                 = #{slug},
+        subtitle             = #{subtitle},
+        edition              = #{edition},
+        publication_year     = #{publicationYear},
+        publisher            = #{publisher},
+        language_id          = #{languageId},
+        description          = #{description},
+        cover_image_url      = #{coverImageUrl},
+        file_format          = #{fileFormat},
+        file_size            = #{fileSize},
+        total_word           = #{totalWord},
+        total_pages          = #{totalPages},
+        estimated_read_time  = #{estimatedReadTime},
+        copyright_status_id  = #{copyrightStatusId},
+        view_count           = #{viewCount},
+        read_count           = #{readCount},
+        download_count       = #{downloadCount},
+        is_featured          = #{isFeatured},
+        is_active            = #{isActive},
+        published_at         = #{publishedAt},
+        category             = #{category},
+        source               = #{source},
+        epub_generated_at    = #{epubGeneratedAt},
+        file_url_archive     = #{fileUrlArchive},
+        file_url             = #{fileUrl},
+        updated_at           = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
-    <!-- Additional deleteBook method -->
-    <delete id="deleteBook">
-        DELETE FROM books
-        WHERE id = #{id}
+    <delete id="deleteEbook">
+        DELETE FROM books WHERE id = #{id}
     </delete>
 
-    <update id="incrementDownloadCount">
-        UPDATE books
-        SET download_count = COALESCE(download_count, 0) + 1
-        WHERE id = #{id}
+    <delete id="deleteBook">
+        DELETE FROM books WHERE id = #{id}
+    </delete>
+
+    <!-- ══════════════════════════════════════════════════════════
+         RELATIONSHIPS
+    ══════════════════════════════════════════════════════════ -->
+
+    <delete id="deleteBookGenres">
+        DELETE FROM book_genres WHERE book_id = #{bookId}
+    </delete>
+
+    <delete id="deleteBookContributors">
+        DELETE FROM book_contributors WHERE book_id = #{bookId}
+    </delete>
+
+    <delete id="deleteBookAuthors">
+        DELETE FROM book_authors WHERE book_id = #{bookId}
+    </delete>
+
+    <!-- ══════════════════════════════════════════════════════════
+         AUTHORS
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="findAuthorsByBookId" resultType="com.naskah.demo.model.entity.Author">
+        SELECT a.* FROM authors a
+        INNER JOIN book_authors ba ON a.id = ba.author_id
+        WHERE ba.book_id = #{bookId}
+    </select>
+
+    <select id="getBookAuthors" resultType="com.naskah.demo.model.entity.Author">
+        SELECT a.* FROM authors a
+        JOIN book_authors ba ON a.id = ba.author_id
+        WHERE ba.book_id = #{bookId}
+    </select>
+
+    <select id="findAuthorNamesByBookId" resultType="java.lang.String">
+        SELECT a.name FROM authors a
+        JOIN book_authors ba ON ba.author_id = a.id
+        WHERE ba.book_id = #{bookId}
+        ORDER BY a.name ASC
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         GENRES
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="getBookGenres" resultType="com.naskah.demo.model.entity.Genre">
+        SELECT g.* FROM genres g
+        JOIN book_genres bg ON g.id = bg.genre_id
+        WHERE bg.book_id = #{bookId}
+    </select>
+
+    <select id="findGenresByBookId" resultType="com.naskah.demo.model.entity.Genre">
+        SELECT g.* FROM genres g
+        JOIN book_genres bg ON g.id = bg.genre_id
+        WHERE bg.book_id = #{bookId}
+    </select>
+
+    <select id="findGenreNamesByBookId" resultType="java.lang.String">
+        SELECT g.name FROM genres g
+        JOIN book_genres bg ON bg.genre_id = g.id
+        WHERE bg.book_id = #{bookId}
+        ORDER BY g.name ASC
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         CONTRIBUTORS
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="findContributorsByBookId" resultType="com.naskah.demo.model.entity.Contributor">
+        SELECT c.* FROM contributors c
+        JOIN book_contributors bc ON c.id = bc.contributor_id
+        WHERE bc.book_id = #{bookId}
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         COPYRIGHT
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="findRightsByCopyrightStatusId" resultType="java.lang.String">
+        SELECT name FROM copyright_statuses WHERE id = #{copyrightStatusId}
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         COUNTERS
+    ══════════════════════════════════════════════════════════ -->
+
+    <update id="incrementReadCount">
+        UPDATE books SET read_count = read_count + 1 WHERE id = #{bookId}
     </update>
 
-    <sql id="advancedSearchConditions">
-        <where>
-            b.is_active = TRUE
-
-            <if test="criteria.searchTitle != null and criteria.searchTitle != ''">
-                AND LOWER(b.title) LIKE CONCAT('%', LOWER(#{criteria.searchTitle}), '%')
-            </if>
-
-            <if test="criteria.searchInBook != null and criteria.searchInBook != ''">
-                AND (
-                LOWER(b.title) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
-                OR LOWER(b.description) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
-                )
-            </if>
-
-            <if test="criteria.authorName != null and criteria.authorName != ''">
-                AND EXISTS (
-                SELECT 1 FROM book_authors ba
-                JOIN authors a ON ba.author_id = a.id
-                WHERE ba.book_id = b.id
-                AND (
-                LOWER(a.slug) = LOWER(#{criteria.authorName})
-                OR LOWER(a.name) LIKE CONCAT('%', LOWER(#{criteria.authorName}), '%')
-                OR LOWER(REGEXP_REPLACE(a.name, '\W', '', 'g'))
-                LIKE CONCAT('%', REGEXP_REPLACE(LOWER(#{criteria.authorName}), '\W', '', 'g'), '%')
-                )
-                )
-            </if>
-
-            <if test="criteria.genre != null and criteria.genre != ''">
-                AND EXISTS (
-                SELECT 1 FROM book_genres bg
-                JOIN genres g ON bg.genre_id = g.id
-                WHERE bg.book_id = b.id
-                AND (
-                LOWER(g.slug) = LOWER(#{criteria.genre})
-                OR LOWER(g.name) LIKE CONCAT('%', LOWER(#{criteria.genre}), '%')
-                )
-                )
-            </if>
-
-            <if test="criteria.contributor != null and criteria.contributor != ''">
-                AND EXISTS (
-                SELECT 1 FROM book_contributors bc
-                JOIN contributors c ON bc.contributor_id = c.id
-                WHERE bc.book_id = b.id
-                AND (
-                LOWER(c.name) LIKE CONCAT('%', LOWER(#{criteria.contributor}), '%')
-                OR LOWER(REGEXP_REPLACE(c.name, '[^a-z0-9]', '', 'g'))
-                LIKE CONCAT('%', REGEXP_REPLACE(LOWER(#{criteria.contributor}), '[^a-z0-9]', '', 'g'), '%')
-                )
-                )
-            </if>
-
-            <if test="criteria.minPages != null">
-                AND b.total_pages >= #{criteria.minPages}
-            </if>
-
-            <if test="criteria.maxPages != null">
-                AND b.total_pages &lt;= #{criteria.maxPages}
-            </if>
-
-            <if test="criteria.minFileSize != null">
-                AND b.file_size >= #{criteria.minFileSize}
-            </if>
-
-            <if test="criteria.maxFileSize != null">
-                AND b.file_size &lt;= #{criteria.maxFileSize}
-            </if>
-
-            <if test="criteria.publicationYearFrom != null">
-                AND b.publication_year >= #{criteria.publicationYearFrom}
-            </if>
-
-            <if test="criteria.publicationYearTo != null">
-                AND b.publication_year &lt;= #{criteria.publicationYearTo}
-            </if>
-
-            <if test="criteria.difficultyLevel != null and criteria.difficultyLevel != ''">
-                AND UPPER(b.difficulty_level) = UPPER(#{criteria.difficultyLevel})
-            </if>
-
-            <if test="criteria.fileFormat != null and criteria.fileFormat != ''">
-                AND UPPER(b.file_format) = UPPER(#{criteria.fileFormat})
-            </if>
-
-            <if test="criteria.isFeatured != null">
-                AND b.is_featured = #{criteria.isFeatured}
-            </if>
-
-            <if test="criteria.languageId != null">
-                AND b.language_id = #{criteria.languageId}
-            </if>
-
-            <if test="criteria.minRating != null">
-                AND EXISTS (
-                SELECT 1 FROM (
-                SELECT book_id, AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS avg_rating
-                FROM reactions
-                WHERE book_id = b.id
-                GROUP BY book_id
-                ) r WHERE r.avg_rating >= #{criteria.minRating}
-                )
-            </if>
-
-            <if test="criteria.minViewCount != null">
-                AND b.view_count >= #{criteria.minViewCount}
-            </if>
-
-            <if test="criteria.minReadCount != null">
-                AND b.read_count >= #{criteria.minReadCount}
-            </if>
-        </where>
-    </sql>
-
-    <!-- Get paginated books with advanced filters -->
-    <select id="getBookListWithAdvancedFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
-        SELECT
-        b.id,
-        b.title,
-        b.slug,
-        b.subtitle,
-        b.edition,
-        b.cover_image_url AS coverImageUrl,
-        b.publisher,
-        b.publication_year AS publicationYear,
-        b.file_url AS fileUrl,
-        b.file_format AS fileFormat,
-        b.file_size AS fileSize,
-        b.total_pages AS totalPages,
-        b.description,
-        b.estimated_read_time AS estimatedReadTime,
-        l.name AS language,
-        b.total_word AS totalWord,
-        b.difficulty_level AS difficultyLevel,
-        b.view_count AS viewCount,
-        b.read_count AS readCount,
-        b.download_count AS downloadCount,
-        b.series_id AS seriesId,
-        b.series_order AS seriesOrder,
-        b.source,
-        cs.name AS copyrightStatus,
-        b.published_at AS publishedAt,
-        b.category,
-        b.created_at AS createdAt,
-        b.updated_at AS updatedAt,
-        b.is_active AS isActive,
-        b.is_featured AS isFeatured,
-        (
-        SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id
-        ) AS authorNames,
-        (
-        SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
-        FROM book_authors ba
-        JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id
-        ) AS authorSlugs,
-        (
-        SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ')
-        FROM book_contributors bc
-        JOIN contributors c ON bc.contributor_id = c.id
-        WHERE bc.book_id = b.id
-        ) AS contributors,
-        (
-        SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
-        FROM book_genres bg
-        JOIN genres g ON bg.genre_id = g.id
-        WHERE bg.book_id = b.id
-        ) AS genres,
-        COALESCE(rs.total_ratings, 0) AS totalRatings,
-        COALESCE(rs.total_angry, 0) AS totalAngry,
-        COALESCE(rs.total_likes, 0) AS totalLikes,
-        COALESCE(rs.total_loves, 0) AS totalLoves,
-        COALESCE(rs.total_dislikes, 0) AS totalDislikes,
-        COALESCE(rs.total_sad, 0) AS totalSad,
-        COALESCE(rs.total_comments, 0) AS totalComments,
-        COALESCE(rs.average_rating, 0.0) AS averageRating,
-        COALESCE(rs.total_reactions, 0) AS totalReactions
-        FROM books b
-        JOIN languages l ON b.language_id = l.id
-        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
-        LEFT JOIN (
-        SELECT
-        book_id,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'RATING' THEN 1 END) AS total_ratings,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) AS total_angry,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) AS total_likes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
-        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
-        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD', 'ANGRY', 'LIKE', 'LOVE', 'DISLIKE') THEN 1 END) AS
-        total_reactions,
-        COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
-        FROM reactions
-        GROUP BY book_id
-        ) rs ON b.id = rs.book_id
-        <include refid="advancedSearchConditions"/>
-        ORDER BY ${sortColumn} ${sortType}
-        LIMIT #{limit} OFFSET #{offset}
-    </select>
-
-    <!-- Count books with advanced filters -->
-    <select id="countBooksWithAdvancedFilters" resultType="int">
-        SELECT COUNT(DISTINCT b.id)
-        FROM books b
-        JOIN languages l ON b.language_id = l.id
-        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
-        LEFT JOIN (
-        SELECT
-        book_id,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
-        FROM reactions
-        GROUP BY book_id
-        ) rs ON b.id = rs.book_id
-        <include refid="advancedSearchConditions"/>
-    </select>
-
-    <select id="findById" resultType="com.naskah.demo.model.entity.Book">
-        SELECT
-        *
-        FROM books
-        WHERE id = #{id}
-    </select>
+    <update id="incrementDownloadCount">
+        UPDATE books SET download_count = COALESCE(download_count, 0) + 1 WHERE id = #{id}
+    </update>
 
     <update id="incrementViewCountBySlug">
-        UPDATE books
-        SET view_count = view_count + 1
-        WHERE slug = #{slug}
+        UPDATE books SET view_count = view_count + 1 WHERE slug = #{slug}
     </update>
 
     <select id="countUserReadSessions" resultType="int">
-        SELECT COUNT(*)
-        FROM reading_sessions
-        WHERE book_id = #{bookId}
-        AND user_id = #{userId}
+        SELECT COUNT(*) FROM reading_sessions
+        WHERE book_id = #{bookId} AND user_id = #{userId}
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         VIEWS / ACTIONS
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="hasActionByHash" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM book_views
+        WHERE viewer_hash = #{viewerHash} AND action_type = #{actionType}
+    </select>
+
+    <insert id="insertAction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO book_views
+        (book_id, slug, user_id, ip_address, user_agent, viewer_hash, action_type, viewed_at)
+        VALUES
+        (#{bookId}, #{slug}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())
+    </insert>
+
+    <select id="getUniqueViewCount" resultType="int">
+        SELECT COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id ELSE viewer_hash END)
+        FROM book_views WHERE slug = #{slug} AND action_type = 'view'
+    </select>
+
+    <select id="getUniqueDownloadCount" resultType="int">
+        SELECT COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN user_id ELSE viewer_hash END)
+        FROM book_views WHERE slug = #{slug} AND action_type = 'download'
+    </select>
+
+    <!-- ══════════════════════════════════════════════════════════
+         RECOMMENDATIONS
+    ══════════════════════════════════════════════════════════ -->
+
+    <select id="getRecommendations"
+            resultType="com.naskah.demo.model.dto.response.BookRecommendationResponse">
+        SELECT b.id, b.title, b.slug, b.cover_image_url,
+        a.name AS author_name, g.name AS genre,
+        COALESCE(AVG(br.rating), 0) AS average_rating,
+        COUNT(DISTINCT rs.user_id)  AS total_readers
+        FROM books b
+        LEFT JOIN book_authors  ba ON b.id = ba.book_id
+        LEFT JOIN authors       a  ON ba.author_id = a.id
+        LEFT JOIN book_genres   bg ON b.id = bg.book_id
+        LEFT JOIN genres        g  ON bg.genre_id = g.id
+        LEFT JOIN book_ratings  br ON b.id = br.book_id
+        LEFT JOIN reading_sessions rs ON b.id = rs.book_id
+        WHERE g.name IN
+        <foreach item="genre" collection="genres" open="(" separator="," close=")">
+            #{genre}
+        </foreach>
+        AND b.id NOT IN (
+        SELECT DISTINCT book_id FROM reading_sessions WHERE user_id = #{userId}
+        )
+        GROUP BY b.id, b.title, b.slug, b.cover_image_url, a.name, g.name
+        ORDER BY average_rating DESC, total_readers DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findBooksByGenreAndUser" resultType="com.naskah.demo.model.entity.Book">
+        SELECT DISTINCT b.* FROM books b
+        JOIN book_genres    bg ON b.id = bg.book_id
+        JOIN genres         g  ON bg.genre_id = g.id
+        JOIN reading_sessions rs ON b.id = rs.book_id
+        WHERE rs.user_id   = #{userId}
+        AND   g.name       = #{genreName}
+        AND   rs.started_at >= #{since}
+        ORDER BY rs.started_at DESC
+    </select>
+
+    <select id="findLanguageNameByBookId" resultType="java.lang.String">
+        SELECT l.code FROM books b
+        JOIN languages l ON b.language_id = l.id
+        WHERE b.id = #{bookId}
+    </select>
+
+    <select id="findCopyrightStatusCodeByBookId" resultType="java.lang.String">
+        SELECT cs.code FROM books b
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        WHERE b.id = #{bookId}
     </select>
 
 </mapper>
