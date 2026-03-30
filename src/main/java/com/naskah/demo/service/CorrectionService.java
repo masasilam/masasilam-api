@@ -46,20 +46,7 @@ public interface CorrectionService {
             String bookSlug,
             Integer chapterNumber);
 
-    // ── ADMIN ────────────────────────────────────────────────
-
-    /**
-     * Ambil daftar koreksi berdasarkan status untuk admin panel.
-     * Dipakai di DashboardController GET /corrections
-     *
-     * @param status  PENDING / APPROVED / REJECTED
-     * @param page    halaman (1-based)
-     * @param limit   jumlah per halaman
-     */
-    DatatableResponse<CorrectionResponse> getPendingCorrections(
-            String status,
-            int page,
-            int limit);
+    DatatableResponse<CorrectionResponse> getCorrections(String status, int page, int limit);
 
     /**
      * Admin menyetujui koreksi.

@@ -13,6 +13,8 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <!-- ─── Core CRUD ──────────────────────────────────────────────────────── -->
+
     <select id="findByUserAndBook" resultMap="EpubBookmarkRM">
         SELECT id, user_id, book_id, cfi, label, created_at
         FROM epub_bookmarks
@@ -30,12 +32,44 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO epub_bookmarks
         (user_id, book_id, cfi, label, created_at)
-        VALUES (#{userId}, #{bookId}, #{cfi}, #{label}, #{createdAt})
+        VALUES
+        (#{userId}, #{bookId}, #{cfi}, #{label}, #{createdAt})
     </insert>
 
     <delete id="deleteById">
         DELETE FROM epub_bookmarks
         WHERE id = #{id}
     </delete>
+
+    <!-- ─── Dashboard ──────────────────────────────────────────────────────── -->
+
+    <select id="countByUser" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findRecentByUser" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findByUserSince" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+        AND created_at >= #{since}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findByUser" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
 
 </mapper>

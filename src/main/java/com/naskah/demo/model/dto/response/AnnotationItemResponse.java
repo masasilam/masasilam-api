@@ -21,6 +21,7 @@ public class AnnotationItemResponse {
     private String chapterTitle;
     private Integer startPosition;
     private Integer endPosition;
+    private String cfi;
 
     // Metadata
     private LocalDateTime createdAt;

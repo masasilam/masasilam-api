@@ -33,6 +33,8 @@ public class DashboardServiceImpl implements DashboardService {
     private final BookReviewMapper bookReviewMapper;
     private final UserReadingPatternMapper patternMapper;
     private final GenreMapper genreMapper;
+    private final EpubAnnotationMapper epubAnnotationMapper;
+    private final EpubBookmarkMapper epubBookmarkMapper;
     private static final String SUCCESS = "Success";
     private static final String READING = "reading";
     private static final String COMPLETED = "completed";
@@ -271,28 +273,27 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private UserReadingDashboardResponse.AnnotationsSummary buildAnnotationsSummary(Long userId) {
-        UserReadingDashboardResponse.AnnotationsSummary summary = new UserReadingDashboardResponse.AnnotationsSummary();
+        UserReadingDashboardResponse.AnnotationsSummary summary =
+                new UserReadingDashboardResponse.AnnotationsSummary();
 
-        // Counts
-        summary.setTotalBookmarks(bookmarkMapper.countByUser(userId));
-        summary.setTotalHighlights(highlightMapper.countByUser(userId));
-        summary.setTotalNotes(noteMapper.countByUser(userId));
+        // Count dari tabel EPUB
+        Integer annotationCount = epubAnnotationMapper.countByUser(userId);
+        Integer bookmarkCount = epubBookmarkMapper.countByUser(userId);
+
+        summary.setTotalBookmarks(bookmarkCount != null ? bookmarkCount : 0);
+        summary.setTotalHighlights(annotationCount != null ? annotationCount : 0);
+        summary.setTotalNotes(0);       // EPUB tidak punya tabel notes terpisah
         summary.setTotalReviews(bookReviewMapper.countByUser(userId));
 
-        // Recent annotations (mixed)
+        // Recent annotations — gabung annotations + bookmarks, sort by date
         List<UserReadingDashboardResponse.RecentAnnotation> recent = new ArrayList<>();
 
-        // Get 2 most recent from each type
-        List<Bookmark> recentBookmarks = bookmarkMapper.findRecentByUser(userId, 2);
-        recentBookmarks.forEach(b -> recent.add(mapBookmarkToRecentAnnotation(b)));
+        epubAnnotationMapper.findRecentByUser(userId, 3)
+                .forEach(a -> recent.add(mapEpubAnnotationToRecentAnnotation(a)));
 
-        List<Highlight> recentHighlights = highlightMapper.findRecentByUser(userId, 2);
-        recentHighlights.forEach(h -> recent.add(mapHighlightToRecentAnnotation(h)));
+        epubBookmarkMapper.findRecentByUser(userId, 2)
+                .forEach(b -> recent.add(mapEpubBookmarkToRecentAnnotation(b)));
 
-        List<Note> recentNotes = noteMapper.findRecentByUser(userId, 2);
-        recentNotes.forEach(n -> recent.add(mapNoteToRecentAnnotation(n)));
-
-        // Sort by date and take top 5
         recent.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
         summary.setRecentAnnotations(recent.stream().limit(5).toList());
 
@@ -300,14 +301,16 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     private UserReadingDashboardResponse.QuickAccessLinks buildQuickAccessLinks(Long userId) {
-        UserReadingDashboardResponse.QuickAccessLinks links = new UserReadingDashboardResponse.QuickAccessLinks();
+        UserReadingDashboardResponse.QuickAccessLinks links =
+                new UserReadingDashboardResponse.QuickAccessLinks();
 
-        // Count pending/unread items
-        links.setPendingBookmarks(bookmarkMapper.countByUser(userId));
-        links.setUnreadHighlights(highlightMapper.countByUser(userId));
-        links.setDraftNotes(noteMapper.countDraftsByUser(userId));
+        Integer bookmarkCount = epubBookmarkMapper.countByUser(userId);
+        Integer annotationCount = epubAnnotationMapper.countByUser(userId);
 
-        // Count books without reviews
+        links.setPendingBookmarks(bookmarkCount != null ? bookmarkCount : 0);
+        links.setUnreadHighlights(annotationCount != null ? annotationCount : 0);
+        links.setDraftNotes(0); // tidak ada konsep draft di EPUB annotations
+
         int totalRead = chapterProgressMapper.countCompletedBooks(userId);
         int reviewCount = bookReviewMapper.countByUser(userId);
         links.setPendingReviews(Math.max(0, totalRead - reviewCount));
@@ -470,43 +473,38 @@ public class DashboardServiceImpl implements DashboardService {
 
             int offset = (page - 1) * limit;
             List<AnnotationItemResponse> items = new ArrayList<>();
-            int totalCount = 0;
 
-            if (type.equals("all") || type.equals("bookmarks")) {
-                List<Bookmark> bookmarks = bookmarkMapper.findByUser(user.getId());
-                items.addAll(bookmarks.stream()
-                        .map(this::mapBookmarkToAnnotation)
-                        .toList());
-                totalCount += bookmarks.size();
+            List<EpubAnnotation> allAnnotations = epubAnnotationMapper.findByUser(user.getId());
+
+            if (type.equals("all") || type.equals("highlight")) {
+                allAnnotations.stream()
+                        .filter(a -> a.getNote() == null || a.getNote().isBlank())
+                        .forEach(a -> items.add(mapEpubAnnotationToAnnotationItem(a)));
             }
 
-            if (type.equals("all") || type.equals("highlights")) {
-                List<Highlight> highlights = highlightMapper.findByUser(user.getId());
-                items.addAll(highlights.stream()
-                        .map(this::mapHighlightToAnnotation)
-                        .toList());
-                totalCount += highlights.size();
+            if (type.equals("all") || type.equals("note")) {
+                allAnnotations.stream()
+                        .filter(a -> a.getNote() != null && !a.getNote().isBlank())
+                        .forEach(a -> items.add(mapEpubAnnotationToAnnotationItem(a)));
             }
 
-            if (type.equals("all") || type.equals("notes")) {
-                List<Note> notes = noteMapper.findByUser(user.getId());
-                items.addAll(notes.stream()
-                        .map(this::mapNoteToAnnotation)
-                        .toList());
-                totalCount += notes.size();
+            if (type.equals("all") || type.equals("bookmark")) {
+                epubBookmarkMapper.findByUser(user.getId())
+                        .forEach(b -> items.add(mapEpubBookmarkToAnnotationItem(b)));
             }
 
-            // Sort
             sortAnnotations(items, sortBy);
 
-            // Paginate
-            int start = Math.min(offset, items.size());
-            int end = Math.min(start + limit, items.size());
+            int totalCount = items.size();
+            int start = Math.min(offset, totalCount);
+            int end = Math.min(start + limit, totalCount);
             List<AnnotationItemResponse> paged = items.subList(start, end);
 
-            PageDataResponse<AnnotationItemResponse> pageData = new PageDataResponse<>(page, limit, totalCount, paged);
+            PageDataResponse<AnnotationItemResponse> pageData =
+                    new PageDataResponse<>(page, limit, totalCount, paged);
 
-            return new DatatableResponse<>(SUCCESS, "Annotations retrieved", HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Annotations retrieved",
+                    HttpStatus.OK.value(), pageData);
 
         } catch (Exception e) {
             log.error("Error getting annotations: {}", e.getMessage(), e);
@@ -995,17 +993,13 @@ public class DashboardServiceImpl implements DashboardService {
     private List<ReadingActivityResponse> getAnnotationActivities(Long userId, LocalDateTime since) {
         List<ReadingActivityResponse> activities = new ArrayList<>();
 
-        // Bookmarks
-        List<Bookmark> bookmarks = bookmarkMapper.findByUserSince(userId, since);
-        bookmarks.forEach(b -> activities.add(mapBookmarkToActivity(b)));
+        // EPUB Annotations (highlight + note)
+        epubAnnotationMapper.findByUserSince(userId, since)
+                .forEach(a -> activities.add(mapEpubAnnotationToActivity(a)));
 
-        // Highlights
-        List<Highlight> highlights = highlightMapper.findByUserSince(userId, since);
-        highlights.forEach(h -> activities.add(mapHighlightToActivity(h)));
-
-        // Notes
-        List<Note> notes = noteMapper.findByUserSince(userId, since);
-        notes.forEach(n -> activities.add(mapNoteToActivity(n)));
+        // EPUB Bookmarks
+        epubBookmarkMapper.findByUserSince(userId, since)
+                .forEach(b -> activities.add(mapEpubBookmarkToActivity(b)));
 
         return activities;
     }
@@ -1726,46 +1720,30 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // Cek aktivitas lain (bookmark, highlight, dll)
-        // Bookmark
-        List<Bookmark> bookmarks = bookmarkMapper.findByUserSince(userId, dayStart);
-        if (bookmarks != null) {
-            long bookmarkCount = bookmarks.stream()
-                    .filter(b -> b != null && b.getCreatedAt() != null)
-                    .filter(b -> b.getCreatedAt().isAfter(dayStart) &&
-                            b.getCreatedAt().isBefore(dayEnd))
+
+        // EPUB Annotations
+        List<EpubAnnotation> annotations = epubAnnotationMapper.findByUserSince(userId, dayStart);
+        if (annotations != null) {
+            long annotationCount = annotations.stream()
+                    .filter(a -> a.getCreatedAt() != null
+                            && a.getCreatedAt().isAfter(dayStart)
+                            && a.getCreatedAt().isBefore(dayEnd))
                     .count();
-            if (bookmarkCount > 0) {
-                activities.add(String.format("%d bookmark", bookmarkCount));
+            if (annotationCount > 0) {
+                activities.add(String.format("%d annotation", annotationCount));
             }
         }
 
-        // Highlight (jika ada)
-        if (highlightMapper != null) {
-            List<Highlight> highlights = highlightMapper.findByUserSince(userId, dayStart);
-            if (highlights != null) {
-                long highlightCount = highlights.stream()
-                        .filter(h -> h != null && h.getCreatedAt() != null)
-                        .filter(h -> h.getCreatedAt().isAfter(dayStart) &&
-                                h.getCreatedAt().isBefore(dayEnd))
-                        .count();
-                if (highlightCount > 0) {
-                    activities.add(String.format("%d highlight", highlightCount));
-                }
-            }
-        }
-
-        // Note (jika ada)
-        if (noteMapper != null) {
-            List<Note> notes = noteMapper.findByUserSince(userId, dayStart);
-            if (notes != null) {
-                long noteCount = notes.stream()
-                        .filter(n -> n != null && n.getCreatedAt() != null)
-                        .filter(n -> n.getCreatedAt().isAfter(dayStart) &&
-                                n.getCreatedAt().isBefore(dayEnd))
-                        .count();
-                if (noteCount > 0) {
-                    activities.add(String.format("%d catatan", noteCount));
-                }
+        // EPUB Bookmarks
+        List<EpubBookmark> epubBookmarks = epubBookmarkMapper.findByUserSince(userId, dayStart);
+        if (epubBookmarks != null) {
+            long epubBookmarkCount = epubBookmarks.stream()
+                    .filter(b -> b.getCreatedAt() != null
+                            && b.getCreatedAt().isAfter(dayStart)
+                            && b.getCreatedAt().isBefore(dayEnd))
+                    .count();
+            if (epubBookmarkCount > 0) {
+                activities.add(String.format("%d bookmark", epubBookmarkCount));
             }
         }
 
@@ -2000,6 +1978,117 @@ public class DashboardServiceImpl implements DashboardService {
             annotation.setBookSlug(book.getSlug());
         }
 
+        return annotation;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+// EPUB ANNOTATION MAPPERS
+// ═══════════════════════════════════════════════════════════
+
+    private AnnotationItemResponse mapEpubAnnotationToAnnotationItem(EpubAnnotation a) {
+        AnnotationItemResponse item = new AnnotationItemResponse();
+        item.setId(a.getId());
+        item.setType(a.getNote() != null && !a.getNote().isBlank() ? "note" : "highlight");
+        item.setContent(a.getNote() != null && !a.getNote().isBlank()
+                ? a.getNote() : a.getSelectedText());
+        item.setCfi(a.getCfi());
+        item.setBookId(a.getBookId());
+        item.setCreatedAt(a.getCreatedAt());
+        item.setUpdatedAt(a.getUpdatedAt());
+
+        Book book = bookMapper.findById(a.getBookId());
+        if (book != null) {
+            item.setBookTitle(book.getTitle());
+            item.setBookSlug(book.getSlug());
+            item.setBookCover(book.getCoverImageUrl());
+        }
+        return item;
+    }
+
+    private AnnotationItemResponse mapEpubBookmarkToAnnotationItem(EpubBookmark b) {
+        AnnotationItemResponse item = new AnnotationItemResponse();
+        item.setId(b.getId());
+        item.setType("bookmark");
+        item.setCfi(b.getCfi());
+        item.setContent(b.getLabel() != null ? b.getLabel() : "Bookmark");
+        item.setBookId(b.getBookId());
+        item.setCreatedAt(b.getCreatedAt());
+        item.setUpdatedAt(b.getCreatedAt());
+
+        Book book = bookMapper.findById(b.getBookId());
+        if (book != null) {
+            item.setBookTitle(book.getTitle());
+            item.setBookSlug(book.getSlug());
+            item.setBookCover(book.getCoverImageUrl());
+        }
+        return item;
+    }
+
+    private ReadingActivityResponse mapEpubAnnotationToActivity(EpubAnnotation a) {
+        ReadingActivityResponse activity = new ReadingActivityResponse();
+        activity.setActivityId(a.getId());
+        activity.setActivityType(a.getNote() != null && !a.getNote().isBlank()
+                ? "add_note" : "add_highlight");
+        activity.setTimestamp(a.getCreatedAt());
+        activity.setBookId(a.getBookId());
+        activity.setDescription(a.getNote() != null && !a.getNote().isBlank()
+                ? "Added a note" : "Highlighted text");
+
+        Book book = bookMapper.findById(a.getBookId());
+        if (book != null) {
+            activity.setBookTitle(book.getTitle());
+            activity.setBookSlug(book.getSlug());
+            activity.setBookCover(book.getCoverImageUrl());
+        }
+        return activity;
+    }
+
+    private ReadingActivityResponse mapEpubBookmarkToActivity(EpubBookmark b) {
+        ReadingActivityResponse activity = new ReadingActivityResponse();
+        activity.setActivityId(b.getId());
+        activity.setActivityType("add_bookmark");
+        activity.setTimestamp(b.getCreatedAt());
+        activity.setBookId(b.getBookId());
+        activity.setDescription(b.getLabel() != null
+                ? "Bookmarked: " + b.getLabel() : "Added a bookmark");
+
+        Book book = bookMapper.findById(b.getBookId());
+        if (book != null) {
+            activity.setBookTitle(book.getTitle());
+            activity.setBookSlug(book.getSlug());
+            activity.setBookCover(book.getCoverImageUrl());
+        }
+        return activity;
+    }
+
+    private UserReadingDashboardResponse.RecentAnnotation mapEpubAnnotationToRecentAnnotation(EpubAnnotation a) {
+        UserReadingDashboardResponse.RecentAnnotation annotation =
+                new UserReadingDashboardResponse.RecentAnnotation();
+        annotation.setType(a.getNote() != null && !a.getNote().isBlank() ? "note" : "highlight");
+        annotation.setContent(a.getNote() != null && !a.getNote().isBlank()
+                ? a.getNote() : a.getSelectedText());
+        annotation.setCreatedAt(a.getCreatedAt());
+
+        Book book = bookMapper.findById(a.getBookId());
+        if (book != null) {
+            annotation.setBookTitle(book.getTitle());
+            annotation.setBookSlug(book.getSlug());
+        }
+        return annotation;
+    }
+
+    private UserReadingDashboardResponse.RecentAnnotation mapEpubBookmarkToRecentAnnotation(EpubBookmark b) {
+        UserReadingDashboardResponse.RecentAnnotation annotation =
+                new UserReadingDashboardResponse.RecentAnnotation();
+        annotation.setType("bookmark");
+        annotation.setContent(b.getLabel() != null ? b.getLabel() : "Bookmark");
+        annotation.setCreatedAt(b.getCreatedAt());
+
+        Book book = bookMapper.findById(b.getBookId());
+        if (book != null) {
+            annotation.setBookTitle(book.getTitle());
+            annotation.setBookSlug(book.getSlug());
+        }
         return annotation;
     }
 

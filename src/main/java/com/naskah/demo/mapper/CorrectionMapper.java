@@ -36,4 +36,14 @@ public interface CorrectionMapper {
      * Dipakai untuk inject editor ke kolofon epub dan content.opf.
      */
     List<String> findApprovedEditorsByBookId(@Param("bookId") Long bookId);
+
+    List<ContentCorrection> findByStatusAndUser(
+            @Param("status") String status,
+            @Param("userId") Long userId,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
+    int countByStatusAndUser(
+            @Param("status") String status,
+            @Param("userId") Long userId);
 }

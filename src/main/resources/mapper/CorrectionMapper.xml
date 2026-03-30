@@ -143,4 +143,30 @@
         ORDER BY u.full_name ASC
     </select>
 
+    <select id="findByStatusAndUser" resultMap="CorrectionResultMap">
+        SELECT
+        cc.*,
+        bc.title AS chapter_title,
+        bc.chapter_number,
+        b.title AS book_title,
+        u.username AS submitted_by_username
+        FROM content_correction cc
+        JOIN book_chapters bc ON cc.chapter_id = bc.id
+        JOIN books b ON cc.book_id = b.id
+        JOIN users u ON cc.submitted_by = u.id
+        WHERE cc.status = CAST(#{status} AS correction_status)
+        AND cc.submitted_by = #{userId}
+        ORDER BY
+        CASE WHEN #{status} = 'PENDING' THEN cc.created_at END ASC,
+        CASE WHEN #{status} != 'PENDING' THEN cc.reviewed_at END DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByStatusAndUser" resultType="int">
+        SELECT COUNT(*)
+        FROM content_correction
+        WHERE status = CAST(#{status} AS correction_status)
+        AND submitted_by = #{userId}
+    </select>
+
 </mapper>

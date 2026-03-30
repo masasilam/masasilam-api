@@ -68,18 +68,23 @@ public class CorrectionServiceImpl implements CorrectionService {
                 book.getId(), chapterNumber);
         if (chapter == null) throw new DataNotFoundException();
 
-        // 4. Validasi: originalText harus ada di html_content
-        //    Cegah laporan yang tidak valid sama sekali
+        // 4. Sanitasi input — buang soft hyphen & karakter invisible lainnya
+        String originalText  = stripInvisibleChars(request.getOriginalText());
+        String correctedText = stripInvisibleChars(request.getCorrectedText());
+        String contextBefore = stripInvisibleChars(request.getContextBefore());
+        String contextAfter  = stripInvisibleChars(request.getContextAfter());
+
+        // 5. Validasi: originalText harus ada di html_content
         String htmlContent = chapter.getHtmlContent();
-        if (htmlContent == null || !htmlContent.contains(request.getOriginalText())) {
+        if (htmlContent == null || !htmlContent.contains(originalText)) {
             throw new IllegalArgumentException(
                     "Teks yang dilaporkan tidak ditemukan di konten chapter ini. " +
                             "Pastikan Anda memilih teks dengan benar.");
         }
 
-        // 5. Cek duplikat — user tidak bisa lapor teks yang sama 2x
+        // 6. Cek duplikat — user tidak bisa lapor teks yang sama 2x
         int duplicateCount = correctionMapper.countDuplicateByUserAndChapter(
-                user.getId(), chapter.getId(), request.getOriginalText());
+                user.getId(), chapter.getId(), originalText);
 
         if (duplicateCount > 0) {
             throw new IllegalStateException(
@@ -87,15 +92,15 @@ public class CorrectionServiceImpl implements CorrectionService {
                             "Tunggu sampai admin meninjau laporan sebelumnya.");
         }
 
-        // 6. Insert laporan
+        // 7. Insert laporan — pakai nilai yang sudah disanitasi
         ContentCorrection correction = new ContentCorrection();
         correction.setBookId(book.getId());
         correction.setChapterId(chapter.getId());
         correction.setSubmittedBy(user.getId());
-        correction.setOriginalText(request.getOriginalText());
-        correction.setCorrectedText(request.getCorrectedText());
-        correction.setContextBefore(request.getContextBefore());
-        correction.setContextAfter(request.getContextAfter());
+        correction.setOriginalText(originalText);
+        correction.setCorrectedText(correctedText);
+        correction.setContextBefore(contextBefore);
+        correction.setContextAfter(contextAfter);
         correction.setStartPosition(request.getStartPosition());
         correction.setEndPosition(request.getEndPosition());
         correction.setUserNote(request.getUserNote());
@@ -134,23 +139,39 @@ public class CorrectionServiceImpl implements CorrectionService {
                 positions);
     }
 
-    // ── ADMIN: LIST ──────────────────────────────────────────
-
     @Override
-    public DatatableResponse<CorrectionResponse> getPendingCorrections(
+    public DatatableResponse<CorrectionResponse> getCorrections(
             String status, int page, int limit) {
 
-        // Validasi status
         if (!List.of("PENDING", "APPROVED", "REJECTED").contains(status)) {
             status = "PENDING";
         }
 
         int offset = (page - 1) * limit;
 
-        List<ContentCorrection> corrections = correctionMapper
-                .findByStatus(status, offset, limit);
+        User user = getCurrentUser();
 
-        int total = correctionMapper.countByStatus(status);
+        // Cek role via DB — bukan dari JWT karena JWT bisa kosong
+        boolean isAdmin = userMapper.findUserRoles(user.getId())
+                .stream()
+                .anyMatch(role -> "ADMIN".equals(role.getName()));
+
+        log.debug("getCorrections: userId={}, isAdmin={}, status={}",
+                user.getId(), isAdmin, status);
+
+        List<ContentCorrection> corrections;
+        int total;
+
+        if (isAdmin) {
+            // Admin → semua koreksi
+            corrections = correctionMapper.findByStatus(status, offset, limit);
+            total = correctionMapper.countByStatus(status);
+        } else {
+            // User biasa → HANYA milik sendiri
+            corrections = correctionMapper.findByStatusAndUser(
+                    status, user.getId(), offset, limit);
+            total = correctionMapper.countByStatusAndUser(status, user.getId());
+        }
 
         List<CorrectionResponse> responses = corrections.stream()
                 .map(this::mapToResponseFromEntity)
@@ -508,5 +529,17 @@ public class CorrectionServiceImpl implements CorrectionService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // Tambah helper method
+    private String stripInvisibleChars(String text) {
+        if (text == null) return null;
+        return text
+                .replace("\u00AD", "")   // soft hyphen
+                .replace("\u200B", "")   // zero-width space
+                .replace("\u200C", "")   // zero-width non-joiner
+                .replace("\u200D", "")   // zero-width joiner
+                .replace("\uFEFF", "")   // BOM / zero-width no-break space
+                .replaceAll("[\\p{Cf}]", ""); // semua Unicode "Format" category
     }
 }

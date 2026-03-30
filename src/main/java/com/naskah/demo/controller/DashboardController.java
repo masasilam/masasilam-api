@@ -129,7 +129,7 @@ public class DashboardController {
             @RequestParam(defaultValue = "20") int limit) {
 
         DatatableResponse<CorrectionResponse> response =
-                correctionService.getPendingCorrections(status, page, limit);
+                correctionService.getCorrections(status, page, limit);  // ← nama baru
 
         return ResponseEntity.ok(response);
     }
