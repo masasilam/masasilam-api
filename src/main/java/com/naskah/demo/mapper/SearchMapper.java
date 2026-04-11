@@ -13,34 +13,31 @@ public interface SearchMapper {
             "WHERE user_id = #{userId} AND book_id = #{bookId} " +
             "ORDER BY created_at DESC " +
             "LIMIT #{limit}")
-    List<SearchHistory> getUserBookSearchHistory(@Param("userId") Long userId,
-                                                 @Param("bookId") Long bookId,
-                                                 @Param("limit") int limit);
-
+    List<SearchHistory> getUserBookSearchHistory(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId,
+            @Param("limit") int limit);
 
     List<Map<String, Object>> searchInBook(
             @Param("bookId") Long bookId,
             @Param("query") String query,
             @Param("offset") int offset,
-            @Param("limit") int limit
-    );
+            @Param("limit") int limit);
 
     int countSearchResults(
             @Param("bookId") Long bookId,
-            @Param("query") String query
-    );
+            @Param("query") String query);
 
     List<Map<String, Object>> searchInBookSimple(
             @Param("bookId") Long bookId,
             @Param("query") String query,
             @Param("offset") int offset,
-            @Param("limit") int limit
-    );
+            @Param("limit") int limit);
 
     int countSearchResultsSimple(
             @Param("bookId") Long bookId,
-            @Param("query") String query
-    );
+            @Param("query") String query);
 
+    // FIX: typo "voaid" → "void"
     void insertSearchHistory(SearchHistory history);
 }

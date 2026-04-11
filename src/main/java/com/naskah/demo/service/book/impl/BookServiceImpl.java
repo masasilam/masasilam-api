@@ -30,8 +30,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -611,53 +614,33 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
-    public ResponseEntity<byte[]> downloadBookAsBytes(String slug, HttpServletRequest request) {
+    public ResponseEntity<?> getDownloadUrl(String slug, HttpServletRequest request) {
         try {
             Book book = bookMapper.findBookBySlug(slug);
-            if (book == null) {
-                throw new DataNotFoundException();
-            }
+            if (book == null) throw new DataNotFoundException();
 
+            String fileUrl = book.getFileUrl();
+            if (fileUrl == null || fileUrl.isEmpty()) throw new DataNotFoundException();
+
+            // Semua logika tracking tetap sama persis
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
-
-            // Get user ID jika login
             Long userId = getCurrentUserId();
-            String userType = userId != null ? "authenticated (userId: " + userId + ")" : "guest";
-
             String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
-            log.info("Checking download for slug: {}, User: {}, IP: {}, Hash: {}",
-                    slug, userType, ipAddress, viewerHash);
-
             boolean hasDownloaded = bookMapper.hasActionByHash(viewerHash, "download");
-
             if (!hasDownloaded) {
                 bookMapper.incrementDownloadCount(book.getId());
-                log.info("Increased download count for book: {} (ID: {})", book.getTitle(), book.getId());
-
-                BookView bookDownload = BookView.builder()
-                        .bookId(book.getId())
-                        .slug(slug)
-                        .userId(userId)
-                        .ipAddress(ipAddress)
-                        .userAgent(userAgent)
-                        .viewerHash(viewerHash)
-                        .actionType("download")
-                        .build();
-
-                bookMapper.insertAction(bookDownload);
-                log.info("✓ New download recorded for slug: {} by {}", slug, userType);
-            } else {
-                log.info("✗ Duplicate download detected for slug: {} by {} - NOT incrementing",
-                        slug, userType);
+                bookMapper.insertAction(BookView.builder()
+                        .bookId(book.getId()).slug(slug).userId(userId)
+                        .ipAddress(ipAddress).userAgent(userAgent)
+                        .viewerHash(viewerHash).actionType("download")
+                        .build());
             }
 
-            // Log user activity untuk authenticated users
+            // Log user activity (sama seperti sebelumnya)
             String username = headerHolder.getUsername();
-            boolean isAuthenticated = username != null && !username.isEmpty();
-
-            if (isAuthenticated) {
+            if (username != null && !username.isEmpty()) {
                 User user = userMapper.findUserByUsername(username);
                 if (user != null) {
                     Map<String, Object> metadata = Map.of(
@@ -673,7 +656,6 @@ public class BookServiceImpl implements BookService {
                                     "ip", ipAddress
                             )
                     );
-
                     UserActivity activity = new UserActivity();
                     activity.setUserId(user.getId());
                     activity.setActivityType("download");
@@ -681,45 +663,22 @@ public class BookServiceImpl implements BookService {
                     activity.setEntityId(book.getId());
                     activity.setMetadata(new ObjectMapper().writeValueAsString(metadata));
                     activity.setCreatedAt(LocalDateTime.now());
-
                     userMapper.insertUserActivity(activity);
-                    log.info("User activity logged for user: {} downloading book: {}", username, book.getTitle());
                 }
             }
 
-            String fileUrl = book.getFileUrl();
-            if (fileUrl == null || fileUrl.isEmpty()) {
-                throw new DataNotFoundException();
-            }
-
-            RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<byte[]> response = restTemplate.getForEntity(fileUrl, byte[].class);
-
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new IOException("Failed to download file from URL: " + fileUrl);
-            }
-
-            byte[] fileContent = response.getBody();
-            log.info("Successfully downloaded {} bytes from: {}", fileContent.length, fileUrl);
-
-            String filename = book.getTitle() != null
-                    ? fileUtil.sanitizeFilename(book.getTitle()) + ".epub"
-                    : slug + ".epub";
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", filename);
-            headers.setCacheControl("no-cache, no-store, must-revalidate");
-            headers.setPragma("no-cache");
-            headers.setExpires(0);
-
-            return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
+            // ✅ Return URL, bukan file — biarkan client download langsung dari Cloudinary
+            return ResponseEntity.ok(Map.of(
+                    "downloadUrl", fileUrl,
+                    "filename", book.getTitle() != null
+                            ? fileUtil.sanitizeFilename(book.getTitle()) + ".epub"
+                            : slug + ".epub"
+            ));
 
         } catch (DataNotFoundException e) {
-            log.warn("Book not found for download: {}", slug);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            log.error("Error downloading book: {}", slug, e);
+            log.error("Error getting download URL: {}", slug, e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

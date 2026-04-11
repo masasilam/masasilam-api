@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.util.List;
@@ -103,8 +104,8 @@ public class BookController {
     }
 
     @GetMapping("/{slug}/download")
-    public ResponseEntity<byte[]> downloadBook(@PathVariable String slug, HttpServletRequest request) {
-        return bookService.downloadBookAsBytes(slug, request);
+    public ResponseEntity<?> downloadBook(@PathVariable String slug, HttpServletRequest request) {
+        return bookService.getDownloadUrl(slug, request);
     }
 
     @GetMapping("/genres")

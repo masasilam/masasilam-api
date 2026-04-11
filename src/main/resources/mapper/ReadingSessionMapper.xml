@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.ReadingSessionMapper">
+
+    <resultMap id="ReadingSessionRM" type="com.naskah.demo.model.entity.ReadingSession">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="book_id" property="bookId"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="ended_at" property="endedAt"/>
+        <result column="total_duration_seconds" property="totalDurationSeconds"/>
+        <result column="start_chapter" property="startChapter"/>
+        <result column="end_chapter" property="endChapter"/>
+        <result column="chapters_read" property="chaptersRead"/>
+        <result column="completion_delta" property="completionDelta"/>
+        <result column="total_interactions" property="totalInteractions"/>
+        <result column="device_type" property="deviceType"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insertSession" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_sessions (
+        user_id, book_id, session_id, started_at, ended_at,
+        total_duration_seconds, start_chapter, end_chapter,
+        chapters_read, completion_delta, total_interactions,
+        device_type, device_id, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{sessionId}, #{startedAt}, #{endedAt},
+        #{totalDurationSeconds}, #{startChapter}, #{endChapter},
+        #{chaptersRead}, #{completionDelta}, #{totalInteractions},
+        #{deviceType}, #{deviceId}, #{createdAt}, #{updatedAt}
+        )
+        ON CONFLICT (session_id) DO NOTHING
+    </insert>
+
+    <update id="updateSession">
+        UPDATE reading_sessions SET
+        ended_at = #{endedAt},
+        total_duration_seconds = #{totalDurationSeconds},
+        chapters_read = #{chaptersRead},
+        start_chapter = #{startChapter},
+        end_chapter = #{endChapter},
+        completion_delta = #{completionDelta},
+        total_interactions = #{totalInteractions},
+        updated_at = #{updatedAt}
+        WHERE session_id = #{sessionId}
+    </update>
+
+    <select id="findBySessionId" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions WHERE session_id = #{sessionId}
+    </select>
+
+    <select id="findById" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions WHERE id = #{id}
+    </select>
+
+    <select id="existsBySessionId" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM reading_sessions WHERE session_id = #{sessionId})
+    </select>
+
+    <select id="findUserBookSessions" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+        ORDER BY started_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findByUserAndBook" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+        ORDER BY started_at DESC
+    </select>
+
+    <select id="findAllUserSessions" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId}
+        ORDER BY started_at DESC
+    </select>
+
+    <select id="findLatestSessionPerBook" resultMap="ReadingSessionRM">
+        SELECT rs.*
+        FROM reading_sessions rs
+        INNER JOIN (
+        SELECT book_id, MAX(started_at) AS max_started
+        FROM reading_sessions
+        WHERE user_id = #{userId}
+        GROUP BY book_id
+        ) latest ON rs.book_id = latest.book_id AND rs.started_at = latest.max_started
+        WHERE rs.user_id = #{userId}
+        ORDER BY rs.started_at DESC
+    </select>
+
+    <select id="findRecentUserSessions" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId}
+        ORDER BY started_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findUserSessionsSince" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId} AND started_at &gt;= #{since}
+        ORDER BY started_at DESC
+    </select>
+
+    <select id="findUserSessionsSincePaged" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId} AND started_at &gt;= #{since}
+        ORDER BY started_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findUserSessionsBetween" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId}
+        AND started_at &gt;= #{start}
+        AND started_at &lt; #{end}
+        ORDER BY started_at
+    </select>
+
+    <select id="findUserRecentSessions" resultMap="ReadingSessionRM">
+        SELECT * FROM reading_sessions
+        WHERE user_id = #{userId}
+        ORDER BY COALESCE(ended_at, started_at) DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+</mapper>

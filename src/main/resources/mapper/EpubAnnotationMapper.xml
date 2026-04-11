@@ -16,22 +16,14 @@
         <result property="updatedAt"    column="updated_at"/>
     </resultMap>
 
-    <!-- ─── Core CRUD ──────────────────────────────────────────────────────── -->
-
-    <select id="findByUserAndBook" resultMap="EpubAnnotationRM">
-        SELECT id, user_id, book_id, cfi, selected_text, color, note,
-        created_at, updated_at
-        FROM epub_annotations
-        WHERE user_id = #{userId}
-        AND book_id = #{bookId}
-        ORDER BY created_at DESC
+    <select id="findById" resultMap="EpubAnnotationRM">
+        SELECT * FROM epub_annotations WHERE id = #{id}
     </select>
 
-    <select id="findById" resultMap="EpubAnnotationRM">
-        SELECT id, user_id, book_id, cfi, selected_text, color, note,
-        created_at, updated_at
-        FROM epub_annotations
-        WHERE id = #{id}
+    <select id="findByUserAndBook" resultMap="EpubAnnotationRM">
+        SELECT * FROM epub_annotations
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+        ORDER BY created_at DESC
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -43,40 +35,53 @@
     </insert>
 
     <delete id="deleteById">
-        DELETE FROM epub_annotations
-        WHERE id = #{id}
+        DELETE FROM epub_annotations WHERE id = #{id}
     </delete>
 
-    <!-- ─── Dashboard ──────────────────────────────────────────────────────── -->
-
     <select id="countByUser" resultType="java.lang.Integer">
-        SELECT COUNT(*)
-        FROM epub_annotations
+        SELECT COUNT(*) FROM epub_annotations WHERE user_id = #{userId}
+    </select>
+
+    <select id="countHighlightsByUser" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM epub_annotations
         WHERE user_id = #{userId}
+        AND (note IS NULL OR note = '')
+    </select>
+
+    <select id="countNotesByUser" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM epub_annotations
+        WHERE user_id = #{userId}
+        AND note IS NOT NULL AND note != ''
+    </select>
+
+    <select id="countByUserAndBook" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM epub_annotations
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+    </select>
+
+    <select id="findByUserPaged" resultMap="EpubAnnotationRM">
+        SELECT * FROM epub_annotations
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
     <select id="findRecentByUser" resultMap="EpubAnnotationRM">
-        SELECT id, user_id, book_id, cfi, selected_text, color, note,
-        created_at, updated_at
-        FROM epub_annotations
+        SELECT * FROM epub_annotations
         WHERE user_id = #{userId}
         ORDER BY created_at DESC
         LIMIT #{limit}
     </select>
 
     <select id="findByUserSince" resultMap="EpubAnnotationRM">
-        SELECT id, user_id, book_id, cfi, selected_text, color, note,
-        created_at, updated_at
-        FROM epub_annotations
+        SELECT * FROM epub_annotations
         WHERE user_id = #{userId}
         AND created_at >= #{since}
         ORDER BY created_at DESC
     </select>
 
     <select id="findByUser" resultMap="EpubAnnotationRM">
-        SELECT id, user_id, book_id, cfi, selected_text, color, note,
-        created_at, updated_at
-        FROM epub_annotations
+        SELECT * FROM epub_annotations
         WHERE user_id = #{userId}
         ORDER BY created_at DESC
     </select>

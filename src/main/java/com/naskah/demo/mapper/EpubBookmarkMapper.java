@@ -4,18 +4,16 @@ import com.naskah.demo.model.entity.EpubBookmark;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
 public interface EpubBookmarkMapper {
 
-    // ── Core CRUD (query di XML) ──────────────────────────────────────────────
+    // ── Core CRUD ─────────────────────────────────────────────────────────────
 
     List<EpubBookmark> findByUserAndBook(
             @Param("userId") Long userId,
-            @Param("bookId") Long bookId
-    );
+            @Param("bookId") Long bookId);
 
     void insert(EpubBookmark bookmark);
 
@@ -23,19 +21,21 @@ public interface EpubBookmarkMapper {
 
     void deleteById(@Param("id") Long id);
 
-    // ── Dashboard methods (query di XML) ─────────────────────────────────────
+    // ── Count — dipanggil DashboardServiceImpl ────────────────────────────────
 
+    /** Hitung total bookmark milik user (semua buku). */
     Integer countByUser(@Param("userId") Long userId);
 
-    List<EpubBookmark> findRecentByUser(
+    /** Hitung bookmark milik user untuk satu buku tertentu. */
+    Integer countByUserAndBook(
             @Param("userId") Long userId,
-            @Param("limit") int limit
-    );
+            @Param("bookId") Long bookId);
 
-    List<EpubBookmark> findByUserSince(
+    // ── List — dipanggil DashboardServiceImpl.getAnnotations() ───────────────
+
+    /** Semua bookmark user, dengan paginasi. */
+    List<EpubBookmark> findByUser(
             @Param("userId") Long userId,
-            @Param("since") LocalDateTime since
-    );
-
-    List<EpubBookmark> findByUser(@Param("userId") Long userId);
+            @Param("offset") int offset,
+            @Param("limit")  int limit);
 }

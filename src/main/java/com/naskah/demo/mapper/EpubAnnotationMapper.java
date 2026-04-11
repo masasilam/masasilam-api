@@ -10,12 +10,11 @@ import java.util.List;
 @Mapper
 public interface EpubAnnotationMapper {
 
-    // ── Core CRUD (query di XML) ──────────────────────────────────────────────
+    // ── Core CRUD ─────────────────────────────────────────────────────────────
 
     List<EpubAnnotation> findByUserAndBook(
             @Param("userId") Long userId,
-            @Param("bookId") Long bookId
-    );
+            @Param("bookId") Long bookId);
 
     void insert(EpubAnnotation annotation);
 
@@ -23,19 +22,34 @@ public interface EpubAnnotationMapper {
 
     void deleteById(@Param("id") Long id);
 
-    // ── Dashboard methods (query di XML) ─────────────────────────────────────
+    // ── Count methods (Sudah dilengkapi) ──────────────────────────────────────
 
     Integer countByUser(@Param("userId") Long userId);
 
+    Integer countHighlightsByUser(@Param("userId") Long userId);
+
+    Integer countNotesByUser(@Param("userId") Long userId);
+
+    Integer countByUserAndBook(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
+
+    // ── List & Pagination methods ─────────────────────────────────────────────
+
+    // Digunakan untuk halaman utama anotasi dengan limit & offset
+    List<EpubAnnotation> findByUserPaged(
+            @Param("userId") Long userId,
+            @Param("offset") int offset,
+            @Param("limit") int limit);
+
     List<EpubAnnotation> findRecentByUser(
             @Param("userId") Long userId,
-            @Param("limit") int limit
-    );
+            @Param("limit") int limit);
 
     List<EpubAnnotation> findByUserSince(
             @Param("userId") Long userId,
-            @Param("since") LocalDateTime since
-    );
+            @Param("since") LocalDateTime since);
 
+    // Untuk Library/Lainnya (Tanpa Pagination)
     List<EpubAnnotation> findByUser(@Param("userId") Long userId);
 }

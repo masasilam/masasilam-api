@@ -18,32 +18,47 @@ public interface ChapterRatingMapper {
 
     @Select("SELECT * FROM chapter_ratings " +
             "WHERE user_id = #{userId} AND book_id = #{bookId} AND chapter_number = #{chapterNumber}")
-    ChapterRating findRating(@Param("userId") Long userId,
-                             @Param("bookId") Long bookId,
-                             @Param("chapterNumber") Integer chapterNumber);
+    ChapterRating findRating(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId,
+            @Param("chapterNumber") Integer chapterNumber);
 
     @Select("SELECT AVG(rating) as average_rating, COUNT(*) as total_ratings " +
             "FROM chapter_ratings " +
             "WHERE book_id = #{bookId} AND chapter_number = #{chapterNumber}")
-    Map<String, Object> getRatingSummary(@Param("bookId") Long bookId,
-                                         @Param("chapterNumber") Integer chapterNumber);
+    Map<String, Object> getRatingSummary(
+            @Param("bookId") Long bookId,
+            @Param("chapterNumber") Integer chapterNumber);
 
     @Select("SELECT rating, COUNT(*) as count " +
             "FROM chapter_ratings " +
             "WHERE book_id = #{bookId} AND chapter_number = #{chapterNumber} " +
             "GROUP BY rating")
-    List<Map<String, Object>> getRatingDistribution(@Param("bookId") Long bookId,
-                                                    @Param("chapterNumber") Integer chapterNumber);
+    List<Map<String, Object>> getRatingDistribution(
+            @Param("bookId") Long bookId,
+            @Param("chapterNumber") Integer chapterNumber);
 
     @Delete("DELETE FROM chapter_ratings " +
             "WHERE user_id = #{userId} AND book_id = #{bookId} AND chapter_number = #{chapterNumber}")
-    void deleteRating(@Param("userId") Long userId,
-                      @Param("bookId") Long bookId,
-                      @Param("chapterNumber") Integer chapterNumber);
+    void deleteRating(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId,
+            @Param("chapterNumber") Integer chapterNumber);
 
     @Select("SELECT * FROM chapter_ratings " +
             "WHERE user_id = #{userId} AND book_id = #{bookId} " +
             "ORDER BY chapter_number")
-    List<ChapterRating> findUserBookRatings(@Param("userId") Long userId,
-                                            @Param("bookId") Long bookId);
+    List<ChapterRating> findUserBookRatings(
+            @Param("userId") Long userId,
+            @Param("bookId") Long bookId);
+
+    /**
+     * Ambil semua rating milik user (semua buku).
+     * Dipanggil DashboardServiceImpl.buildOverviewStats() untuk
+     * menghitung rating rata-rata user.
+     *
+     * SELECT user_id, rating FROM chapter_ratings WHERE user_id = #{userId}
+     */
+    @Select("SELECT user_id, rating FROM chapter_ratings WHERE user_id = #{userId}")
+    List<Map<String, Object>> findAllUserRatings(@Param("userId") Long userId);
 }

@@ -42,4 +42,5 @@ public interface BookChapterService {
     DataResponse<BookAnalyticsResponse> getBookAnalytics(String slug, String dateFrom, String dateTo);
     DataResponse<List<ChapterAnalyticsResponse>> getChaptersAnalytics(String slug);
     DataResponse<ChapterStatsResponse> getChapterStats(String slug, Integer chapterNumber);
+    DataResponse<Void> recordEpubSession(String slug, EpubSessionRequest request);
 }

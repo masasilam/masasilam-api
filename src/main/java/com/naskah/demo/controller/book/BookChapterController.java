@@ -246,6 +246,12 @@ public class BookChapterController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/reading/epub-session")
+    public ResponseEntity<DataResponse<Void>> recordEpubSession(@PathVariable String slug, @RequestBody EpubSessionRequest request) {
+        DataResponse<Void> response = chapterService.recordEpubSession(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
     // ════════════════════════════════════════════════════════════
     // CONTENT CORRECTIONS (Lapor Typo) — Ditambahkan
     // ════════════════════════════════════════════════════════════

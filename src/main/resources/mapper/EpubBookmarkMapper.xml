@@ -30,10 +30,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO epub_bookmarks
-        (user_id, book_id, cfi, label, created_at)
-        VALUES
-        (#{userId}, #{bookId}, #{cfi}, #{label}, #{createdAt})
+        INSERT INTO epub_bookmarks (user_id, book_id, cfi, label, created_at)
+        VALUES (#{userId}, #{bookId}, #{cfi}, #{label}, #{createdAt})
     </insert>
 
     <delete id="deleteById">
@@ -41,7 +39,7 @@
         WHERE id = #{id}
     </delete>
 
-    <!-- ─── Dashboard ──────────────────────────────────────────────────────── -->
+    <!-- ─── Count ──────────────────────────────────────────────────────────── -->
 
     <select id="countByUser" resultType="java.lang.Integer">
         SELECT COUNT(*)
@@ -49,27 +47,23 @@
         WHERE user_id = #{userId}
     </select>
 
-    <select id="findRecentByUser" resultMap="EpubBookmarkRM">
-        SELECT id, user_id, book_id, cfi, label, created_at
+    <!-- BARU: dipanggil getLibrary() filter bookmarked + epubBookmarkCount -->
+    <select id="countByUserAndBook" resultType="java.lang.Integer">
+        SELECT COUNT(*)
         FROM epub_bookmarks
         WHERE user_id = #{userId}
-        ORDER BY created_at DESC
-        LIMIT #{limit}
+        AND book_id = #{bookId}
     </select>
 
-    <select id="findByUserSince" resultMap="EpubBookmarkRM">
-        SELECT id, user_id, book_id, cfi, label, created_at
-        FROM epub_bookmarks
-        WHERE user_id = #{userId}
-        AND created_at >= #{since}
-        ORDER BY created_at DESC
-    </select>
+    <!-- ─── List ────────────────────────────────────────────────────────────── -->
 
+    <!-- BARU: versi paginasi — dipanggil getAnnotations() -->
     <select id="findByUser" resultMap="EpubBookmarkRM">
         SELECT id, user_id, book_id, cfi, label, created_at
         FROM epub_bookmarks
         WHERE user_id = #{userId}
         ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
 </mapper>

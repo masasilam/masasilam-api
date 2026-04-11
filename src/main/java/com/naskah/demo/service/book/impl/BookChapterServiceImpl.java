@@ -62,7 +62,7 @@ public class BookChapterServiceImpl implements BookChapterService {
     private static final String HIGHLIGHT_COUNT = "highlight_count";
 
     @Override
-    @Cacheable(value = "chapter-by-path", key = "#slug + ':' + #slugPath")
+    @Cacheable(value = "chapter-by-path", key = "#bookSlug + ':' + #slugPath")
     public DataResponse<ChapterReadingResponse> readChapterBySlugPath(String bookSlug, String slugPath) {
         try {
             Book book = bookMapper.findBookBySlug(bookSlug);
@@ -1856,6 +1856,58 @@ public class BookChapterServiceImpl implements BookChapterService {
             log.error("Error getting chapter annotations: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<Void> recordEpubSession(String slug, EpubSessionRequest request) {
+        User user = getCurrentUser();
+        Book book = bookMapper.findBookBySlug(slug);
+        validateBook(book);
+
+        // ← TAMBAH: skip jika session sudah ada (double-send dari frontend)
+        boolean exists = sessionMapper.existsBySessionId(request.getSessionId());
+        if (exists) {
+            log.debug("EPUB session already recorded, skipping: sessionId={}",
+                    request.getSessionId());
+            return new DataResponse<>("Success", "EPUB session already recorded", 200, null);
+        }
+
+        LocalDateTime endedAt   = LocalDateTime.now();
+        LocalDateTime startedAt = endedAt.minusSeconds(
+                request.getDurationSeconds() != null ? request.getDurationSeconds() : 0
+        );
+
+        ReadingSession session = new ReadingSession();
+        session.setUserId(user.getId());
+        session.setBookId(book.getId());
+        session.setSessionId(request.getSessionId());
+        session.setStartedAt(startedAt);
+        session.setEndedAt(endedAt);
+        session.setTotalDurationSeconds(
+                request.getDurationSeconds() != null ? request.getDurationSeconds() : 0
+        );
+        session.setStartChapter(0);
+        session.setEndChapter(0);
+        session.setChaptersRead(0);
+        session.setCompletionDelta(
+                request.getProgressPercent() != null
+                        ? request.getProgressPercent().doubleValue() : 0.0
+        );
+        session.setTotalInteractions(0);
+        session.setDeviceType(request.getDeviceType());
+        session.setCreatedAt(LocalDateTime.now());
+        session.setUpdatedAt(LocalDateTime.now());
+
+        sessionMapper.insertSession(session);
+
+        log.info("EPUB session recorded: user={} book={} duration={}s progress={}%",
+                user.getId(), slug,
+                request.getDurationSeconds(),
+                request.getProgressPercent()
+        );
+
+        return new DataResponse<>("Success", "EPUB session recorded", 200, null);
     }
 
     private Integer safeConvertToInt(Object value) {

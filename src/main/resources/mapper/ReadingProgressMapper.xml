@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.ReadingProgressMapper">
+
+    <!-- ResultMap sesuai entity ReadingProgress -->
+    <resultMap id="ReadingProgressResultMap" type="com.naskah.demo.model.entity.ReadingProgress">
+        <id     column="id"                   property="id"/>
+        <result column="user_id"              property="userId"/>
+        <result column="book_id"              property="bookId"/>
+        <result column="current_page"         property="currentPage"/>
+        <result column="total_pages"          property="totalPages"/>
+        <result column="current_position"     property="currentPosition"/>
+        <result column="percentage_completed" property="percentageCompleted"/>
+        <result column="reading_time_minutes" property="readingTimeMinutes"/>
+        <result column="status"               property="status"/>
+        <result column="is_favorite"          property="isFavorite"/>
+        <result column="notes"                property="notes"/>
+        <result column="started_at"           property="startedAt"/>
+        <result column="completed_at"         property="completedAt"/>
+        <result column="last_read_at"         property="lastReadAt"/>
+    </resultMap>
+
+    <!-- findByUserAndBook -->
+    <select id="findByUserAndBook" resultMap="ReadingProgressResultMap">
+        SELECT *
+        FROM reading_progress
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        LIMIT 1
+    </select>
+
+    <!-- findAllByUser -->
+    <select id="findAllByUser" resultMap="ReadingProgressResultMap">
+        SELECT *
+        FROM reading_progress
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- updateReadingProgress — upsert (PostgreSQL ON CONFLICT) -->
+    <insert id="updateReadingProgress">
+        INSERT INTO reading_progress (
+        user_id, book_id,
+        current_page, total_pages, current_position,
+        percentage_completed, reading_time_minutes,
+        status, is_favorite, notes,
+        started_at, completed_at, last_read_at
+        ) VALUES (
+        #{userId}, #{bookId},
+        #{currentPage}, #{totalPages}, #{currentPosition},
+        #{percentageCompleted}, #{readingTimeMinutes},
+        #{status}, #{isFavorite}, #{notes},
+        #{startedAt}, #{completedAt}, NOW()
+        )
+        ON CONFLICT (user_id, book_id)
+        DO UPDATE SET
+        current_page         = EXCLUDED.current_page,
+        total_pages          = EXCLUDED.total_pages,
+        current_position     = EXCLUDED.current_position,
+        percentage_completed = EXCLUDED.percentage_completed,
+        reading_time_minutes = EXCLUDED.reading_time_minutes,
+        status               = EXCLUDED.status,
+        is_favorite          = EXCLUDED.is_favorite,
+        notes                = EXCLUDED.notes,
+        completed_at         = EXCLUDED.completed_at,
+        last_read_at         = NOW()
+    </insert>
+
+</mapper>
