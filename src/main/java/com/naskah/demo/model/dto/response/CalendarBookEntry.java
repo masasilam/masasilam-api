@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class CalendarBookEntry {
     private String title;
+    private String coverImageUrl;
 }

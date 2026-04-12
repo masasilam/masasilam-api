@@ -661,224 +661,6 @@ public class BookChapterServiceImpl implements BookChapterService {
     }
 
     @Override
-    @Transactional
-    public DataResponse<Void> startReading(String slug, StartReadingRequest request) {
-        try {
-            User user = getCurrentUser();
-            Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book);
-
-            BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), request.getChapterNumber());
-            if (chapter == null) {
-                throw new DataNotFoundException();
-            }
-
-            ReadingActivityLog existingActivity = activityMapper.findActiveSession(request.getSessionId(), request.getChapterNumber());
-
-            if (existingActivity != null) {
-                log.warn("Session {} already has active reading for chapter {}, skipping duplicate", request.getSessionId(), request.getChapterNumber());
-                return new DataResponse<>(SUCCESS, "Reading session already active", HttpStatus.OK.value(), null);
-            }
-
-            int existingSessions = bookMapper.countUserReadSessions(book.getId(), user.getId());
-            if (existingSessions == 0) {
-                bookMapper.incrementReadCount(book.getId());
-                log.info("First time read: User {} started reading book {} (ID: {})", user.getId(), slug, book.getId());
-            }
-
-            ReadingSession session = sessionMapper.findBySessionId(request.getSessionId());
-            if (session == null) {
-                session = new ReadingSession();
-                session.setUserId(user.getId());
-                session.setBookId(book.getId());
-                session.setSessionId(request.getSessionId());
-                session.setStartedAt(LocalDateTime.now());
-                session.setStartChapter(request.getChapterNumber());
-                session.setDeviceType(request.getDeviceType());
-                session.setChaptersRead(0);
-                session.setTotalInteractions(0);
-                session.setCreatedAt(LocalDateTime.now());
-                session.setUpdatedAt(LocalDateTime.now());
-                sessionMapper.insertSession(session);
-                log.info("Created new reading session: {}", request.getSessionId());
-            }
-
-            try {
-                ReadingActivityLog activity = new ReadingActivityLog();
-                activity.setUserId(user.getId());
-                activity.setBookId(book.getId());
-                activity.setChapterNumber(request.getChapterNumber());
-                activity.setSessionId(request.getSessionId());
-                activity.setStartedAt(LocalDateTime.now());
-                activity.setStartPosition(request.getStartPosition() != null ? request.getStartPosition() : 0);
-                activity.setDeviceType(request.getDeviceType());
-                activity.setSource(request.getSource());
-                activity.setIsSkip(false);
-                activity.setIsReread(false);
-                activity.setInteractionCount(0);
-                activity.setCreatedAt(LocalDateTime.now());
-
-                activityMapper.insertActivity(activity);
-
-                log.info("User {} started reading chapter {} of book {} (session: {})", user.getId(), request.getChapterNumber(), slug, request.getSessionId());
-
-            } catch (DuplicateKeyException e) {
-                log.warn("Race condition detected while inserting activity for session {} chapter {}, but it's already handled", request.getSessionId(), request.getChapterNumber());
-                return new DataResponse<>(SUCCESS, "Reading session already started (race condition handled)", HttpStatus.OK.value(), null);
-            }
-
-            return new DataResponse<>(SUCCESS, "Reading started successfully", HttpStatus.OK.value(), null);
-
-        } catch (DataNotFoundException e) {
-            log.error("Resource not found: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error starting reading for slug {}: {}", slug, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    @Transactional
-    public DataResponse<Void> endReading(String slug, EndReadingRequest request) {
-        try {
-            User user = getCurrentUser();
-            Book book = bookMapper.findBookBySlug(slug);
-            validateBook(book);
-
-            BookChapter chapter = chapterMapper.findChapterByNumber(book.getId(), request.getChapterNumber());
-            if (chapter == null) {
-                throw new DataNotFoundException();
-            }
-
-            ReadingActivityLog activity = activityMapper.findActiveSession(request.getSessionId(), request.getChapterNumber());
-
-            if (activity == null) {
-                log.warn("No active reading session found for session {} chapter {}", request.getSessionId(), request.getChapterNumber());
-                return new DataResponse<>(SUCCESS, "No active reading session to end", HttpStatus.OK.value(), null);
-            }
-
-            LocalDateTime now = LocalDateTime.now();
-            activity.setEndedAt(now);
-
-            int duration = (int) ChronoUnit.SECONDS.between(activity.getStartedAt(), now);
-            activity.setDurationSeconds(duration);
-
-            activity.setEndPosition(request.getEndPosition() != null ? request.getEndPosition() : 0);
-            activity.setScrollDepthPercentage(request.getScrollDepthPercentage() != null ? request.getScrollDepthPercentage() : 0.0);
-            activity.setWordsRead(request.getWordsRead() != null ? request.getWordsRead() : 0);
-            activity.setInteractionCount(request.getInteractionCount() != null ? request.getInteractionCount() : 0);
-
-            if (activity.getWordsRead() != null && activity.getWordsRead() > 0 && duration > 0) {
-                double minutes = duration / 60.0;
-                int wpm = (int) (activity.getWordsRead() / minutes);
-                activity.setReadingSpeedWpm(wpm);
-            }
-
-            if (activity.getScrollDepthPercentage() != null && activity.getScrollDepthPercentage() < 30.0) {
-                activity.setIsSkip(true);
-            }
-
-            Integer previousReads = activityMapper.countCompletedReads(user.getId(), book.getId(), request.getChapterNumber(), activity.getId());
-            if (previousReads != null && previousReads > 0) {
-                activity.setIsReread(true);
-            }
-
-            activityMapper.updateActivity(activity);
-            log.info("Updated activity log: duration={}s, wpm={}, skip={}, reread={}", duration, activity.getReadingSpeedWpm(), activity.getIsSkip(), activity.getIsReread());
-
-            updateReadingSession(request.getSessionId(), request.getChapterNumber());
-
-            calculateUserReadingPattern(user.getId(), book.getId());
-
-            log.info("User {} ended reading chapter {} of book {}", user.getId(), request.getChapterNumber(), slug);
-
-            return new DataResponse<>(SUCCESS, "Reading ended successfully", HttpStatus.OK.value(), null);
-
-        } catch (DataNotFoundException e) {
-            log.error("Not found: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Error ending reading for slug {}: {}", slug, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    private void updateReadingSession(String sessionId, Integer endChapter) {
-        try {
-            ReadingSession session = sessionMapper.findBySessionId(sessionId);
-            if (session == null) {
-                log.warn("Session {} not found, skipping update", sessionId);
-                return;
-            }
-
-            LocalDateTime now = LocalDateTime.now();
-            session.setEndedAt(now);
-            session.setEndChapter(endChapter);
-
-            if (session.getStartedAt() != null) {
-                int totalDuration = (int) ChronoUnit.SECONDS.between(session.getStartedAt(), now);
-                session.setTotalDurationSeconds(totalDuration);
-            }
-
-            Integer chaptersRead = activityMapper.countUniqueChaptersInSession(sessionId);
-            session.setChaptersRead(chaptersRead != null ? chaptersRead : 0);
-
-            Integer totalInteractions = activityMapper.sumInteractionsInSession(sessionId);
-            session.setTotalInteractions(totalInteractions != null ? totalInteractions : 0);
-
-            if (session.getStartChapter() != null && endChapter != null) {
-                BookChapter firstChapter = chapterMapper.findChapterByNumber(session.getBookId(), session.getStartChapter());
-                BookChapter lastChapter = chapterMapper.findChapterByNumber(session.getBookId(), endChapter);
-
-                if (firstChapter != null && lastChapter != null) {
-                    int totalChapters = chapterMapper.countChaptersByBookId(session.getBookId());
-                    if (totalChapters > 0) {
-                        int chaptersProgressed = Math.abs(endChapter - session.getStartChapter()) + 1;
-                        double delta = (chaptersProgressed * 100.0) / totalChapters;
-                        session.setCompletionDelta(delta);
-                    }
-                }
-            }
-
-            session.setUpdatedAt(now);
-            sessionMapper.updateSession(session);
-
-            log.info("Updated session {}: chapters_read={}, total_duration={}s, completion_delta={}%",
-                    sessionId, session.getChaptersRead(), session.getTotalDurationSeconds(),
-                    session.getCompletionDelta() != null ? String.format("%.2f", session.getCompletionDelta()) : "N/A");
-
-        } catch (Exception e) {
-            log.error("Error updating reading session {}: {}", sessionId, e.getMessage(), e);
-            // Don't throw - this is a helper method
-        }
-    }
-
-    private void calculateUserReadingPattern(Long userId, Long bookId) {
-        try {
-            // This would ideally run as an async job or event-driven process
-            // Analyze reading_activity_log to calculate:
-            // - Average reading speed
-            // - Preferred reading times
-            // - Skip patterns
-            // - Completion rates
-            // - Engagement levels
-
-            log.info("Calculating reading pattern for user {} and book {}", userId, bookId);
-
-            // Example: Get average WPM for this user on this book
-            Integer avgWpm = activityMapper.calculateAverageWpm(userId, bookId);
-            if (avgWpm != null) {
-                log.debug("User {} average WPM on book {}: {}", userId, bookId, avgWpm);
-            }
-
-        } catch (Exception e) {
-            log.error("Error calculating reading pattern: {}", e.getMessage(), e);
-            // Don't throw - this is analytics, shouldn't break main flow
-        }
-    }
-
-    @Override
     public DataResponse<ReadingHistoryResponse> getReadingHistory(String slug) {
         try {
             User user = getCurrentUser();
@@ -970,6 +752,30 @@ public class BookChapterServiceImpl implements BookChapterService {
         } catch (Exception e) {
             log.error("Error getting reading pattern: {}", e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private void calculateUserReadingPattern(Long userId, Long bookId) {
+        try {
+            // This would ideally run as an async job or event-driven process
+            // Analyze reading_activity_log to calculate:
+            // - Average reading speed
+            // - Preferred reading times
+            // - Skip patterns
+            // - Completion rates
+            // - Engagement levels
+
+            log.info("Calculating reading pattern for user {} and book {}", userId, bookId);
+
+            // Example: Get average WPM for this user on this book
+            Integer avgWpm = activityMapper.calculateAverageWpm(userId, bookId);
+            if (avgWpm != null) {
+                log.debug("User {} average WPM on book {}: {}", userId, bookId, avgWpm);
+            }
+
+        } catch (Exception e) {
+            log.error("Error calculating reading pattern: {}", e.getMessage(), e);
+            // Don't throw - this is analytics, shouldn't break main flow
         }
     }
 
@@ -1856,58 +1662,6 @@ public class BookChapterServiceImpl implements BookChapterService {
             log.error("Error getting chapter annotations: {}", e.getMessage(), e);
             throw e;
         }
-    }
-
-    @Override
-    @Transactional
-    public DataResponse<Void> recordEpubSession(String slug, EpubSessionRequest request) {
-        User user = getCurrentUser();
-        Book book = bookMapper.findBookBySlug(slug);
-        validateBook(book);
-
-        // ← TAMBAH: skip jika session sudah ada (double-send dari frontend)
-        boolean exists = sessionMapper.existsBySessionId(request.getSessionId());
-        if (exists) {
-            log.debug("EPUB session already recorded, skipping: sessionId={}",
-                    request.getSessionId());
-            return new DataResponse<>("Success", "EPUB session already recorded", 200, null);
-        }
-
-        LocalDateTime endedAt   = LocalDateTime.now();
-        LocalDateTime startedAt = endedAt.minusSeconds(
-                request.getDurationSeconds() != null ? request.getDurationSeconds() : 0
-        );
-
-        ReadingSession session = new ReadingSession();
-        session.setUserId(user.getId());
-        session.setBookId(book.getId());
-        session.setSessionId(request.getSessionId());
-        session.setStartedAt(startedAt);
-        session.setEndedAt(endedAt);
-        session.setTotalDurationSeconds(
-                request.getDurationSeconds() != null ? request.getDurationSeconds() : 0
-        );
-        session.setStartChapter(0);
-        session.setEndChapter(0);
-        session.setChaptersRead(0);
-        session.setCompletionDelta(
-                request.getProgressPercent() != null
-                        ? request.getProgressPercent().doubleValue() : 0.0
-        );
-        session.setTotalInteractions(0);
-        session.setDeviceType(request.getDeviceType());
-        session.setCreatedAt(LocalDateTime.now());
-        session.setUpdatedAt(LocalDateTime.now());
-
-        sessionMapper.insertSession(session);
-
-        log.info("EPUB session recorded: user={} book={} duration={}s progress={}%",
-                user.getId(), slug,
-                request.getDurationSeconds(),
-                request.getProgressPercent()
-        );
-
-        return new DataResponse<>("Success", "EPUB session recorded", 200, null);
     }
 
     private Integer safeConvertToInt(Object value) {

@@ -183,11 +183,11 @@ public class DashboardController {
     //   - active  : list GoalResponse
     //   - completed: list GoalResponse
     // ─────────────────────────────────────────────────────────────────────────
-    @GetMapping("/goals")
-    public ResponseEntity<DataResponse<GoalsResponse>> getGoals() {
-        DataResponse<GoalsResponse> response = dashboardService.getGoals();
-        return ResponseEntity.ok(response);
-    }
+//    @GetMapping("/goals")
+//    public ResponseEntity<DataResponse<GoalsResponse>> getGoals() {
+//        DataResponse<GoalsResponse> response = dashboardService.getGoals();
+//        return ResponseEntity.ok(response);
+//    }
 
     @GetMapping("/recommendations")
     public ResponseEntity<DataResponse<List<BookRecommendationResponse>>> getRecommendations(

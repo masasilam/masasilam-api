@@ -35,8 +35,8 @@ public interface DashboardService {
     // Dipanggil dari DashboardController.getUserReviews()
     DatatableResponse<UserReviewItemResponse> getUserReviews(int page, int limit);
 
-    // ── Goals ─────────────────────────────────────────────────────────────────
-    DataResponse<GoalsResponse> getGoals();
+//    // ── Goals ─────────────────────────────────────────────────────────────────
+//    DataResponse<GoalsResponse> getGoals();
 
     // ── Recommendations ───────────────────────────────────────────────────────
     // Dipanggil dari DashboardController.getRecommendations()

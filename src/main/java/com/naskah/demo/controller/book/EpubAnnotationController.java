@@ -1,7 +1,6 @@
 package com.naskah.demo.controller.book;
 
-import com.naskah.demo.model.dto.request.EpubAnnotationRequest;
-import com.naskah.demo.model.dto.request.EpubBookmarkRequest;
+import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.service.EpubAnnotationService;
 import jakarta.validation.Valid;
@@ -16,10 +15,11 @@ import org.springframework.web.bind.annotation.*;
  * Mengapa dipisah dari BookChapterController:
  *  - Posisi direpresentasikan sebagai CFI, bukan character offset
  *  - Tidak ada relasi dengan chapterNumber — EPUB bekerja lintas spine item
- *  - Tidak memerlukan logika heatmap, analytics chapter, dsb.
+ *  - Chapter tracking menggunakan TOC dari dalam file .epub, bukan dari DB chapter
  *
  * Base path: /api/books/{slug}/epub-annotations
  *             /api/books/{slug}/epub-bookmarks
+ *             /api/books/{slug}/reading/...
  */
 @RestController
 @CrossOrigin(origins = "*")
@@ -112,6 +112,76 @@ public class EpubAnnotationController {
             @PathVariable Long bookmarkId) {
 
         DataResponse<Void> response = epubAnnotationService.deleteBookmark(slug, bookmarkId);
+        return ResponseEntity.ok(response);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // READING SESSION
+    // ════════════════════════════════════════════════════════════
+
+    /**
+     * POST /api/books/{slug}/reading/epub-session
+     *
+     * Merekam sesi baca EPUB secara lengkap saat user meninggalkan halaman.
+     * Dikirim via dua jalur: fetch+keepalive (beforeunload) dan React cleanup.
+     *
+     * Body: EpubSessionRequest yang sudah include chapterLabel, chapterIndex, totalChapters
+     */
+    @PostMapping("/reading/epub-session")
+    public ResponseEntity<DataResponse<Void>> recordEpubSession(
+            @PathVariable String slug,
+            @RequestBody EpubSessionRequest request) {
+
+        DataResponse<Void> response = epubAnnotationService.recordEpubSession(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/books/{slug}/reading/start
+     *
+     * Dipanggil saat EpubReaderPage pertama mount.
+     * Menggunakan EpubStartReadingRequest (bukan StartReadingRequest) karena:
+     *   - Tidak perlu chapterNumber (EPUB tidak pakai nomor chapter dari DB)
+     *   - Menerima chapterLabel, chapterIndex, totalChapters dari TOC .epub
+     *
+     * Auth: wajib login
+     */
+    @PostMapping("/reading/start")
+    public ResponseEntity<DataResponse<EpubStartReadingResponse>> startReading(
+            @PathVariable String slug,
+            @Valid @RequestBody EpubStartReadingRequest request) {
+
+        DataResponse<EpubStartReadingResponse> response = epubAnnotationService.startReading(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/books/{slug}/reading/end
+     *
+     * No-op untuk EPUB — data sesi direkam via /reading/epub-session.
+     * Endpoint tetap tersedia untuk konsistensi API.
+     */
+    @PostMapping("/reading/end")
+    public ResponseEntity<DataResponse<Void>> endReading(
+            @PathVariable String slug,
+            @Valid @RequestBody EndReadingRequest request) {
+
+        DataResponse<Void> response = epubAnnotationService.endReading(slug, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/books/{slug}/reading/heartbeat
+     *
+     * Heartbeat untuk EPUB — saat ini hanya acknowledge, tidak disimpan.
+     * Data aktual direkam di session saat user keluar halaman.
+     */
+    @PostMapping("/reading/heartbeat")
+    public ResponseEntity<DataResponse<Void>> readingHeartbeat(
+            @PathVariable String slug,
+            @Valid @RequestBody ReadingHeartbeatRequest request) {
+
+        DataResponse<Void> response = new DataResponse<>("Success", "Heartbeat received", 200, null);
         return ResponseEntity.ok(response);
     }
 }

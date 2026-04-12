@@ -150,24 +150,6 @@ public class BookChapterController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/reading/start")
-    public ResponseEntity<DataResponse<Void>> startReading(@PathVariable String slug, @Valid @RequestBody StartReadingRequest request) {
-        DataResponse<Void> response = chapterService.startReading(slug, request);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/reading/end")
-    public ResponseEntity<DataResponse<Void>> endReading(@PathVariable String slug, @Valid @RequestBody EndReadingRequest request) {
-        DataResponse<Void> response = chapterService.endReading(slug, request);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/reading/heartbeat")
-    public ResponseEntity<DataResponse<Void>> readingHeartbeat(@PathVariable String slug, @Valid @RequestBody ReadingHeartbeatRequest request) {
-        DataResponse<Void> response = new DataResponse<>("Success", "Heartbeat received", 200, null);
-        return ResponseEntity.ok(response);
-    }
-
     @GetMapping("/reading/history")
     public ResponseEntity<DataResponse<ReadingHistoryResponse>> getReadingHistory(@PathVariable String slug) {
         DataResponse<ReadingHistoryResponse> response = chapterService.getReadingHistory(slug);
@@ -243,12 +225,6 @@ public class BookChapterController {
     @GetMapping("/{chapterNumber}/stats")
     public ResponseEntity<DataResponse<ChapterStatsResponse>> getChapterStats(@PathVariable String slug, @PathVariable Integer chapterNumber) {
         DataResponse<ChapterStatsResponse> response = chapterService.getChapterStats(slug, chapterNumber);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/reading/epub-session")
-    public ResponseEntity<DataResponse<Void>> recordEpubSession(@PathVariable String slug, @RequestBody EpubSessionRequest request) {
-        DataResponse<Void> response = chapterService.recordEpubSession(slug, request);
         return ResponseEntity.ok(response);
     }
 

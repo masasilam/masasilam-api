@@ -5,7 +5,7 @@ import java.util.List;
 
 @Data
 public class GoalsResponse {
-    private GoalsSummary       summary;
-    private List<Object>       active;
-    private List<Object>       completed;
+    private GoalsSummary           summary;
+    private List<GoalItemResponse> active;
+    private List<GoalItemResponse> completed;
 }

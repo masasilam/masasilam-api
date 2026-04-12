@@ -26,8 +26,6 @@ public interface BookChapterService {
     DataResponse<ChapterReviewResponse> replyToChapterReview(String slug, Integer chapterNumber, Long reviewId, ChapterReplyRequest request);
     DataResponse<Void> likeChapterReview(String slug, Integer chapterNumber, Long reviewId);
     DataResponse<Void> unlikeChapterReview(String slug, Integer chapterNumber, Long reviewId);
-    DataResponse<Void> startReading(String slug, StartReadingRequest request);
-    DataResponse<Void> endReading(String slug, EndReadingRequest request);
 //    DataResponse<Void> readingHeartbeat(String slug, ReadingHeartbeatRequest request);
     DataResponse<ReadingHistoryResponse> getReadingHistory(String slug);
     DataResponse<UserReadingPatternResponse> getUserReadingPattern(String slug);
@@ -42,5 +40,4 @@ public interface BookChapterService {
     DataResponse<BookAnalyticsResponse> getBookAnalytics(String slug, String dateFrom, String dateTo);
     DataResponse<List<ChapterAnalyticsResponse>> getChaptersAnalytics(String slug);
     DataResponse<ChapterStatsResponse> getChapterStats(String slug, Integer chapterNumber);
-    DataResponse<Void> recordEpubSession(String slug, EpubSessionRequest request);
 }
