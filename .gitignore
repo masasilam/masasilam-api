@@ -31,3 +31,16 @@ build/
 
 ### VS Code ###
 .vscode/
+
+echo "
+# Log files
+*.log
+replay_pid*.log
+
+# Storage & uploads
+storage/
+uploads/
+
+# File aneh
+mvn
+s" >> .gitignore
