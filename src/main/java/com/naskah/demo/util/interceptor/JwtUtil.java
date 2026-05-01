@@ -26,11 +26,13 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long jwtExpiration;
 
-    @Value("${jwt.verification.expiration:3600}")
+    @Value("${jwt.refresh.expiration}")
+    private Long refreshTokenExpiration;
+
+    @Value("${jwt.verification.expiration:86400}")
     private Long verificationTokenExpiration;
 
     private SecretKey getSigningKey() {
-        // Pastikan secret key cukup panjang (minimal 256 bit = 32 karakter)
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalArgumentException("JWT secret must be at least 256 bits (32 characters)");
@@ -71,13 +73,20 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * Refresh token dengan expiry sangat panjang (100 tahun).
+     * Sesi aktif selama user tidak logout — seperti standar Instagram/Facebook.
+     * Token lama di-blacklist saat dirotasi (setiap kali refresh digunakan).
+     */
     public String generateRefreshToken(String username) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + (jwtExpiration * 7 * 1000));
+        // refreshTokenExpiration sudah dalam detik (3153600000 = 100 tahun)
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpiration * 1000L);
 
         return Jwts.builder()
                 .subject(username)
                 .claim("tokenType", "REFRESH")
+                .claim("issuedAt", now.getTime())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
@@ -135,10 +144,6 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
     public void blacklistToken(String token) {
         blacklistedTokens.add(token);
         log.info("Token blacklisted successfully");
@@ -148,9 +153,9 @@ public class JwtUtil {
         return blacklistedTokens.contains(token);
     }
 
-    public static String extractAuthToken(String authHeader, String prefix){
+    public static String extractAuthToken(String authHeader, String prefix) {
         String token = Optional.ofNullable(authHeader).orElse("");
-        if (prefix != null && token.startsWith(prefix)){
+        if (prefix != null && token.startsWith(prefix)) {
             return token.replaceFirst(prefix, "");
         }
         return token;
@@ -165,8 +170,7 @@ public class JwtUtil {
         try {
             Claims claims = extractAllClaims(token);
             Map<String, String> result = new HashMap<>();
-
-            for(String attr : attrName) {
+            for (String attr : attrName) {
                 Object value = claims.get(attr);
                 result.put(attr, value != null ? value.toString() : "");
             }

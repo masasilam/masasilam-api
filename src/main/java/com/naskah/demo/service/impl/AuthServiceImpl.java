@@ -360,11 +360,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public DataResponse<TokenResponse> refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
+
+        // Validasi token tidak di-blacklist dan signature valid
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new UnauthorizedException();
+        }
+
         String tokenType = jwtUtil.extractTokenType(refreshToken);
+        if (!"REFRESH".equals(tokenType)) {
+            throw new UnauthorizedException();
+        }
+
         String username = jwtUtil.extractUsername(refreshToken);
         User user = userMapper.findUserByUsername(username);
 
-        if (!jwtUtil.validateToken(refreshToken) || !"REFRESH".equals(tokenType) || user == null || Boolean.TRUE.equals(!user.getIsActive())) {
+        if (user == null || Boolean.TRUE.equals(!user.getIsActive())) {
             throw new UnauthorizedException();
         }
 
@@ -373,14 +383,15 @@ public class AuthServiceImpl implements AuthService {
                 .map(Role::getName)
                 .collect(Collectors.toList());
 
-        String newToken = jwtUtil.generateToken(user.getUsername(), user.getFullName(), roleNames);
+        String newAccessToken = jwtUtil.generateToken(user.getUsername(), user.getFullName(), roleNames);
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
-        // Blacklist old refresh token
+        // KUNCI: Blacklist refresh token lama agar tidak bisa dipakai dua kali
+        // (token rotation — standar keamanan OAuth2)
         jwtUtil.blacklistToken(refreshToken);
 
         TokenResponse response = new TokenResponse();
-        response.setToken(newToken);
+        response.setToken(newAccessToken);
         response.setTokenType("Bearer");
         response.setRefreshToken(newRefreshToken);
         response.setExpiresIn(jwtExpiration);

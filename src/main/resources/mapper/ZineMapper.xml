@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.ZineMapper">
+
+    <!-- ═══════════════════════════════════════════
+         RESULT MAPS
+    ═══════════════════════════════════════════ -->
+
+    <resultMap id="ZineResultMap" type="com.naskah.demo.model.entity.Zine">
+        <id     property="id"                column="id"/>
+        <result property="title"             column="title"/>
+        <result property="slug"              column="slug"/>
+        <result property="subtitle"          column="subtitle"/>
+        <result property="volume"            column="volume"/>
+        <result property="issueNumber"       column="issue_number"/>
+        <result property="publicationYear"   column="publication_year"/>
+        <result property="publisher"         column="publisher"/>
+        <result property="languageId"        column="language_id"/>
+        <result property="description"       column="description"/>
+        <result property="fileUrl"           column="file_url"/>
+        <result property="fileUrlArchive"    column="file_url_archive"/>
+        <result property="filePath"          column="file_path"/>
+        <result property="coverImageUrl"     column="cover_image_url"/>
+        <result property="fileFormat"        column="file_format"/>
+        <result property="fileSize"          column="file_size"/>
+        <result property="copyrightStatusId" column="copyright_status_id"/>
+        <result property="viewCount"         column="view_count"/>
+        <result property="readCount"         column="read_count"/>
+        <result property="downloadCount"     column="download_count"/>
+        <result property="totalWord"         column="total_word"/>
+        <result property="totalPages"        column="total_pages"/>
+        <result property="estimatedReadTime" column="estimated_read_time"/>
+        <result property="isActive"          column="is_active"/>
+        <result property="isFeatured"        column="is_featured"/>
+        <result property="publishedAt"       column="published_at"/>
+        <result property="category"          column="category"/>
+        <result property="source"            column="source"/>
+        <result property="difficultyLevel"   column="difficulty_level"/>
+        <result property="createdAt"         column="created_at"/>
+        <result property="updatedAt"         column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ZineResponseResultMap" type="com.naskah.demo.model.dto.response.ZineResponse">
+        <id     property="id"                column="id"/>
+        <result property="title"             column="title"/>
+        <result property="slug"              column="slug"/>
+        <result property="subtitle"          column="subtitle"/>
+        <result property="volume"            column="volume"/>
+        <result property="issueNumber"       column="issue_number"/>
+        <result property="publicationYear"   column="publication_year"/>
+        <result property="publisher"         column="publisher"/>
+        <result property="languageName"      column="language_name"/>
+        <result property="description"       column="description"/>
+        <result property="fileUrl"           column="file_url"/>
+        <result property="coverImageUrl"     column="cover_image_url"/>
+        <result property="fileFormat"        column="file_format"/>
+        <result property="fileSize"          column="file_size"/>
+        <result property="copyrightStatus"   column="copyright_status_name"/>
+        <result property="viewCount"         column="view_count"/>
+        <result property="readCount"         column="read_count"/>
+        <result property="downloadCount"     column="download_count"/>
+        <result property="totalWord"         column="total_word"/>
+        <result property="totalPages"        column="total_pages"/>
+        <result property="estimatedReadTime" column="estimated_read_time"/>
+        <result property="isActive"          column="is_active"/>
+        <result property="isFeatured"        column="is_featured"/>
+        <result property="publishedAt"       column="published_at"/>
+        <result property="category"          column="category"/>
+        <result property="source"            column="source"/>
+        <result property="difficultyLevel"   column="difficulty_level"/>
+        <result property="averageRating"     column="average_rating"/>
+        <result property="totalRatings"      column="total_ratings"/>
+        <result property="createdAt"         column="created_at"/>
+        <result property="updatedAt"         column="updated_at"/>
+    </resultMap>
+
+    <!-- ═══════════════════════════════════════════
+         BASE SELECT FRAGMENT
+    ═══════════════════════════════════════════ -->
+
+    <sql id="baseZineSelect">
+        SELECT
+        z.id, z.title, z.slug, z.subtitle, z.volume, z.issue_number,
+        z.publication_year, z.publisher, z.description,
+        z.file_url, z.cover_image_url, z.file_format, z.file_size,
+        z.view_count, z.read_count, z.download_count,
+        z.total_word, z.total_pages, z.estimated_read_time,
+        z.is_active, z.is_featured, z.published_at,
+        z.category, z.source, z.difficulty_level,
+        z.created_at, z.updated_at,
+        l.name AS language_name,
+        cs.name AS copyright_status_name,
+        COALESCE(AVG(zr.rating), 0) AS average_rating,
+        COUNT(DISTINCT zr.id) AS total_ratings
+        FROM zines z
+        LEFT JOIN languages l ON l.id = z.language_id
+        LEFT JOIN copyright_statuses cs ON cs.id = z.copyright_status_id
+        LEFT JOIN zine_ratings zr ON zr.zine_id = z.id
+    </sql>
+
+    <sql id="advancedFilterWhere">
+        WHERE z.is_active = true
+        <if test="criteria.searchTitle != null and criteria.searchTitle != ''">
+            AND z.title ILIKE CONCAT('%', #{criteria.searchTitle}, '%')
+        </if>
+        <if test="criteria.searchInZine != null and criteria.searchInZine != ''">
+            AND (z.title ILIKE CONCAT('%', #{criteria.searchInZine}, '%')
+            OR z.description ILIKE CONCAT('%', #{criteria.searchInZine}, '%'))
+        </if>
+        <if test="criteria.authorName != null and criteria.authorName != ''">
+            AND EXISTS (
+            SELECT 1 FROM zine_authors za
+            JOIN authors a ON a.id = za.author_id
+            WHERE za.zine_id = z.id
+            AND a.name ILIKE CONCAT('%', #{criteria.authorName}, '%')
+            )
+        </if>
+        <if test="criteria.contributor != null and criteria.contributor != ''">
+            AND EXISTS (
+            SELECT 1 FROM zine_contributors zc
+            JOIN contributors c ON c.id = zc.contributor_id
+            WHERE zc.zine_id = z.id
+            AND c.name ILIKE CONCAT('%', #{criteria.contributor}, '%')
+            )
+        </if>
+        <if test="criteria.genre != null and criteria.genre != ''">
+            AND EXISTS (
+            SELECT 1 FROM zine_genres zg
+            JOIN genres g ON g.id = zg.genre_id
+            WHERE zg.zine_id = z.id
+            AND g.name ILIKE CONCAT('%', #{criteria.genre}, '%')
+            )
+        </if>
+        <if test="criteria.volume != null">
+            AND z.volume = #{criteria.volume}
+        </if>
+        <if test="criteria.issueNumber != null and criteria.issueNumber != ''">
+            AND z.issue_number = #{criteria.issueNumber}
+        </if>
+        <if test="criteria.minPages != null">
+            AND z.total_pages >= #{criteria.minPages}
+        </if>
+        <if test="criteria.maxPages != null">
+            AND z.total_pages &lt;= #{criteria.maxPages}
+        </if>
+        <if test="criteria.minFileSize != null">
+            AND z.file_size >= #{criteria.minFileSize}
+        </if>
+        <if test="criteria.maxFileSize != null">
+            AND z.file_size &lt;= #{criteria.maxFileSize}
+        </if>
+        <if test="criteria.publicationYearFrom != null">
+            AND z.publication_year >= #{criteria.publicationYearFrom}
+        </if>
+        <if test="criteria.publicationYearTo != null">
+            AND z.publication_year &lt;= #{criteria.publicationYearTo}
+        </if>
+        <if test="criteria.difficultyLevel != null and criteria.difficultyLevel != ''">
+            AND z.difficulty_level = #{criteria.difficultyLevel}
+        </if>
+        <if test="criteria.fileFormat != null and criteria.fileFormat != ''">
+            AND z.file_format ILIKE #{criteria.fileFormat}
+        </if>
+        <if test="criteria.isFeatured != null">
+            AND z.is_featured = #{criteria.isFeatured}
+        </if>
+        <if test="criteria.languageId != null">
+            AND z.language_id = #{criteria.languageId}
+        </if>
+        <if test="criteria.minViewCount != null">
+            AND z.view_count >= #{criteria.minViewCount}
+        </if>
+        <if test="criteria.minReadCount != null">
+            AND z.read_count >= #{criteria.minReadCount}
+        </if>
+    </sql>
+
+    <!-- ═══════════════════════════════════════════
+         CRUD
+    ═══════════════════════════════════════════ -->
+
+    <insert id="insertZine" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO zines (
+        title, slug, subtitle, volume, issue_number,
+        publication_year, publisher, language_id, description,
+        file_url, file_url_archive, file_path, cover_image_url,
+        file_format, file_size, copyright_status_id,
+        view_count, read_count, download_count,
+        total_word, total_pages, estimated_read_time,
+        is_active, is_featured, published_at,
+        category, source, difficulty_level,
+        created_at, updated_at
+        ) VALUES (
+        #{title}, #{slug}, #{subtitle}, #{volume}, #{issueNumber},
+        #{publicationYear}, #{publisher}, #{languageId}, #{description},
+        #{fileUrl}, #{fileUrlArchive}, #{filePath}, #{coverImageUrl},
+        #{fileFormat}, #{fileSize}, #{copyrightStatusId},
+        #{viewCount}, #{readCount}, #{downloadCount},
+        #{totalWord}, #{totalPages}, #{estimatedReadTime},
+        #{isActive}, #{isFeatured}, #{publishedAt},
+        #{category}, #{source}, #{difficultyLevel},
+        #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateZine">
+        UPDATE zines SET
+        title             = #{title},
+        slug              = #{slug},
+        subtitle          = #{subtitle},
+        volume            = #{volume},
+        issue_number      = #{issueNumber},
+        publication_year  = #{publicationYear},
+        publisher         = #{publisher},
+        language_id       = #{languageId},
+        description       = #{description},
+        file_url          = #{fileUrl},
+        file_url_archive  = #{fileUrlArchive},
+        file_path         = #{filePath},
+        cover_image_url   = #{coverImageUrl},
+        file_format       = #{fileFormat},
+        file_size         = #{fileSize},
+        copyright_status_id = #{copyrightStatusId},
+        total_word        = #{totalWord},
+        total_pages       = #{totalPages},
+        estimated_read_time = #{estimatedReadTime},
+        is_active         = #{isActive},
+        is_featured       = #{isFeatured},
+        published_at      = #{publishedAt},
+        category          = #{category},
+        source            = #{source},
+        difficulty_level  = #{difficultyLevel},
+        updated_at        = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteZine">
+        DELETE FROM zines WHERE id = #{id}
+    </delete>
+
+    <!-- ═══════════════════════════════════════════
+         FIND
+    ═══════════════════════════════════════════ -->
+
+    <select id="findById" resultMap="ZineResultMap">
+        SELECT * FROM zines WHERE id = #{id}
+    </select>
+
+    <select id="findZineBySlug" resultMap="ZineResultMap">
+        SELECT * FROM zines WHERE slug = #{slug} AND is_active = true
+    </select>
+
+    <select id="findBySlug" resultMap="ZineResultMap">
+        SELECT * FROM zines WHERE slug = #{slug}
+    </select>
+
+    <select id="getZineIdBySlug" resultType="java.lang.Long">
+        SELECT id FROM zines WHERE slug = #{slug}
+    </select>
+
+    <select id="countBySlug" resultType="int">
+        SELECT COUNT(*) FROM zines WHERE slug = #{slug}
+    </select>
+
+    <!-- ═══════════════════════════════════════════
+         DETAIL & LIST
+    ═══════════════════════════════════════════ -->
+
+    <select id="getZineDetailBySlug" resultMap="ZineResponseResultMap">
+        <include refid="baseZineSelect"/>
+        WHERE z.slug = #{slug}
+        GROUP BY z.id, l.name, cs.name
+    </select>
+
+    <select id="getZineListWithAdvancedFilters" resultMap="ZineResponseResultMap">
+        <include refid="baseZineSelect"/>
+        <include refid="advancedFilterWhere"/>
+        GROUP BY z.id, l.name, cs.name
+        <if test="criteria.minRating != null">
+            HAVING COALESCE(AVG(zr.rating), 0) >= #{criteria.minRating}
+        </if>
+        ORDER BY ${sortColumn} ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countZinesWithAdvancedFilters" resultType="int">
+        SELECT COUNT(DISTINCT z.id)
+        FROM zines z
+        LEFT JOIN zine_ratings zr ON zr.zine_id = z.id
+        <include refid="advancedFilterWhere"/>
+        <if test="criteria.minRating != null">
+            AND (
+            SELECT COALESCE(AVG(zr2.rating), 0)
+            FROM zine_ratings zr2
+            WHERE zr2.zine_id = z.id
+            ) >= #{criteria.minRating}
+        </if>
+    </select>
+
+    <!-- ═══════════════════════════════════════════
+         VIEW / ACTION TRACKING
+    ═══════════════════════════════════════════ -->
+
+    <update id="incrementViewCountBySlug">
+        UPDATE zines SET view_count = view_count + 1 WHERE slug = #{slug}
+    </update>
+
+    <update id="incrementDownloadCount">
+        UPDATE zines SET download_count = download_count + 1 WHERE id = #{zineId}
+    </update>
+
+    <select id="hasActionByHash" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1 FROM zine_views
+        WHERE viewer_hash = #{viewerHash} AND action_type = #{actionType}
+        )
+    </select>
+
+    <insert id="insertAction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO zine_views
+        (zine_id, slug, user_id, ip_address, user_agent, viewer_hash, action_type, created_at)
+        VALUES
+        (#{zineId}, #{slug}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())
+        <choose>
+            <when test="userId != null">
+                ON CONFLICT (zine_id, user_id, action_type) WHERE user_id IS NOT NULL DO NOTHING
+            </when>
+            <otherwise>
+                ON CONFLICT (viewer_hash, action_type) WHERE user_id IS NULL DO NOTHING
+            </otherwise>
+        </choose>
+    </insert>
+
+    <!-- ═══════════════════════════════════════════
+         RELATIONSHIPS
+    ═══════════════════════════════════════════ -->
+
+    <select id="findAuthorsByZineId" resultType="com.naskah.demo.model.entity.Author">
+        SELECT a.* FROM authors a
+        JOIN zine_authors za ON za.author_id = a.id
+        WHERE za.zine_id = #{zineId}
+    </select>
+
+    <select id="findAuthorNamesByZineId" resultType="java.lang.String">
+        SELECT a.name FROM authors a
+        JOIN zine_authors za ON za.author_id = a.id
+        WHERE za.zine_id = #{zineId}
+    </select>
+
+    <insert id="insertZineGenre">
+        INSERT INTO zine_genres (zine_id, genre_id)
+        VALUES (#{zineId}, #{genreId})
+        ON CONFLICT (zine_id, genre_id) DO NOTHING
+    </insert>
+
+    <insert id="insertZineAuthor">
+        INSERT INTO zine_authors (zine_id, author_id)
+        VALUES (#{zineId}, #{authorId})
+        ON CONFLICT (zine_id, author_id) DO NOTHING
+    </insert>
+
+    <insert id="insertZineContributor">
+        INSERT INTO zine_contributors (zine_id, contributor_id, role)
+        VALUES (#{zineId}, #{contributorId}, #{role})
+        ON CONFLICT (zine_id, contributor_id) DO NOTHING
+    </insert>
+
+    <delete id="deleteZineGenres">
+        DELETE FROM zine_genres WHERE zine_id = #{zineId}
+    </delete>
+
+    <delete id="deleteZineContributors">
+        DELETE FROM zine_contributors WHERE zine_id = #{zineId}
+    </delete>
+
+    <!-- ═══════════════════════════════════════════
+         SITEMAP
+    ═══════════════════════════════════════════ -->
+
+    <select id="findAllZinesForSitemap" resultMap="ZineResultMap">
+        SELECT id, slug, title, updated_at FROM zines WHERE is_active = true ORDER BY updated_at DESC
+    </select>
+
+    <select id="getChapterPathsForSitemap" resultType="java.lang.String">
+        SELECT CONCAT('/zines/', #{zineSlug}, '/read/', bc.chapter_order)
+        FROM book_chapters bc
+        JOIN zines z ON z.id = bc.book_id
+        WHERE z.slug = #{zineSlug}
+        AND bc.entity_type = 'ZINE'
+        AND bc.is_active = true
+        ORDER BY bc.chapter_order
+    </select>
+
+    <!-- ═══════════════════════════════════════════
+         RECOMMENDATIONS (untuk dashboard)
+    ═══════════════════════════════════════════ -->
+
+    <select id="getZineRecommendations" resultType="com.naskah.demo.model.dto.response.BookRecommendationResponse">
+        SELECT
+        z.id           AS bookId,
+        z.slug         AS bookSlug,
+        z.title        AS bookTitle,
+        z.cover_image_url AS coverImageUrl,
+        z.category     AS genre,
+        COALESCE(AVG(zr.rating), 0) AS averageRating
+        FROM zines z
+        LEFT JOIN zine_ratings zr ON zr.zine_id = z.id
+        WHERE z.is_active = true
+        AND z.id NOT IN (
+        SELECT DISTINCT zrs.zine_id FROM zine_reading_sessions zrs WHERE zrs.user_id = #{userId}
+        )
+        <if test="favoriteGenres != null and favoriteGenres.size() > 0">
+            AND z.category IN
+            <foreach item="genre" collection="favoriteGenres" open="(" separator="," close=")">
+                #{genre}
+            </foreach>
+        </if>
+        GROUP BY z.id
+        ORDER BY averageRating DESC, z.view_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="hasActionByUserAndZine" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1 FROM zine_views
+        WHERE zine_id = #{zineId}
+        AND user_id = #{userId}
+        AND action_type = #{actionType}
+        )
+    </select>
+
+    <select id="countUserReadSessions" resultType="int">
+        SELECT COUNT(*)
+        FROM reading_sessions
+        WHERE user_id = #{userId}
+        AND zine_id = #{zineId}
+    </select>
+
+    <update id="incrementReadCount">
+        UPDATE zines SET read_count = read_count + 1 WHERE id = #{zineId}
+    </update>
+
+</mapper>

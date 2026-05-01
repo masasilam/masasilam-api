@@ -8,6 +8,7 @@
         <id     property="id"           column="id"/>
         <result property="userId"       column="user_id"/>
         <result property="bookId"       column="book_id"/>
+        <result property="zineId"       column="zine_id"/>
         <result property="cfi"          column="cfi"/>
         <result property="selectedText" column="selected_text"/>
         <result property="color"        column="color"/>
@@ -26,11 +27,17 @@
         ORDER BY created_at DESC
     </select>
 
+    <select id="findByUserAndZine" resultMap="EpubAnnotationRM">
+        SELECT * FROM epub_annotations
+        WHERE user_id = #{userId} AND zine_id = #{zineId}
+        ORDER BY created_at DESC
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO epub_annotations
-        (user_id, book_id, cfi, selected_text, color, note, created_at, updated_at)
+        (user_id, book_id, zine_id, cfi, selected_text, color, note, created_at, updated_at)
         VALUES
-        (#{userId}, #{bookId}, #{cfi}, #{selectedText},
+        (#{userId}, #{bookId}, #{zineId}, #{cfi}, #{selectedText},
         #{color}, #{note}, #{createdAt}, #{updatedAt})
     </insert>
 

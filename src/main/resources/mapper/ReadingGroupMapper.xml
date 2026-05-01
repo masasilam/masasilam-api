@@ -1,0 +1,546 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.social.ReadingGroupMapper">
+
+    <resultMap id="GroupEntityRM" type="com.naskah.demo.model.entity.social.ReadingGroup">
+        <id property="id" column="id"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="groupType" column="group_type"/>
+        <result property="focusType" column="focus_type"/>
+        <result property="memberCount" column="member_count"/>
+        <result property="maxMembers" column="max_members"/>
+        <result property="currentReadEntityType" column="current_read_entity_type"/>
+        <result property="currentReadEntityId" column="current_read_entity_id"/>
+        <result property="currentReadTitle" column="current_read_title"/>
+        <result property="currentReadStart" column="current_read_start"/>
+        <result property="currentReadEnd" column="current_read_end"/>
+        <result property="tags" column="tags"/>
+        <result property="rules" column="rules"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="GroupResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingGroupResponse">
+        <result property="id" column="id"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="ownerUsername" column="owner_username"/>
+        <result property="ownerPhoto" column="owner_photo"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="groupType" column="group_type"/>
+        <result property="focusType" column="focus_type"/>
+        <result property="memberCount" column="member_count"/>
+        <result property="maxMembers" column="max_members"/>
+        <result property="tags" column="tags"/>
+        <result property="rules" column="rules"/>
+        <result property="currentReadEntityType" column="current_read_entity_type"/>
+        <result property="currentReadEntityId" column="current_read_entity_id"/>
+        <result property="currentReadTitle" column="current_read_title"/>
+        <result property="currentReadStart" column="current_read_start"/>
+        <result property="currentReadEnd" column="current_read_end"/>
+        <result property="isMember" column="is_member"/>
+        <result property="myRole" column="my_role"/>
+        <result property="hasPendingRequest" column="has_pending_request"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="MemberRM" type="com.naskah.demo.model.dto.response.social.GroupMemberResponse">
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="profilePictureUrl" column="profile_picture_url"/>
+        <result property="role" column="role"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="joinedAt" column="joined_at"/>
+    </resultMap>
+
+    <resultMap id="ScheduleRM" type="com.naskah.demo.model.dto.response.social.GroupReadingScheduleResponse">
+        <result property="id" column="id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="entityTitle" column="entity_title"/>
+        <result property="entitySlug" column="entity_slug"/>
+        <result property="chapterStart" column="chapter_start"/>
+        <result property="chapterEnd" column="chapter_end"/>
+        <result property="chapterLabel" column="chapter_label"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="discussionPrompt" column="discussion_prompt"/>
+        <result property="isCompleted" column="is_completed"/>
+        <result property="discussionCount" column="discussion_count"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="DiscussionRM" type="com.naskah.demo.model.dto.response.social.GroupDiscussionResponse">
+        <result property="id" column="id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="scheduleId" column="schedule_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="userRole" column="user_role"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="cfiReference" column="cfi_reference"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="isPinned" column="is_pinned"/>
+        <result property="isOwner" column="is_owner"/>
+        <result property="isLikedByMe" column="is_liked_by_me"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="groupSelectBase">
+        SELECT
+        rg.id,
+        rg.owner_id,
+        uo.username                         AS owner_username,
+        uo.profile_picture_url              AS owner_photo,
+        rg.name,
+        rg.slug,
+        rg.description,
+        rg.cover_image_url,
+        rg.group_type,
+        rg.focus_type,
+        rg.member_count,
+        rg.max_members,
+        array_to_string(rg.tags, ',')       AS tags,
+        rg.rules,
+        rg.current_read_entity_type,
+        rg.current_read_entity_id,
+        rg.current_read_title,
+        rg.current_read_start,
+        rg.current_read_end,
+        rg.created_at,
+        rg.updated_at
+    </sql>
+
+    <!-- ── GROUP CRUD ────────────────────────────────────────────── -->
+    <insert id="insertGroup" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_groups
+        (owner_id, name, slug, description, cover_image_url,
+        group_type, focus_type, member_count, max_members,
+        tags, rules, is_active, created_at, updated_at)
+        VALUES
+        (#{ownerId}, #{name}, #{slug}, #{description}, #{coverImageUrl},
+        #{groupType}, #{focusType}, 1, #{maxMembers},
+        #{tags}::text[], #{rules}, TRUE, NOW(), NOW())
+    </insert>
+
+    <update id="updateGroup">
+        UPDATE reading_groups SET
+        name            = #{name},
+        description     = #{description},
+        cover_image_url = #{coverImageUrl},
+        group_type      = #{groupType},
+        max_members     = #{maxMembers},
+        tags            = #{tags}::text[],
+        rules           = #{rules},
+        current_read_entity_type = #{currentReadEntityType},
+        current_read_entity_id   = #{currentReadEntityId},
+        current_read_title       = #{currentReadTitle},
+        current_read_start       = #{currentReadStart},
+        current_read_end         = #{currentReadEnd},
+        updated_at      = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteGroup">
+        UPDATE reading_groups SET is_active = FALSE, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultMap="GroupEntityRM">
+        SELECT * FROM reading_groups WHERE id = #{id} AND is_active = TRUE
+    </select>
+
+    <select id="findBySlug" resultMap="GroupEntityRM">
+        SELECT * FROM reading_groups WHERE slug = #{slug} AND is_active = TRUE
+    </select>
+
+    <!-- ── GROUP DETAIL ──────────────────────────────────────────── -->
+    <select id="getGroupDetail" resultMap="GroupResponseRM">
+        <include refid="groupSelectBase"/>,
+        CASE WHEN #{currentUserId} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_group_members m
+        WHERE m.group_id = rg.id AND m.user_id = #{currentUserId} AND m.is_active = TRUE)
+        ELSE FALSE END AS is_member,
+        (SELECT role FROM reading_group_members m2
+        WHERE m2.group_id = rg.id AND m2.user_id = #{currentUserId} AND m2.is_active = TRUE
+        LIMIT 1)      AS my_role,
+        CASE WHEN #{currentUserId} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM group_join_requests r
+        WHERE r.group_id = rg.id AND r.user_id = #{currentUserId} AND r.status = 'pending')
+        ELSE FALSE END AS has_pending_request
+        FROM reading_groups rg
+        JOIN users uo ON uo.id = rg.owner_id
+        WHERE rg.id = #{groupId} AND rg.is_active = TRUE
+    </select>
+
+    <!-- ── PUBLIC GROUPS ─────────────────────────────────────────── -->
+    <select id="findPublicGroups" resultMap="GroupResponseRM">
+        <include refid="groupSelectBase"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_group_members m
+        WHERE m.group_id = rg.id AND m.user_id = #{currentUserId, jdbcType=BIGINT} AND m.is_active = TRUE)
+        ELSE FALSE END AS is_member,
+        NULL AS my_role, FALSE AS has_pending_request
+        FROM reading_groups rg
+        JOIN users uo ON uo.id = rg.owner_id
+        WHERE rg.is_active = TRUE
+        AND rg.group_type IN ('public', 'invite_only')
+        <if test="search != null and search != ''">
+            AND (rg.name ILIKE '%' || #{search} || '%'
+            OR rg.description ILIKE '%' || #{search} || '%')
+        </if>
+        <if test="focusType != null and focusType != ''">
+            AND rg.focus_type = #{focusType}
+        </if>
+        ORDER BY rg.member_count DESC, rg.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- ── USER GROUPS ───────────────────────────────────────────── -->
+    <select id="findUserGroups" resultMap="GroupResponseRM">
+        <include refid="groupSelectBase"/>,
+        TRUE AS is_member,
+        m.role AS my_role,
+        FALSE AS has_pending_request
+        FROM reading_groups rg
+        JOIN users uo ON uo.id = rg.owner_id
+        JOIN reading_group_members m ON m.group_id = rg.id AND m.user_id = #{userId} AND m.is_active = TRUE
+        WHERE rg.is_active = TRUE
+        ORDER BY m.joined_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPublicGroups" resultType="int">
+        SELECT COUNT(*) FROM reading_groups
+        WHERE is_active = TRUE AND group_type IN ('public','invite_only')
+        <if test="search != null and search != ''">
+            AND (name ILIKE '%' || #{search} || '%' OR description ILIKE '%' || #{search} || '%')
+        </if>
+        <if test="focusType != null and focusType != ''">
+            AND focus_type = #{focusType}
+        </if>
+    </select>
+
+    <select id="countUserGroups" resultType="int">
+        SELECT COUNT(*) FROM reading_group_members
+        WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+
+    <!-- ── MEMBERS ────────────────────────────────────────────────── -->
+    <insert id="insertMember" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_group_members (group_id, user_id, role, joined_at, is_active)
+        VALUES (#{groupId}, #{userId}, #{role}, NOW(), TRUE)
+        ON CONFLICT (group_id, user_id) DO UPDATE SET is_active = TRUE, role = EXCLUDED.role
+    </insert>
+
+    <update id="updateMember">
+        UPDATE reading_group_members SET role = #{role}, is_active = #{isActive}
+        WHERE group_id = #{groupId} AND user_id = #{userId}
+    </update>
+
+    <select id="findMember" resultType="com.naskah.demo.model.entity.social.ReadingGroupMember">
+        SELECT * FROM reading_group_members WHERE group_id = #{groupId} AND user_id = #{userId}
+    </select>
+
+    <select id="findMembers" resultMap="MemberRM">
+        SELECT
+        u.id AS user_id, u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        m.role,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
+        m.joined_at
+        FROM reading_group_members m
+        JOIN users u ON u.id = m.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        WHERE m.group_id = #{groupId} AND m.is_active = TRUE
+        ORDER BY CASE m.role WHEN 'owner' THEN 1 WHEN 'moderator' THEN 2 ELSE 3 END, m.joined_at ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMembers" resultType="int">
+        SELECT COUNT(*) FROM reading_group_members WHERE group_id = #{groupId} AND is_active = TRUE
+    </select>
+
+    <select id="isMember" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM reading_group_members
+        WHERE group_id = #{groupId} AND user_id = #{userId} AND is_active = TRUE
+        )
+    </select>
+
+    <select id="getMemberRole" resultType="string">
+        SELECT role FROM reading_group_members
+        WHERE group_id = #{groupId} AND user_id = #{userId} AND is_active = TRUE
+    </select>
+
+    <!-- ── SCHEDULES ─────────────────────────────────────────────── -->
+    <insert id="insertSchedule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO group_reading_schedules
+        (group_id, entity_type, entity_id, entity_title, entity_slug,
+        chapter_start, chapter_end, chapter_label,
+        start_date, end_date, discussion_prompt, is_completed, created_at)
+        VALUES
+        (#{groupId}, #{entityType}, #{entityId}, #{entityTitle}, #{entitySlug},
+        #{chapterStart}, #{chapterEnd}, #{chapterLabel},
+        #{startDate}, #{endDate}, #{discussionPrompt}, FALSE, NOW())
+    </insert>
+
+    <update id="updateSchedule">
+        UPDATE group_reading_schedules SET
+        chapter_start      = #{chapterStart},
+        chapter_end        = #{chapterEnd},
+        chapter_label      = #{chapterLabel},
+        start_date         = #{startDate},
+        end_date           = #{endDate},
+        discussion_prompt  = #{discussionPrompt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="markScheduleCompleted">
+        UPDATE group_reading_schedules SET is_completed = TRUE WHERE id = #{id}
+    </update>
+
+    <select id="findScheduleById" resultType="com.naskah.demo.model.entity.social.GroupReadingSchedule">
+        SELECT * FROM group_reading_schedules WHERE id = #{id}
+    </select>
+
+    <select id="findSchedulesByGroup" resultMap="ScheduleRM">
+        SELECT s.*,
+        (SELECT COUNT(*) FROM group_discussions d WHERE d.schedule_id = s.id AND d.is_deleted = FALSE)
+        AS discussion_count
+        FROM group_reading_schedules s
+        WHERE s.group_id = #{groupId}
+        ORDER BY s.start_date DESC
+    </select>
+
+    <select id="findActiveSchedule" resultMap="ScheduleRM">
+        SELECT s.*,
+        (SELECT COUNT(*) FROM group_discussions d WHERE d.schedule_id = s.id AND d.is_deleted = FALSE)
+        AS discussion_count
+        FROM group_reading_schedules s
+        WHERE s.group_id    = #{groupId}
+        AND s.is_completed = FALSE
+        AND s.end_date    >= CURRENT_DATE
+        ORDER BY s.start_date ASC
+        LIMIT 1
+    </select>
+
+    <!-- ── DISCUSSIONS ───────────────────────────────────────────── -->
+    <insert id="insertDiscussion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO group_discussions
+        (group_id, schedule_id, user_id, parent_id, title, content,
+        entity_type, entity_id, cfi_reference,
+        like_count, reply_count, is_pinned, is_deleted, created_at, updated_at)
+        VALUES
+        (#{groupId}, #{scheduleId}, #{userId}, #{parentId}, #{title}, #{content},
+        #{entityType}, #{entityId}, #{cfiReference},
+        0, 0, FALSE, FALSE, NOW(), NOW())
+    </insert>
+
+    <update id="updateDiscussion">
+        UPDATE group_discussions SET content = #{content}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteDiscussion">
+        UPDATE group_discussions SET is_deleted = TRUE, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="findDiscussionById" resultType="com.naskah.demo.model.entity.social.GroupDiscussion">
+        SELECT * FROM group_discussions WHERE id = #{id}
+    </select>
+
+    <select id="findDiscussionsByGroup" resultMap="DiscussionRM">
+        SELECT
+        d.id, d.group_id, d.schedule_id, d.user_id,
+        u.username,
+        u.profile_picture_url          AS user_photo,
+        m.role                         AS user_role,
+        d.parent_id, d.title, d.content,
+        d.entity_type, d.entity_id, d.cfi_reference,
+        d.like_count, d.reply_count, d.is_pinned,
+        (d.user_id = #{currentUserId}) AS is_owner,
+        CASE WHEN #{currentUserId} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM group_discussion_likes l
+        WHERE l.discussion_id = d.id AND l.user_id = #{currentUserId})
+        ELSE FALSE END AS is_liked_by_me,
+        d.created_at, d.updated_at
+        FROM group_discussions d
+        JOIN users u ON u.id = d.user_id
+        LEFT JOIN reading_group_members m ON m.group_id = d.group_id AND m.user_id = d.user_id
+        WHERE d.group_id   = #{groupId}
+        AND d.parent_id  IS NULL
+        AND d.is_deleted = FALSE
+        <if test="scheduleId != null">AND d.schedule_id = #{scheduleId}</if>
+        ORDER BY d.is_pinned DESC, d.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findRepliesByParent" resultMap="DiscussionRM">
+        SELECT
+        d.id, d.group_id, d.schedule_id, d.user_id,
+        u.username, u.profile_picture_url AS user_photo,
+        m.role AS user_role,
+        d.parent_id, d.title, d.content,
+        d.entity_type, d.entity_id, d.cfi_reference,
+        d.like_count, d.reply_count, d.is_pinned,
+        (d.user_id = #{currentUserId}) AS is_owner,
+        CASE WHEN #{currentUserId} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM group_discussion_likes l
+        WHERE l.discussion_id = d.id AND l.user_id = #{currentUserId})
+        ELSE FALSE END AS is_liked_by_me,
+        d.created_at, d.updated_at
+        FROM group_discussions d
+        JOIN users u ON u.id = d.user_id
+        LEFT JOIN reading_group_members m ON m.group_id = d.group_id AND m.user_id = d.user_id
+        WHERE d.parent_id  = #{parentId}
+        AND d.is_deleted = FALSE
+        ORDER BY d.created_at ASC
+    </select>
+
+    <select id="countDiscussionsByGroup" resultType="int">
+        SELECT COUNT(*) FROM group_discussions
+        WHERE group_id = #{groupId} AND parent_id IS NULL AND is_deleted = FALSE
+        <if test="scheduleId != null">AND schedule_id = #{scheduleId}</if>
+    </select>
+
+    <update id="incrementDiscussionLikeCount">
+        UPDATE group_discussions SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+    <update id="decrementDiscussionLikeCount">
+        UPDATE group_discussions SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
+    </update>
+    <update id="incrementReplyCount">
+        UPDATE group_discussions SET reply_count = reply_count + 1 WHERE id = #{id}
+    </update>
+    <update id="decrementReplyCount">
+        UPDATE group_discussions SET reply_count = GREATEST(0, reply_count - 1) WHERE id = #{id}
+    </update>
+
+    <!-- ── DISCUSSION LIKES ───────────────────────────────────────── -->
+    <insert id="insertDiscussionLike">
+        INSERT INTO group_discussion_likes (discussion_id, user_id, created_at)
+        VALUES (#{discussionId}, #{userId}, NOW()) ON CONFLICT DO NOTHING
+    </insert>
+    <delete id="deleteDiscussionLike">
+        DELETE FROM group_discussion_likes WHERE discussion_id = #{discussionId} AND user_id = #{userId}
+    </delete>
+    <select id="isDiscussionLiked" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM group_discussion_likes WHERE discussion_id = #{discussionId} AND user_id = #{userId})
+    </select>
+
+    <!-- ── JOIN REQUESTS ──────────────────────────────────────────── -->
+    <insert id="insertJoinRequest" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO group_join_requests (group_id, user_id, message, status, created_at)
+        VALUES (#{groupId}, #{userId}, #{message}, 'pending', NOW())
+    </insert>
+
+    <update id="updateJoinRequest">
+        UPDATE group_join_requests SET
+        status = #{status}, reviewed_by = #{reviewedBy}, reviewed_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="findJoinRequest" resultType="com.naskah.demo.model.entity.social.GroupJoinRequest">
+        SELECT * FROM group_join_requests WHERE group_id = #{groupId} AND user_id = #{userId}
+    </select>
+
+    <select id="findPendingRequests"
+            resultType="com.naskah.demo.model.dto.response.social.GroupJoinRequestResponse">
+        SELECT r.id, r.group_id, r.user_id, u.username,
+        u.profile_picture_url AS user_photo,
+        r.message, r.status, r.created_at
+        FROM group_join_requests r
+        JOIN users u ON u.id = r.user_id
+        WHERE r.group_id = #{groupId} AND r.status = 'pending'
+        ORDER BY r.created_at ASC
+    </select>
+
+    <!-- ── POLLS ──────────────────────────────────────────────────── -->
+    <insert id="insertPoll" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO group_polls (group_id, created_by, question, options, ends_at, is_closed, created_at)
+        VALUES (#{groupId}, #{createdBy}, #{question}, #{options}::jsonb, #{endsAt}, FALSE, NOW())
+    </insert>
+
+    <update id="updatePollOptions">
+        UPDATE group_polls SET options = #{options}::jsonb WHERE id = #{pollId}
+    </update>
+
+    <update id="closePoll">
+        UPDATE group_polls SET is_closed = TRUE WHERE id = #{id}
+    </update>
+
+    <select id="findPollById" resultType="com.naskah.demo.model.entity.social.GroupPoll">
+        SELECT * FROM group_polls WHERE id = #{id}
+    </select>
+
+    <select id="findPollsByGroup"
+            resultType="com.naskah.demo.model.dto.response.social.GroupPollResponse">
+        SELECT
+        p.id, p.group_id, p.created_by,
+        u.username AS creator_username,
+        p.question, p.options::text AS options,
+        p.ends_at, p.is_closed, p.created_at,
+        (SELECT COUNT(*) FROM group_poll_votes WHERE poll_id = p.id) AS total_votes,
+        (SELECT option_id FROM group_poll_votes WHERE poll_id = p.id AND user_id = #{currentUserId} LIMIT 1)
+        AS my_vote_option_id
+        FROM group_polls p
+        JOIN users u ON u.id = p.created_by
+        WHERE p.group_id = #{groupId}
+        ORDER BY p.created_at DESC
+    </select>
+
+    <insert id="insertPollVote" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO group_poll_votes (poll_id, user_id, option_id, created_at)
+        VALUES (#{pollId}, #{userId}, #{optionId}, NOW())
+    </insert>
+
+    <select id="findPollVote" resultType="com.naskah.demo.model.entity.social.GroupPollVote">
+        SELECT * FROM group_poll_votes WHERE poll_id = #{pollId} AND user_id = #{userId}
+    </select>
+
+    <delete id="deletePollVote">
+        DELETE FROM group_poll_votes WHERE poll_id = #{pollId} AND user_id = #{userId}
+    </delete>
+
+    <!-- ── PROGRESS LEADERBOARD ───────────────────────────────────── -->
+    <select id="getMemberProgressLeaderboard" resultMap="MemberRM">
+        SELECT
+        u.id AS user_id, u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        m.role,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
+        m.joined_at
+        FROM reading_group_members m
+        JOIN users u ON u.id = m.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        LEFT JOIN reading_progress rp ON rp.user_id = u.id
+        AND rp.entity_type = #{entityType}
+        AND rp.entity_id   = #{entityId}
+        WHERE m.group_id  = #{groupId}
+        AND m.is_active = TRUE
+        ORDER BY COALESCE(rp.percentage_completed, 0) DESC
+        LIMIT 20
+    </select>
+
+</mapper>

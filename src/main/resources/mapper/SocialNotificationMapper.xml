@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.social.SocialNotificationMapper">
+
+    <resultMap id="NotifRM" type="com.naskah.demo.model.dto.response.social.NotificationResponse">
+        <result property="id" column="id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="senderUsername" column="sender_username"/>
+        <result property="senderPhoto" column="sender_photo"/>
+        <result property="type" column="type"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="message" column="message"/>
+        <result property="data" column="data" typeHandler="com.naskah.demo.typehandler.JsonMapTypeHandler"/>
+        <result property="isRead" column="is_read"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO social_notifications
+        (recipient_id, sender_id, type, entity_type, entity_id, message, data, is_read, created_at)
+        VALUES
+        (#{recipientId}, #{senderId}, #{type}, #{entityType}, #{entityId},
+        #{message}, #{data, typeHandler=com.naskah.demo.typehandler.JsonMapTypeHandler}, FALSE, NOW())
+    </insert>
+
+    <update id="markRead">
+        UPDATE social_notifications SET is_read = TRUE WHERE id = #{id}
+    </update>
+
+    <update id="markAllRead">
+        UPDATE social_notifications SET is_read = TRUE WHERE recipient_id = #{recipientId}
+    </update>
+
+    <delete id="deleteOld">
+        DELETE FROM social_notifications
+        WHERE recipient_id = #{recipientId}
+        AND id NOT IN (
+        SELECT id FROM social_notifications
+        WHERE recipient_id = #{recipientId}
+        ORDER BY created_at DESC
+        LIMIT #{keepCount}
+        )
+    </delete>
+
+    <select id="findByRecipient" resultMap="NotifRM">
+        SELECT
+        n.id, n.sender_id,
+        u.username AS sender_username,
+        u.profile_picture_url AS sender_photo,
+        n.type, n.entity_type, n.entity_id,
+        n.message, n.data,
+        n.is_read, n.created_at
+        FROM social_notifications n
+        LEFT JOIN users u ON u.id = n.sender_id
+        WHERE n.recipient_id = #{recipientId}
+        ORDER BY n.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countUnread" resultType="int">
+        SELECT COUNT(*) FROM social_notifications WHERE recipient_id = #{recipientId} AND is_read = FALSE
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM social_notifications WHERE recipient_id = #{recipientId}
+    </select>
+
+</mapper>

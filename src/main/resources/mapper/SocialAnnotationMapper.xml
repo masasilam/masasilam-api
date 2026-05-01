@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.social.SocialAnnotationMapper">
+
+    <resultMap id="AnnotationRM" type="com.naskah.demo.model.dto.response.social.SocialAnnotationResponse">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="entitySlug" column="entity_slug"/>
+        <result property="entityTitle" column="entity_title"/>
+        <result property="entityCover" column="entity_cover"/>
+        <result property="cfi" column="cfi"/>
+        <result property="selectedText" column="selected_text"/>
+        <result property="color" column="color"/>
+        <result property="note" column="note"/>
+        <result property="contextBefore" column="context_before"/>
+        <result property="contextAfter" column="context_after"/>
+        <result property="chapterLabel" column="chapter_label"/>
+        <result property="visibility" column="visibility"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="reshareCount" column="reshare_count"/>
+        <result property="isLikedByMe" column="is_liked_by_me"/>
+        <result property="isOwner" column="is_owner"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="AnnCommentRM" type="com.naskah.demo.model.dto.response.social.AnnotationCommentResponse">
+        <result property="id" column="id"/>
+        <result property="annotationId" column="annotation_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="content" column="content"/>
+        <result property="isOwner" column="is_owner"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="annSelect">
+        SELECT
+        sa.id, sa.user_id,
+        u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url                  AS user_photo,
+        COALESCE(sp.is_verified, FALSE)        AS is_verified,
+        sa.entity_type, sa.entity_id, sa.entity_slug, sa.entity_title, sa.entity_cover,
+        sa.cfi, sa.selected_text, sa.color, sa.note,
+        sa.context_before, sa.context_after, sa.chapter_label,
+        sa.visibility, sa.like_count, sa.comment_count, sa.reshare_count,
+        sa.created_at, sa.updated_at
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO social_annotations
+        (user_id, source_annotation_id, entity_type, entity_id, entity_slug,
+        entity_title, entity_cover, cfi, selected_text, color, note,
+        context_before, context_after, chapter_label,
+        visibility, like_count, comment_count, reshare_count, is_active, created_at, updated_at)
+        VALUES
+        (#{userId}, #{sourceAnnotationId}, #{entityType}, #{entityId}, #{entitySlug},
+        #{entityTitle}, #{entityCover}, #{cfi}, #{selectedText}, #{color}, #{note},
+        #{contextBefore}, #{contextAfter}, #{chapterLabel},
+        #{visibility}, 0, 0, 0, TRUE, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE social_annotations SET
+        note       = #{note},
+        color      = #{color},
+        visibility = #{visibility},
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE social_annotations SET is_active = FALSE, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultType="com.naskah.demo.model.entity.social.SocialAnnotation">
+        SELECT * FROM social_annotations WHERE id = #{id}
+    </select>
+
+    <select id="findPublicAnnotations" resultMap="AnnotationRM">
+        <include refid="annSelect"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM social_annotation_likes l
+        WHERE l.annotation_id = sa.id AND l.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me,
+        FALSE AS is_owner
+        FROM social_annotations sa
+        JOIN users u ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.is_active = TRUE AND sa.visibility = 'public'
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findFollowingAnnotations" resultMap="AnnotationRM">
+        <include refid="annSelect"/>,
+        EXISTS(SELECT 1 FROM social_annotation_likes l WHERE l.annotation_id = sa.id AND l.user_id = #{userId, jdbcType=BIGINT})
+        AS is_liked_by_me,
+        (sa.user_id = #{userId, jdbcType=BIGINT}) AS is_owner
+        FROM social_annotations sa
+        JOIN users u ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.is_active = TRUE
+        AND sa.user_id IN (SELECT following_id FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT})
+        AND sa.visibility IN ('public','followers')
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findByUser" resultMap="AnnotationRM">
+        <include refid="annSelect"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM social_annotation_likes l WHERE l.annotation_id = sa.id AND l.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me,
+        (sa.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner
+        FROM social_annotations sa
+        JOIN users u ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.user_id = #{profileUserId} AND sa.is_active = TRUE
+        AND (sa.visibility = 'public'
+        OR sa.user_id = #{currentUserId, jdbcType=BIGINT}
+        OR (sa.visibility = 'followers'
+        AND #{currentUserId, jdbcType=BIGINT} IS NOT NULL
+        AND EXISTS(
+        SELECT 1 FROM user_follows
+        WHERE follower_id = #{currentUserId, jdbcType=BIGINT}
+        AND following_id = #{profileUserId}
+        ))
+        )
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findByEntity" resultMap="AnnotationRM">
+        <include refid="annSelect"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM social_annotation_likes l WHERE l.annotation_id = sa.id AND l.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me,
+        (sa.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner
+        FROM social_annotations sa
+        JOIN users u ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.entity_type = #{entityType} AND sa.entity_id = #{entityId}
+        AND sa.is_active   = TRUE AND sa.visibility = 'public'
+        ORDER BY sa.like_count DESC, sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUser" resultType="int">
+        SELECT COUNT(*) FROM social_annotations WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+    <select id="countByEntity" resultType="int">
+        SELECT COUNT(*) FROM social_annotations
+        WHERE entity_type = #{entityType} AND entity_id = #{entityId} AND is_active = TRUE
+    </select>
+    <select id="countPublic" resultType="int">
+        SELECT COUNT(*) FROM social_annotations WHERE is_active = TRUE AND visibility = 'public'
+    </select>
+
+    <insert id="insertLike">
+        INSERT INTO social_annotation_likes (annotation_id, user_id, created_at)
+        VALUES (#{annotationId}, #{userId}, NOW()) ON CONFLICT DO NOTHING
+    </insert>
+    <delete id="deleteLike">
+        DELETE FROM social_annotation_likes WHERE annotation_id = #{annotationId} AND user_id = #{userId}
+    </delete>
+    <select id="isLiked" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM social_annotation_likes WHERE annotation_id = #{annotationId} AND user_id = #{userId})
+    </select>
+    <update id="incrementLikeCount">
+        UPDATE social_annotations SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+    <update id="decrementLikeCount">
+        UPDATE social_annotations SET like_count = GREATEST(0,like_count-1) WHERE id = #{id}
+    </update>
+    <update id="incrementReshareCount">
+        UPDATE social_annotations SET reshare_count = reshare_count + 1 WHERE id = #{id}
+    </update>
+
+    <insert id="insertComment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO social_annotation_comments
+        (annotation_id, user_id, parent_id, content, is_deleted, created_at, updated_at)
+        VALUES (#{annotationId}, #{userId}, #{parentId}, #{content}, FALSE, NOW(), NOW())
+    </insert>
+    <update id="updateComment">
+        UPDATE social_annotation_comments SET content = #{content}, updated_at = NOW() WHERE id = #{id}
+    </update>
+    <update id="softDeleteComment">
+        UPDATE social_annotation_comments SET is_deleted = TRUE WHERE id = #{id}
+    </update>
+    <select id="findCommentById" resultType="com.naskah.demo.model.entity.social.SocialAnnotationComment">
+        SELECT * FROM social_annotation_comments WHERE id = #{id}
+    </select>
+    <select id="findCommentsByAnnotation" resultMap="AnnCommentRM">
+        SELECT
+        c.id, c.annotation_id, c.user_id,
+        u.username, u.profile_picture_url AS user_photo,
+        c.parent_id, c.content,
+        (c.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner,
+        c.created_at, c.updated_at
+        FROM social_annotation_comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.annotation_id = #{annotationId} AND c.parent_id IS NULL AND c.is_deleted = FALSE
+        ORDER BY c.created_at ASC
+    </select>
+    <update id="incrementCommentCount">
+        UPDATE social_annotations SET comment_count = comment_count + 1 WHERE id = #{id}
+    </update>
+    <update id="decrementCommentCount">
+        UPDATE social_annotations SET comment_count = GREATEST(0,comment_count-1) WHERE id = #{id}
+    </update>
+
+</mapper>

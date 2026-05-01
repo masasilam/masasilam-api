@@ -1,4 +1,4 @@
-package com.naskah.demo.controller;
+package com.naskah.demo.controller.film;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

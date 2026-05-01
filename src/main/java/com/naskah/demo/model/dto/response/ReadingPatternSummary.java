@@ -8,6 +8,7 @@ public class ReadingPatternSummary {
     private String  preferredDay;
     private Integer averageSessionMinutes;
     private Integer averageReadingSpeedWpm;
+    private Double  estimatedReadingSpeedWpm;
     private Integer currentStreak;
     private Integer longestStreak;
     private String  readingPace;

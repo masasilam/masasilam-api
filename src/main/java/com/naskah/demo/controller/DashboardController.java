@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api/dashboard")
@@ -17,53 +18,34 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService  dashboardService;
-    private final CorrectionService correctionService; // ← tambah inject
+    private final CorrectionService correctionService;
 
     // ═══════════════════════════════════════════════════════════
-    // USER DASHBOARD ENDPOINTS (tidak berubah)
-    // ═══════════════════════════════════════════════════════════
-
-
-    // ─────────────────────────────────────────────────────────────────────────
     // MAIN DASHBOARD
     // GET /api/dashboard
     //
-    // Dipakai oleh: DashboardOverview.jsx → dashboardService.getMainDashboard()
-    //
     // Response: DashboardMainResponse
-    //   - overviewStats     : total buku, waktu baca, streak, rating
-    //   - booksInProgress   : buku yang sedang dibaca (dari reading_session)
-    //   - readingPattern    : pola baca (jam, durasi, pace)
-    //   - recentlyRead      : 6 buku terakhir dibaca
-    //   - annotationsSummary: ringkasan anotasi EPUB
-    //   - recentAchievements: pencapaian terbaru
-    // ─────────────────────────────────────────────────────────────────────────
+    //   - overviewStats      : total buku, waktu baca, streak, rating
+    //   - booksInProgress    : buku yang sedang dibaca
+    //   - zinесInProgress    : zine yang sedang dibaca          ← BARU
+    //   - readingPattern     : pola baca (jam, durasi, pace)
+    //   - recentlyRead       : 6 buku+zine terakhir dibaca
+    //   - annotationsSummary : ringkasan anotasi EPUB
+    //   - recentAchievements : pencapaian terbaru
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping
     public ResponseEntity<DataResponse<DashboardMainResponse>> getMainDashboard() {
         DataResponse<DashboardMainResponse> response = dashboardService.getMainDashboard();
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // LIBRARY
+    // ═══════════════════════════════════════════════════════════
+    // LIBRARY (buku)
     // GET /api/dashboard/library
-    //
-    // Dipakai oleh: MyLibraryPage.jsx → dashboardService.getLibrary()
-    //
-    // Query params:
-    //   filter : "all" | "reading" | "completed" | "bookmarked"  (default: "all")
-    //   page   : halaman (default: 1)
-    //   limit  : jumlah per halaman (default: 16)
-    //   sortBy : "last_read" | "progress" | "title" | "rating"  (default: "last_read")
-    //
-    // Response: LibraryPageResponse
-    //   - items     : list LibraryBookResponse
-    //   - totalData : total buku
-    //   - page, limit
-    //
-    // PERBAIKAN: Sumber data dari reading_session (mencakup EPUB)
-    // bukan hanya reading_activity_log.
-    // ─────────────────────────────────────────────────────────────────────────
+    // params: filter, page, limit, sortBy
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/library")
     public ResponseEntity<DataResponse<LibraryPageResponse>> getLibrary(
             @RequestParam(defaultValue = "all")       String filter,
@@ -76,25 +58,12 @@ public class DashboardController {
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // READING HISTORY
+    // ═══════════════════════════════════════════════════════════
+    // READING HISTORY (buku)
     // GET /api/dashboard/history
-    //
-    // Dipakai oleh: ReadingHistoryPage.jsx → dashboardService.getReadingHistory()
-    //
-    // Query params:
-    //   days  : rentang hari ke belakang (default: 7)
-    //   page  : halaman (default: 1)
-    //   limit : jumlah per halaman (default: 20)
-    //
-    // Response: ReadingHistoryPageResponse
-    //   - list  : list ReadingHistoryItemResponse (dari reading_session)
-    //   - total : total sesi
-    //   - page, limit
-    //
-    // PERBAIKAN: Sebelumnya membaca dari reading_activity_log yang tidak terisi
-    // untuk sesi EPUB. Sekarang membaca dari reading_session.
-    // ─────────────────────────────────────────────────────────────────────────
+    // params: days, page, limit
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/history")
     public ResponseEntity<DataResponse<ReadingHistoryPageResponse>> getReadingHistory(
             @RequestParam(defaultValue = "7")  int days,
@@ -106,23 +75,12 @@ public class DashboardController {
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // STATISTICS
+    // ═══════════════════════════════════════════════════════════
+    // STATISTICS (buku)
     // GET /api/dashboard/statistics
-    //
-    // Dipakai oleh: StatisticsPage.jsx → dashboardService.getStatistics()
-    //
-    // Query params:
-    //   period : jumlah hari ke belakang (default: 30)
-    //
-    // Response: StatisticsResponse
-    //   - totalBooksRead, totalChaptersRead, totalReadingMinutes
-    //   - averageReadingSpeedWpm
-    //   - readingTimeTrend, completionTrend, speedTrend
-    //   - genreBreakdown, peakReadingTimes
-    //
-    // PERBAIKAN: Semua total dihitung dari reading_session yang mencakup EPUB.
-    // ─────────────────────────────────────────────────────────────────────────
+    // params: period
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/statistics")
     public ResponseEntity<DataResponse<StatisticsResponse>> getStatistics(
             @RequestParam(defaultValue = "30") int period) {
@@ -131,27 +89,12 @@ public class DashboardController {
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ANNOTATIONS
+    // ═══════════════════════════════════════════════════════════
+    // ANNOTATIONS (buku + zine — keduanya pakai epub_annotation)
     // GET /api/dashboard/annotations
-    //
-    // Dipakai oleh: AnnotationsPage.jsx → dashboardService.getAnnotations()
-    //
-    // Query params:
-    //   type   : "all" | "highlight" | "note" | "bookmark"  (default: "all")
-    //   page   : halaman (default: 1)
-    //   limit  : jumlah per halaman (default: 20)
-    //   sortBy : "recent" | "book"  (default: "recent")
-    //
-    // Response: AnnotationsPageResponse
-    //   - items : list AnnotationItemResponse (dari epub_annotation + epub_bookmark)
-    //   - total : total item
-    //   - page, limit
-    //
-    // PERBAIKAN: Sebelumnya membaca dari tabel bookmark/highlight/note yang tidak
-    // terisi untuk user yang membaca via EpubReaderPage.
-    // Sekarang membaca dari epub_annotation dan epub_bookmark.
-    // ─────────────────────────────────────────────────────────────────────────
+    // params: type, page, limit, sortBy
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/annotations")
     public ResponseEntity<DataResponse<AnnotationsPageResponse>> getAnnotations(
             @RequestParam(defaultValue = "all")    String type,
@@ -164,30 +107,24 @@ public class DashboardController {
         return ResponseEntity.ok(response);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // REVIEWS (buku)
+    // GET /api/dashboard/reviews
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/reviews")
     public ResponseEntity<DatatableResponse<UserReviewItemResponse>> getUserReviews(
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1")  int page,
             @RequestParam(defaultValue = "10") int limit) {
-        DatatableResponse<UserReviewItemResponse> response = dashboardService.getUserReviews(page, limit);
+        DatatableResponse<UserReviewItemResponse> response =
+                dashboardService.getUserReviews(page, limit);
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // GOALS
-    // GET /api/dashboard/goals
-    //
-    // Dipakai oleh: GoalsPage.jsx → dashboardService.getGoals()
-    //
-    // Response: GoalsResponse
-    //   - summary : GoalsSummary (total, completed, active, thisMonth)
-    //   - active  : list GoalResponse
-    //   - completed: list GoalResponse
-    // ─────────────────────────────────────────────────────────────────────────
-//    @GetMapping("/goals")
-//    public ResponseEntity<DataResponse<GoalsResponse>> getGoals() {
-//        DataResponse<GoalsResponse> response = dashboardService.getGoals();
-//        return ResponseEntity.ok(response);
-//    }
+    // ═══════════════════════════════════════════════════════════
+    // RECOMMENDATIONS
+    // GET /api/dashboard/recommendations
+    // ═══════════════════════════════════════════════════════════
 
     @GetMapping("/recommendations")
     public ResponseEntity<DataResponse<List<BookRecommendationResponse>>> getRecommendations(
@@ -197,29 +134,23 @@ public class DashboardController {
         return ResponseEntity.ok(response);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // QUICK STATS
+    // GET /api/dashboard/quick-stats
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/quick-stats")
     public ResponseEntity<DataResponse<QuickStatsResponse>> getQuickStats() {
         DataResponse<QuickStatsResponse> response = dashboardService.getQuickStats();
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
     // CALENDAR
     // GET /api/dashboard/calendar
-    //
-    // Dipakai oleh: CalendarPage.jsx → dashboardService.getCalendar()
-    //
-    // Query params:
-    //   year  : tahun (default: tahun sekarang)
-    //   month : bulan 1-12 (default: bulan sekarang)
-    //
-    // Response: CalendarResponse
-    //   - days        : list CalendarDayResponse (aktivitas per hari)
-    //   - totalMinutes, totalPages, activeDays
-    //
-    // PERBAIKAN: Menit baca per hari dihitung dari reading_session,
-    // bukan reading_activity_log yang tidak terisi untuk EPUB.
-    // ─────────────────────────────────────────────────────────────────────────
+    // params: year, month
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/calendar")
     public ResponseEntity<DataResponse<CalendarResponse>> getCalendar(
             @RequestParam(required = false) Integer year,
@@ -228,27 +159,26 @@ public class DashboardController {
         int targetYear  = year  != null ? year  : java.time.LocalDate.now().getYear();
         int targetMonth = month != null ? month : java.time.LocalDate.now().getMonthValue();
 
-        DataResponse<CalendarResponse> response = dashboardService.getCalendar(targetYear, targetMonth);
+        DataResponse<CalendarResponse> response =
+                dashboardService.getCalendar(targetYear, targetMonth);
         return ResponseEntity.ok(response);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
     // ACHIEVEMENTS
     // GET /api/dashboard/achievements
-    //
-    // Dipakai oleh: AchievementsPage.jsx → dashboardService.getAchievements()
-    //
-    // Response: AchievementsResponse
-    //   - list       : list AchievementResponse
-    //   - total      : total pencapaian
-    //   - unlocked   : yang sudah terbuka
-    //   - categories : list AchievementCategoryResponse
-    // ─────────────────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/achievements")
     public ResponseEntity<DataResponse<AchievementsResponse>> getAchievements() {
         DataResponse<AchievementsResponse> response = dashboardService.getAchievements();
         return ResponseEntity.ok(response);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // EXPORT
+    // POST /api/dashboard/export
+    // ═══════════════════════════════════════════════════════════
 
     @PostMapping("/export")
     public ResponseEntity<DataResponse<ExportJobResponse>> exportUserData(
@@ -258,22 +188,23 @@ public class DashboardController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // CORRECTIONS
+    // ═══════════════════════════════════════════════════════════
+
     @GetMapping("/corrections")
     public ResponseEntity<DatatableResponse<CorrectionResponse>> getCorrections(
             @RequestParam(defaultValue = "PENDING") String status,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "1")       int page,
+            @RequestParam(defaultValue = "20")      int limit) {
 
         DatatableResponse<CorrectionResponse> response =
-                correctionService.getCorrections(status, page, limit);  // ← nama baru
-
+                correctionService.getCorrections(status, page, limit);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/corrections/{id}/approve")
-    public ResponseEntity<DataResponse<Void>> approveCorrection(
-            @PathVariable Long id) {
-
+    public ResponseEntity<DataResponse<Void>> approveCorrection(@PathVariable Long id) {
         DataResponse<Void> response = correctionService.approveCorrection(id);
         return ResponseEntity.ok(response);
     }
@@ -282,7 +213,6 @@ public class DashboardController {
     public ResponseEntity<DataResponse<Void>> rejectCorrection(
             @PathVariable Long id,
             @RequestBody(required = false) RejectCorrectionRequest request) {
-
         String note = (request != null) ? request.getNote() : null;
         DataResponse<Void> response = correctionService.rejectCorrection(id, note);
         return ResponseEntity.ok(response);

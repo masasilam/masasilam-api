@@ -1,0 +1,60 @@
+package com.naskah.demo.mapper.social;
+
+import com.naskah.demo.model.entity.social.*;
+import com.naskah.demo.model.dto.response.social.*;
+import org.apache.ibatis.annotations.*;
+import java.util.List;
+
+@Mapper
+public interface ReadingListMapper {
+    void insertList(ReadingList list);
+    void updateList(ReadingList list);
+    void softDeleteList(Long id);
+    ReadingList findById(Long id);
+    ReadingList findBySlug(@Param("userId") Long userId, @Param("slug") String slug);
+    ReadingListResponse getListDetail(@Param("listId") Long listId, @Param("currentUserId") Long currentUserId);
+
+    List<ReadingListResponse> findByUser(@Param("userId") Long userId, @Param("currentUserId") Long currentUserId,
+                                         @Param("offset") int offset, @Param("limit") int limit);
+    List<ReadingListResponse> findPublicLists(@Param("search") String search,
+                                              @Param("tag") String tag,
+                                              @Param("offset") int offset,
+                                              @Param("limit") int limit);
+    int countByUser(Long userId);
+    int countPublicLists(@Param("search") String search, @Param("tag") String tag);
+
+    // Items
+    void insertItem(ReadingListItem item);
+    void deleteItem(@Param("listId") Long listId, @Param("entityType") String entityType, @Param("entityId") Long entityId);
+    void deleteItemById(Long id);
+    ReadingListItem findItem(@Param("listId") Long listId, @Param("entityType") String entityType, @Param("entityId") Long entityId);
+    List<ReadingListItemResponse> findItemsByList(@Param("listId") Long listId,
+                                                  @Param("offset") int offset, @Param("limit") int limit);
+    void updateItemOrder(@Param("itemId") Long itemId, @Param("sortOrder") int sortOrder);
+    int countItemsByList(Long listId);
+
+    // Likes
+    void insertLike(@Param("listId") Long listId, @Param("userId") Long userId);
+    void deleteLike(@Param("listId") Long listId, @Param("userId") Long userId);
+    boolean isLiked(@Param("listId") Long listId, @Param("userId") Long userId);
+    void incrementLikeCount(Long listId);
+    void decrementLikeCount(Long listId);
+
+    // Follows
+    void insertFollow(@Param("listId") Long listId, @Param("userId") Long userId);
+    void deleteFollow(@Param("listId") Long listId, @Param("userId") Long userId);
+    boolean isFollowed(@Param("listId") Long listId, @Param("userId") Long userId);
+
+    // Fork
+    void incrementForkCount(Long listId);
+
+    // View
+    void incrementViewCount(Long listId);
+
+    // Used by entity to check if it's in any list
+    List<ReadingListSummaryResponse> findListsContainingEntity(@Param("entityType") String entityType,
+                                                               @Param("entityId") Long entityId,
+                                                               @Param("currentUserId") Long currentUserId);
+
+    ReadingList findBySlugGlobal(@Param("slug") String slug);
+}

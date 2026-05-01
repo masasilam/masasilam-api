@@ -35,4 +35,6 @@ public interface UserMapper {
     void softDeleteUser(@Param("userId") Long userId);
     void hardDeleteUser(@Param("userId") Long userId);
     void deleteUserRoles(@Param("userId") Long userId);
+
+    List<Long> findActiveUserIds(@Param("daysThreshold") int daysThreshold);
 }

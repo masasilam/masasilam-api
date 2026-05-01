@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.social.SocialActivityMapper">
+
+    <resultMap id="ActivityRM" type="com.naskah.demo.model.entity.social.SocialActivity">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="activityType" column="activity_type"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="entitySlug" column="entity_slug"/>
+        <result property="entityTitle" column="entity_title"/>
+        <result property="entityCover" column="entity_cover"/>
+        <result property="metadata" column="metadata" typeHandler="com.naskah.demo.typehandler.JsonTypeHandler"/>
+        <result property="visibility" column="visibility"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="FeedItemRM" type="com.naskah.demo.model.dto.response.social.ActivityFeedItemResponse">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="activityType" column="activity_type"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="entitySlug" column="entity_slug"/>
+        <result property="entityTitle" column="entity_title"/>
+        <result property="entityCover" column="entity_cover"/>
+        <result property="metadata" column="metadata" typeHandler="com.naskah.demo.typehandler.JsonMapTypeHandler"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="isLikedByMe" column="is_liked_by_me"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="CommentRM" type="com.naskah.demo.model.dto.response.social.ActivityCommentResponse">
+        <result property="id" column="id"/>
+        <result property="activityId" column="activity_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="content" column="content"/>
+        <result property="isOwner" column="is_owner"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="feedSelect">
+        SELECT
+        sa.id,
+        sa.user_id,
+        u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url                  AS user_photo,
+        COALESCE(sp.is_verified, FALSE)        AS is_verified,
+        sa.activity_type,
+        sa.entity_type,
+        sa.entity_id,
+        sa.entity_slug,
+        sa.entity_title,
+        sa.entity_cover,
+        sa.metadata,
+        sa.like_count,
+        sa.comment_count,
+        sa.created_at
+    </sql>
+
+    <insert id="insertActivity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO social_activities
+        (user_id, activity_type, entity_type, entity_id, entity_slug,
+        entity_title, entity_cover, metadata, visibility,
+        like_count, comment_count, is_active, created_at)
+        VALUES
+        (#{userId}, #{activityType}, #{entityType}, #{entityId}, #{entitySlug},
+        #{entityTitle}, #{entityCover}, #{metadata, typeHandler=com.naskah.demo.typehandler.JsonMapTypeHandler}, #{visibility},
+        0, 0, TRUE, NOW())
+    </insert>
+
+    <update id="updateActivity">
+        UPDATE social_activities SET
+        visibility = #{visibility},
+        is_active  = #{isActive}
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteActivity">
+        UPDATE social_activities SET is_active = FALSE WHERE id = #{id}
+    </update>
+
+    <!-- ── FOLLOWING FEED ───────────────────────────────────────── -->
+    <select id="getFollowingFeed" resultMap="FeedItemRM">
+        <include refid="feedSelect"/>,
+        CASE WHEN #{userId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM activity_likes al
+        WHERE al.activity_id = sa.id AND al.user_id = #{userId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me
+        FROM social_activities sa
+        JOIN users u  ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.user_id IN (
+        SELECT following_id FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT}
+        )
+        AND sa.is_active = TRUE
+        AND (
+        sa.visibility = 'public'
+        OR (sa.visibility = 'followers' AND EXISTS(
+        SELECT 1 FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT} AND following_id = sa.user_id
+        ))
+        )
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- ── PUBLIC FEED ──────────────────────────────────────────── -->
+    <select id="getPublicFeed" resultMap="FeedItemRM">
+        <include refid="feedSelect"/>,
+        FALSE AS is_liked_by_me
+        FROM social_activities sa
+        JOIN users u  ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.is_active  = TRUE
+        AND sa.visibility = 'public'
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- ── USER PROFILE ACTIVITIES ──────────────────────────────── -->
+    <select id="getUserActivities" resultMap="FeedItemRM">
+        <include refid="feedSelect"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM activity_likes al
+        WHERE al.activity_id = sa.id AND al.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me
+        FROM social_activities sa
+        JOIN users u  ON u.id = sa.user_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
+        WHERE sa.user_id  = #{profileUserId}
+        AND sa.is_active = TRUE
+        AND (
+        sa.visibility = 'public'
+        OR (sa.visibility = 'followers' AND #{currentUserId, jdbcType=BIGINT} IS NOT NULL AND EXISTS(
+        SELECT 1 FROM user_follows
+        WHERE follower_id = #{currentUserId, jdbcType=BIGINT} AND following_id = #{profileUserId}
+        ))
+        OR sa.user_id = #{currentUserId, jdbcType=BIGINT}
+        )
+        ORDER BY sa.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countFollowingFeed" resultType="int">
+        SELECT COUNT(*) FROM social_activities sa
+        WHERE sa.user_id IN (SELECT following_id FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT})
+        AND sa.is_active  = TRUE
+        AND sa.visibility = 'public'
+    </select>
+
+    <!-- ── LIKES ────────────────────────────────────────────────── -->
+    <insert id="insertLike" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO activity_likes (activity_id, user_id, created_at)
+        VALUES (#{activityId}, #{userId}, NOW())
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM activity_likes
+        WHERE activity_id = #{activityId} AND user_id = #{userId}
+    </delete>
+
+    <select id="findLike" resultType="com.naskah.demo.model.entity.social.ActivityLike">
+        SELECT * FROM activity_likes
+        WHERE activity_id = #{activityId} AND user_id = #{userId}
+    </select>
+
+    <update id="incrementLikeCount">
+        UPDATE social_activities SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementLikeCount">
+        UPDATE social_activities SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
+    </update>
+
+    <!-- ── COMMENTS ─────────────────────────────────────────────── -->
+    <insert id="insertComment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO activity_comments
+        (activity_id, user_id, parent_id, content, is_deleted, created_at, updated_at)
+        VALUES
+        (#{activityId}, #{userId}, #{parentId}, #{content}, FALSE, NOW(), NOW())
+    </insert>
+
+    <update id="updateComment">
+        UPDATE activity_comments SET content = #{content}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteComment">
+        UPDATE activity_comments SET is_deleted = TRUE WHERE id = #{id}
+    </update>
+
+    <select id="findCommentById" resultType="com.naskah.demo.model.entity.social.ActivityComment">
+        SELECT * FROM activity_comments WHERE id = #{id}
+    </select>
+
+    <select id="findCommentsByActivity" resultMap="CommentRM">
+        SELECT
+        ac.id,
+        ac.activity_id,
+        ac.user_id,
+        u.username,
+        u.profile_picture_url AS user_photo,
+        ac.parent_id,
+        ac.content,
+        ac.created_at,
+        ac.updated_at,
+        (ac.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner
+        FROM activity_comments ac
+        JOIN users u ON u.id = ac.user_id
+        WHERE ac.activity_id = #{activityId}
+        AND ac.parent_id   IS NULL
+        AND ac.is_deleted  = FALSE
+        ORDER BY ac.created_at ASC
+    </select>
+
+    <update id="incrementCommentCount">
+        UPDATE social_activities SET comment_count = comment_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementCommentCount">
+        UPDATE social_activities
+        SET comment_count = GREATEST(0, comment_count - 1) WHERE id = #{id}
+    </update>
+
+    <!-- ── STATS ─────────────────────────────────────────────────── -->
+    <select id="countUserActivities" resultType="int">
+        SELECT COUNT(*) FROM social_activities WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+
+    <select id="countUserLikesReceived" resultType="int">
+        SELECT COALESCE(SUM(like_count), 0) FROM social_activities
+        WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+
+    <select id="countUserCommentsReceived" resultType="int">
+        SELECT COALESCE(SUM(comment_count), 0) FROM social_activities
+        WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+
+</mapper>

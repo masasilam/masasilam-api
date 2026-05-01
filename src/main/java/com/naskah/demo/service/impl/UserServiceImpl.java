@@ -61,34 +61,29 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public DataResponse<UserResponse> updateUser(Long userId, UpdateUserRequest request) {
-        log.info("Updating user with ID: {}", userId);
-
         User user = userMapper.findUserById(userId);
         if (user == null || !user.getIsActive()) {
             throw new DataNotFoundException();
         }
 
-        // Update user fields
-        if (request.getFullName() != null) {
-            user.setFullName(request.getFullName());
+        // Cek apakah username sudah dipakai user lain
+        if (request.getUsername() != null) {
+            User existingUser = userMapper.findUserByUsername(request.getUsername());
+            if (existingUser != null && !existingUser.getId().equals(userId)) {
+                throw new BadRequestException(); // atau buat UsernameAlreadyTakenException
+            }
+            user.setUsername(request.getUsername());
         }
-        if (request.getBio() != null) {
-            user.setBio(request.getBio());
-        }
-        if (request.getProfilePictureUrl() != null) {
-            user.setProfilePictureUrl(request.getProfilePictureUrl());
-        }
-        if (request.getEmailNotifications() != null) {
-            user.setEmailNotifications(request.getEmailNotifications());
-        }
+
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getBio() != null) user.setBio(request.getBio());
+        if (request.getProfilePictureUrl() != null) user.setProfilePictureUrl(request.getProfilePictureUrl());
+        if (request.getEmailNotifications() != null) user.setEmailNotifications(request.getEmailNotifications());
 
         user.setUpdatedAt(LocalDateTime.now());
         userMapper.updateUser(user);
 
-        UserResponse response = mapToUserResponse(user);
-
-        log.info("Successfully updated user: {}", user.getUsername());
-        return new DataResponse<>("success", "User updated successfully", HttpStatus.OK.value(), response);
+        return new DataResponse<>("success", "User updated successfully", HttpStatus.OK.value(), mapToUserResponse(user));
     }
 
     @Override

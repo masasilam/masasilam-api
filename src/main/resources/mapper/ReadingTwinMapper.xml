@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.social.ReadingTwinMapper">
+
+    <resultMap id="TwinResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingTwinResponse">
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="profilePictureUrl" column="profile_picture_url"/>
+        <result property="tagline" column="tagline"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="similarityScore" column="similarity_score"/>
+        <result property="commonCount" column="common_count"/>
+        <result property="isFollowing" column="is_following"/>
+    </resultMap>
+
+    <insert id="upsert">
+        INSERT INTO reading_twins (user_id_a, user_id_b, similarity_score, common_count, last_calculated)
+        VALUES (
+        LEAST(#{userIdA}, #{userIdB}),
+        GREATEST(#{userIdA}, #{userIdB}),
+        #{similarityScore}, #{commonCount}, NOW()
+        )
+        ON CONFLICT (user_id_a, user_id_b) DO UPDATE SET
+        similarity_score = EXCLUDED.similarity_score,
+        common_count     = EXCLUDED.common_count,
+        last_calculated  = NOW()
+    </insert>
+
+    <select id="findByUsers" resultType="com.naskah.demo.model.entity.social.ReadingTwin">
+        SELECT * FROM reading_twins
+        WHERE user_id_a = LEAST(#{userIdA}, #{userIdB})
+        AND user_id_b = GREATEST(#{userIdA}, #{userIdB})
+    </select>
+
+    <select id="findTwinsForUser" resultMap="TwinResponseRM">
+        SELECT
+        u.id AS user_id, u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        sp.tagline,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
+        rt.similarity_score,
+        rt.common_count,
+        CASE WHEN #{currentUserId} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM user_follows f WHERE f.follower_id = #{currentUserId} AND f.following_id = u.id)
+        ELSE FALSE END AS is_following
+        FROM reading_twins rt
+        JOIN users u ON u.id = CASE
+        WHEN rt.user_id_a = #{userId} THEN rt.user_id_b
+        ELSE rt.user_id_a
+        END
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        WHERE (rt.user_id_a = #{userId} OR rt.user_id_b = #{userId})
+        AND u.is_active = TRUE
+        AND rt.similarity_score > 0.1
+        ORDER BY rt.similarity_score DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countTwinsForUser" resultType="int">
+        SELECT COUNT(*) FROM reading_twins
+        WHERE (user_id_a = #{userId} OR user_id_b = #{userId}) AND similarity_score > 0.1
+    </select>
+
+    <select id="findUsersToCompare" resultType="long">
+        -- Users who read the same books/content as this user
+        SELECT DISTINCT rp2.user_id
+        FROM reading_progress rp1
+        JOIN reading_progress rp2
+        ON  rp2.book_id = rp1.book_id
+        AND rp2.user_id != #{userId}
+        AND rp2.percentage_completed >= 10
+        WHERE rp1.user_id = #{userId}
+        AND rp1.percentage_completed >= 10
+        UNION
+        SELECT DISTINCT rp4.user_id
+        FROM reading_progress rp3
+        JOIN reading_progress rp4
+        ON  rp4.zine_id = rp3.zine_id
+        AND rp4.user_id != #{userId}
+        AND rp4.percentage_completed >= 10
+        WHERE rp3.user_id = #{userId}
+        AND rp3.percentage_completed >= 10
+        LIMIT 500
+    </select>
+
+    <delete id="deleteStaleFor">
+        DELETE FROM reading_twins
+        WHERE (user_id_a = #{userId} OR user_id_b = #{userId})
+        AND last_calculated &lt; NOW() - INTERVAL '7 days'
+    </delete>
+
+</mapper>

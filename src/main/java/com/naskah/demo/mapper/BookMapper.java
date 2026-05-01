@@ -106,4 +106,8 @@ public interface BookMapper {
 
     String findLanguageNameByBookId(@Param("bookId") Long bookId);
     String findCopyrightStatusCodeByBookId(@Param("bookId") Long bookId);
+
+    boolean hasActionByUserAndBook(@Param("bookId") Long bookId,
+                                   @Param("userId") Long userId,
+                                   @Param("actionType") String actionType);
 }

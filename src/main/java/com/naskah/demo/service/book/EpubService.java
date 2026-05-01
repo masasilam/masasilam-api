@@ -3,21 +3,39 @@ package com.naskah.demo.service.book;
 import com.naskah.demo.model.dto.EpubProcessResult;
 import com.naskah.demo.model.entity.Book;
 import com.naskah.demo.model.entity.BookChapter;
+import com.naskah.demo.repository.ChapterRepository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
 
 public interface EpubService {
-    EpubProcessResult processEpubFile(MultipartFile epubFile, Book book) throws IOException;
 
-    BookChapter getChapter(Long bookId, Integer chapterNumber);
+    /**
+     * Proses EPUB baru — insert semua chapter.
+     *
+     * @param chapterRepository repository yang sesuai (book atau zine)
+     */
+    EpubProcessResult processEpubFile(
+            MultipartFile epubFile,
+            Book book,
+            ChapterRepository chapterRepository) throws IOException;
 
-    List<BookChapter> getAllChapters(Long bookId);
+    /**
+     * Proses EPUB untuk update — update chapter yang ada, insert yang baru, hapus yang hilang.
+     *
+     * @param chapterRepository repository yang sesuai (book atau zine)
+     */
+    EpubProcessResult processEpubFileForUpdate(
+            MultipartFile epubFile,
+            Book book,
+            ChapterRepository chapterRepository) throws IOException;
 
-    List<BookChapter> searchInBook(Long bookId, String query);
+    BookChapter getChapter(Long entityId, Integer chapterNumber, ChapterRepository chapterRepository);
 
-    void deleteChaptersByBookId(Long bookId);
+    List<BookChapter> getAllChapters(Long entityId, ChapterRepository chapterRepository);
 
-    EpubProcessResult processEpubFileForUpdate(MultipartFile newFile, Book existingBook) throws IOException;
+    List<BookChapter> searchInEntity(Long entityId, String query, ChapterRepository chapterRepository);
+
+    void deleteChaptersByEntityId(Long entityId, ChapterRepository chapterRepository);
 }

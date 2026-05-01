@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- ============================================================
+     SocialProfileMapper.xml
+     ============================================================ -->
+<mapper namespace="com.naskah.demo.mapper.social.SocialProfileMapper">
+
+    <resultMap id="SocialProfileRM" type="com.naskah.demo.model.entity.social.UserSocialProfile">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="displayName" column="display_name"/>
+        <result property="tagline" column="tagline"/>
+        <result property="location" column="location"/>
+        <result property="websiteUrl" column="website_url"/>
+        <result property="socialLinks" column="social_links" typeHandler="com.naskah.demo.typehandler.JsonStringTypeHandler"/>
+        <result property="readingVisibility" column="reading_visibility"/>
+        <result property="annotationVisibility" column="annotation_visibility"/>
+        <result property="profileTheme" column="profile_theme"/>
+        <result property="totalFollowers" column="total_followers"/>
+        <result property="totalFollowing" column="total_following"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="PublicProfileRM" type="com.naskah.demo.model.dto.response.social.UserPublicProfileResponse">
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="profilePictureUrl" column="profile_picture_url"/>
+        <result property="tagline" column="tagline"/>
+        <result property="location" column="location"/>
+        <result property="websiteUrl" column="website_url"/>
+        <result property="socialLinks" column="social_links" typeHandler="com.naskah.demo.typehandler.JsonStringTypeHandler"/>
+        <result property="readingVisibility" column="reading_visibility"/>
+        <result property="profileTheme" column="profile_theme"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="totalFollowers" column="total_followers"/>
+        <result property="totalFollowing" column="total_following"/>
+        <result property="totalBooksRead" column="total_books_read"/>
+        <result property="readingStreakDays" column="reading_streak_days"/>
+        <result property="contributedBooksCount" column="contributed_books_count"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="experiencePoints" column="experience_points"/>
+        <result property="level" column="level"/>
+        <result property="isFollowing" column="is_following"/>
+        <result property="isFollowedBy" column="is_followed_by"/>
+        <result property="memberSince" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="FollowerItemRM" type="com.naskah.demo.model.dto.response.social.FollowerItemResponse">
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="displayName" column="display_name"/>
+        <result property="profilePictureUrl" column="profile_picture_url"/>
+        <result property="tagline" column="tagline"/>
+        <result property="isVerified" column="is_verified"/>
+        <result property="isFollowing" column="is_following"/>
+        <result property="followedAt" column="followed_at"/>
+    </resultMap>
+
+    <select id="findByUserId" resultMap="SocialProfileRM">
+        SELECT * FROM user_social_profiles WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_social_profiles
+        (user_id, display_name, tagline, location, website_url, social_links,
+        reading_visibility, annotation_visibility, profile_theme,
+        total_followers, total_following, is_verified, created_at, updated_at)
+        VALUES
+        (#{userId}, #{displayName}, #{tagline}, #{location}, #{websiteUrl},
+        #{socialLinks, typeHandler=com.naskah.demo.typehandler.JsonStringTypeHandler}::jsonb,
+        #{readingVisibility}, #{annotationVisibility},
+        #{profileTheme}, 0, 0, FALSE, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE user_social_profiles SET
+        display_name         = #{displayName},
+        tagline              = #{tagline},
+        location             = #{location},
+        website_url          = #{websiteUrl},
+        social_links         = #{socialLinks, typeHandler=com.naskah.demo.typehandler.JsonStringTypeHandler}::jsonb,
+        reading_visibility   = #{readingVisibility},
+        annotation_visibility = #{annotationVisibility},
+        profile_theme        = #{profileTheme},
+        updated_at           = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <select id="getPublicProfile" resultMap="PublicProfileRM">
+        SELECT
+        u.id                        AS user_id,
+        u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        sp.tagline,
+        sp.location,
+        sp.website_url,
+        sp.social_links,
+        sp.reading_visibility,
+        sp.profile_theme,
+        sp.is_verified,
+        COALESCE(sp.total_followers, 0) AS total_followers,
+        COALESCE(sp.total_following, 0) AS total_following,
+        COALESCE(u.total_books_read, 0) AS total_books_read,
+        COALESCE(u.reading_streak_days, 0) AS reading_streak_days,
+        COALESCE(u.contributed_books_count, 0) AS contributed_books_count,
+        COALESCE(u.average_rating, 0.0) AS average_rating,
+        COALESCE(u.experience_points, 0) AS experience_points,
+        COALESCE(u.level, '1') AS level,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM user_follows
+        WHERE follower_id = #{currentUserId, jdbcType=BIGINT} AND following_id = u.id)
+        ELSE FALSE END AS is_following,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM user_follows
+        WHERE follower_id = u.id AND following_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_followed_by,
+        u.created_at
+        FROM users u
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        WHERE u.id = #{userId}
+        AND u.is_active = TRUE
+    </select>
+
+    <select id="findFollowers" resultMap="FollowerItemRM">
+        SELECT
+        u.id            AS user_id,
+        u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        sp.tagline,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM user_follows f2
+        WHERE f2.follower_id = #{currentUserId, jdbcType=BIGINT} AND f2.following_id = u.id)
+        ELSE FALSE END AS is_following,
+        uf.created_at   AS followed_at
+        FROM user_follows uf
+        JOIN users u ON u.id = uf.follower_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        WHERE uf.following_id = #{userId}
+        AND u.is_active = TRUE
+        ORDER BY uf.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findFollowing" resultMap="FollowerItemRM">
+        SELECT
+        u.id            AS user_id,
+        u.username,
+        COALESCE(sp.display_name, u.full_name) AS display_name,
+        u.profile_picture_url,
+        sp.tagline,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM user_follows f2
+        WHERE f2.follower_id = #{currentUserId, jdbcType=BIGINT} AND f2.following_id = u.id)
+        ELSE FALSE END AS is_following,
+        uf.created_at   AS followed_at
+        FROM user_follows uf
+        JOIN users u ON u.id = uf.following_id
+        LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
+        WHERE uf.follower_id = #{userId}
+        AND u.is_active = TRUE
+        ORDER BY uf.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countFollowers" resultType="int">
+        SELECT COUNT(*) FROM user_follows WHERE following_id = #{userId}
+    </select>
+
+    <select id="countFollowing" resultType="int">
+        SELECT COUNT(*) FROM user_follows WHERE follower_id = #{userId}
+    </select>
+
+</mapper>

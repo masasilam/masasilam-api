@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -52,4 +53,6 @@ public interface EpubAnnotationMapper {
 
     // Untuk Library/Lainnya (Tanpa Pagination)
     List<EpubAnnotation> findByUser(@Param("userId") Long userId);
+
+    List<EpubAnnotation> findByUserAndZine(@Param("userId") Long userId, @Param("zineId") Long zineId);
 }

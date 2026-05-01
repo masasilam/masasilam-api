@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.naskah.demo.mapper.ZineReadingProgressMapper">
+
+    <resultMap id="ZineReadingProgressResultMap" type="com.naskah.demo.model.entity.ZineReadingProgress">
+        <id     property="id"                  column="id"/>
+        <result property="userId"              column="user_id"/>
+        <result property="zineId"              column="zine_id"/>
+        <result property="currentPosition"     column="current_position"/>
+        <result property="currentPage"         column="current_page"/>
+        <result property="totalPages"          column="total_pages"/>
+        <result property="percentageCompleted" column="percentage_completed"/>
+        <result property="lastReadAt"          column="last_read_at"/>
+        <result property="createdAt"           column="created_at"/>
+        <result property="updatedAt"           column="updated_at"/>
+    </resultMap>
+
+    <!-- ── INSERT ──────────────────────────────────────────────────────────── -->
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO zine_reading_progress (
+        user_id, zine_id, current_position,
+        current_page, total_pages, percentage_completed,
+        last_read_at, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{zineId}, #{currentPosition},
+        #{currentPage}, #{totalPages}, #{percentageCompleted},
+        #{lastReadAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ── UPDATE (upsert logic ditangani di service) ──────────────────────── -->
+
+    <update id="update">
+        UPDATE zine_reading_progress
+        SET current_position     = #{currentPosition},
+        current_page         = #{currentPage},
+        total_pages          = #{totalPages},
+        percentage_completed = #{percentageCompleted},
+        last_read_at         = #{lastReadAt},
+        updated_at           = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ── FIND BY USER AND ZINE ───────────────────────────────────────────── -->
+
+    <select id="findByUserAndZine" resultMap="ZineReadingProgressResultMap">
+        SELECT * FROM zine_reading_progress
+        WHERE user_id = #{userId}
+        AND zine_id = #{zineId}
+    </select>
+
+    <!-- ── ALL PROGRESS FOR USER (dashboard stats) ────────────────────────── -->
+
+    <select id="findAllByUser" resultMap="ZineReadingProgressResultMap">
+        SELECT * FROM zine_reading_progress
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

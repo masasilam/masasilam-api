@@ -44,11 +44,9 @@
     </select>
 
     <!-- Insert genre -->
-    <insert id="insertGenre" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO genres
-        (name, slug, description, created_at)
-        VALUES
-        (#{name}, #{slug}, #{description}, #{createdAt}, #{updatedAt})
+    <insert id="insertGenre" parameterType="com.naskah.demo.model.entity.Genre" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO genres (name, slug, description, color_hex, icon_name, is_fiction)
+        VALUES (#{name}, #{slug}, #{description}, #{colorHex}, #{iconName}, #{isFiction})
     </insert>
 
     <!-- Update genre -->

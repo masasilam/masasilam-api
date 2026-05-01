@@ -51,4 +51,18 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "socialTaskExecutor")
+    public Executor socialTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("social-async-");
+        executor.setRejectedExecutionHandler(
+                (r, e) -> {} // silently discard if queue full — notifications are non-critical
+        );
+        executor.initialize();
+        return executor;
+    }
 }

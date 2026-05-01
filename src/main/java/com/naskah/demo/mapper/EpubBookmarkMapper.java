@@ -38,4 +38,6 @@ public interface EpubBookmarkMapper {
             @Param("userId") Long userId,
             @Param("offset") int offset,
             @Param("limit")  int limit);
+
+    List<EpubBookmark> findByUserAndZine(@Param("userId") Long userId, @Param("zineId") Long zineId);
 }

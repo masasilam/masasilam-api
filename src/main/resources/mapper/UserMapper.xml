@@ -131,10 +131,10 @@
         ORDER BY created_at DESC
     </select>
 
-    <!-- New Queries -->
     <update id="updateUser" parameterType="com.naskah.demo.model.entity.User">
         UPDATE users
         <set>
+            <if test="username != null">username = #{username},</if>
             <if test="fullName != null">full_name = #{fullName},</if>
             <if test="bio != null">bio = #{bio},</if>
             <if test="profilePictureUrl != null">profile_picture_url = #{profilePictureUrl},</if>
@@ -161,5 +161,42 @@
         DELETE FROM user_roles
         WHERE user_id = #{userId}
     </delete>
+
+    <select id="findActiveUserIds" resultType="long">
+        SELECT DISTINCT u.id
+        FROM users u
+        JOIN reading_sessions rs ON rs.user_id = u.id
+        WHERE u.is_active = TRUE
+        AND rs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval
+        UNION
+        SELECT DISTINCT u2.id
+        FROM users u2
+        JOIN zine_reading_sessions zrs ON zrs.user_id = u2.id
+        WHERE u2.is_active = TRUE
+        AND zrs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval
+    </select>
+
+<!--    <select id="findActiveUserIds" resultType="long">-->
+<!--        SELECT DISTINCT u.id-->
+<!--        FROM users u-->
+<!--        WHERE u.is_active = TRUE-->
+<!--        AND (-->
+<!--        EXISTS(-->
+<!--        SELECT 1 FROM reading_sessions rs-->
+<!--        WHERE rs.user_id = u.id-->
+<!--        AND rs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval-->
+<!--        )-->
+<!--        OR EXISTS(-->
+<!--        SELECT 1 FROM zine_reading_sessions zrs-->
+<!--        WHERE zrs.user_id = u.id-->
+<!--        AND zrs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval-->
+<!--        )-->
+<!--        )-->
+<!--        ORDER BY u.id-->
+<!--    </select>-->
+
+<!--    <select id="findUserById" resultType="com.naskah.demo.model.entity.User">-->
+<!--        SELECT * FROM users WHERE id = #{userId} AND is_active = TRUE-->
+<!--    </select>-->
 
 </mapper>

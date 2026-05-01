@@ -11,6 +11,7 @@ import com.naskah.demo.model.dto.*;
 import com.naskah.demo.model.dto.request.*;
 import com.naskah.demo.model.dto.response.*;
 import com.naskah.demo.model.entity.*;
+import com.naskah.demo.repository.ChapterRepository;
 import com.naskah.demo.service.book.BookService;
 import com.naskah.demo.service.book.EpubService;
 import com.naskah.demo.util.HashUtil;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -56,6 +58,7 @@ public class BookServiceImpl implements BookService {
     private final GenreMapper genreMapper;
     private final HeaderHolder headerHolder;
     private final EpubService epubService;
+    private final ChapterRepository bookChapterRepository;
     private final FileUtil fileUtil;
     private static final String SUCCESS = "Success";
 
@@ -161,7 +164,7 @@ public class BookServiceImpl implements BookService {
             bookMapper.insertBook(book);
             log.info("Book created with ID: {} and slug: {}", book.getId(), book.getSlug());
 
-            EpubProcessResult result = epubService.processEpubFile(request.getBookFile(), book);
+            EpubProcessResult result = epubService.processEpubFile(request.getBookFile(), book, bookChapterRepository);
             log.info("EPUB processed: {} chapters, {} words", result.getTotalChapters(), result.getTotalWords());
 
             book.setTotalWord(result.getTotalWords());
@@ -281,7 +284,7 @@ public class BookServiceImpl implements BookService {
         existingBook.setUpdatedAt(epubMeta.getUpdatedAt());
 
         // 6. PROCESS NEW EPUB FILE (UPDATE MODE)
-        EpubProcessResult result = epubService.processEpubFileForUpdate(newFile, existingBook);
+        EpubProcessResult result = epubService.processEpubFileForUpdate(newFile, existingBook, bookChapterRepository);
         log.info("New EPUB processed: {} chapters, {} words", result.getTotalChapters(), result.getTotalWords());
 
         existingBook.setTotalWord(result.getTotalWords());
@@ -461,50 +464,41 @@ public class BookServiceImpl implements BookService {
         try {
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
-
-            // Get user ID jika login
             Long userId = getCurrentUserId();
             String userType = userId != null ? "authenticated (userId: " + userId + ")" : "guest";
-
             String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
             log.info("Checking view for slug: {}, User: {}, IP: {}, Hash: {}", slug, userType, ipAddress, viewerHash);
 
-            boolean hasViewed = bookMapper.hasActionByHash(viewerHash, "view");
+            Long bookId = bookMapper.getBookIdBySlug(slug);
+            if (bookId == null) throw new DataNotFoundException();
+
+            boolean hasViewed = userId != null
+                    ? bookMapper.hasActionByUserAndBook(bookId, userId, "view")
+                    : bookMapper.hasActionByHash(viewerHash, "view");
 
             if (!hasViewed) {
-                bookMapper.incrementViewCountBySlug(slug);
-
-                Long bookId = bookMapper.getBookIdBySlug(slug);
-
-                if (bookId != null) {
-                    BookView bookView = BookView.builder()
-                            .bookId(bookId)
-                            .slug(slug)
-                            .userId(userId)
-                            .ipAddress(ipAddress)
-                            .userAgent(userAgent)
-                            .viewerHash(viewerHash)
-                            .actionType("view")
-                            .build();
-
-                    bookMapper.insertAction(bookView);
+                try {
+                    bookMapper.insertAction(BookView.builder()
+                            .bookId(bookId).slug(slug).userId(userId)
+                            .ipAddress(ipAddress).userAgent(userAgent)
+                            .viewerHash(viewerHash).actionType("view")
+                            .build());
+                    bookMapper.incrementViewCountBySlug(slug);
                     log.info("✓ New view recorded for slug: {} by {}", slug, userType);
-                } else {
-                    log.warn("Book ID not found for slug: {}", slug);
+                } catch (DuplicateKeyException e) {
+                    log.warn("Race condition on view insert for slug: {} by {} — skipping", slug, userType);
                 }
             } else {
-                log.info("✗ Duplicate view detected for slug: {} by {} - NOT incrementing",
-                        slug, userType);
+                log.info("✗ Duplicate view detected for slug: {} by {} - NOT incrementing", slug, userType);
             }
 
             BookResponse data = bookMapper.getBookDetailBySlug(slug);
-
             if (data != null) {
                 return new DataResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
-            } else {
-                throw new DataNotFoundException();
             }
+            throw new DataNotFoundException();
+
         } catch (DataNotFoundException e) {
             throw e;
         } catch (Exception e) {
@@ -622,23 +616,28 @@ public class BookServiceImpl implements BookService {
             String fileUrl = book.getFileUrl();
             if (fileUrl == null || fileUrl.isEmpty()) throw new DataNotFoundException();
 
-            // Semua logika tracking tetap sama persis
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
             Long userId = getCurrentUserId();
             String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
-            boolean hasDownloaded = bookMapper.hasActionByHash(viewerHash, "download");
+            boolean hasDownloaded = userId != null
+                    ? bookMapper.hasActionByUserAndBook(book.getId(), userId, "download")
+                    : bookMapper.hasActionByHash(viewerHash, "download");
+
             if (!hasDownloaded) {
-                bookMapper.incrementDownloadCount(book.getId());
-                bookMapper.insertAction(BookView.builder()
-                        .bookId(book.getId()).slug(slug).userId(userId)
-                        .ipAddress(ipAddress).userAgent(userAgent)
-                        .viewerHash(viewerHash).actionType("download")
-                        .build());
+                try {
+                    bookMapper.insertAction(BookView.builder()
+                            .bookId(book.getId()).slug(slug).userId(userId)
+                            .ipAddress(ipAddress).userAgent(userAgent)
+                            .viewerHash(viewerHash).actionType("download")
+                            .build());
+                    bookMapper.incrementDownloadCount(book.getId());
+                } catch (DuplicateKeyException e) {
+                    log.warn("Race condition on download insert for slug: {} — skipping", slug);
+                }
             }
 
-            // Log user activity (sama seperti sebelumnya)
             String username = headerHolder.getUsername();
             if (username != null && !username.isEmpty()) {
                 User user = userMapper.findUserByUsername(username);
@@ -667,7 +666,6 @@ public class BookServiceImpl implements BookService {
                 }
             }
 
-            // ✅ Return URL, bukan file — biarkan client download langsung dari Cloudinary
             return ResponseEntity.ok(Map.of(
                     "downloadUrl", fileUrl,
                     "filename", book.getTitle() != null
@@ -843,5 +841,9 @@ public class BookServiceImpl implements BookService {
             log.debug("No authenticated user found, treating as guest");
             return null;
         }
+    }
+
+    public void deleteChapters(Long bookId) {
+        epubService.deleteChaptersByEntityId(bookId, bookChapterRepository);
     }
 }

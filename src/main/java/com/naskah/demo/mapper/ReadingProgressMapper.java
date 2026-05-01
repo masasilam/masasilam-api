@@ -40,4 +40,6 @@ public interface ReadingProgressMapper {
      * WHERE id = #{id}
      */
     void updateTimeOnly(ReadingProgress progress);
+
+    ReadingProgress findByUserAndZine(@Param("userId") Long userId, @Param("zineId") Long zineId);
 }
