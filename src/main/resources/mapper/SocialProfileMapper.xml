@@ -5,16 +5,16 @@
 <!-- ============================================================
      SocialProfileMapper.xml
      ============================================================ -->
-<mapper namespace="com.naskah.demo.mapper.social.SocialProfileMapper">
+<mapper namespace="com.masasilam.app.mapper.social.SocialProfileMapper">
 
-    <resultMap id="SocialProfileRM" type="com.naskah.demo.model.entity.social.UserSocialProfile">
+    <resultMap id="SocialProfileRM" type="com.masasilam.app.model.entity.social.UserSocialProfile">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="displayName" column="display_name"/>
         <result property="tagline" column="tagline"/>
         <result property="location" column="location"/>
         <result property="websiteUrl" column="website_url"/>
-        <result property="socialLinks" column="social_links" typeHandler="com.naskah.demo.typehandler.JsonStringTypeHandler"/>
+        <result property="socialLinks" column="social_links" typeHandler="com.masasilam.app.typehandler.JsonStringTypeHandler"/>
         <result property="readingVisibility" column="reading_visibility"/>
         <result property="annotationVisibility" column="annotation_visibility"/>
         <result property="profileTheme" column="profile_theme"/>
@@ -25,7 +25,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="PublicProfileRM" type="com.naskah.demo.model.dto.response.social.UserPublicProfileResponse">
+    <resultMap id="PublicProfileRM" type="com.masasilam.app.model.dto.response.social.UserPublicProfileResponse">
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
         <result property="displayName" column="display_name"/>
@@ -33,7 +33,7 @@
         <result property="tagline" column="tagline"/>
         <result property="location" column="location"/>
         <result property="websiteUrl" column="website_url"/>
-        <result property="socialLinks" column="social_links" typeHandler="com.naskah.demo.typehandler.JsonStringTypeHandler"/>
+        <result property="socialLinks" column="social_links" typeHandler="com.masasilam.app.typehandler.JsonStringTypeHandler"/>
         <result property="readingVisibility" column="reading_visibility"/>
         <result property="profileTheme" column="profile_theme"/>
         <result property="isVerified" column="is_verified"/>
@@ -50,7 +50,7 @@
         <result property="memberSince" column="created_at"/>
     </resultMap>
 
-    <resultMap id="FollowerItemRM" type="com.naskah.demo.model.dto.response.social.FollowerItemResponse">
+    <resultMap id="FollowerItemRM" type="com.masasilam.app.model.dto.response.social.FollowerItemResponse">
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
         <result property="displayName" column="display_name"/>
@@ -72,22 +72,22 @@
         total_followers, total_following, is_verified, created_at, updated_at)
         VALUES
         (#{userId}, #{displayName}, #{tagline}, #{location}, #{websiteUrl},
-        #{socialLinks, typeHandler=com.naskah.demo.typehandler.JsonStringTypeHandler}::jsonb,
+        #{socialLinks, typeHandler=com.masasilam.app.typehandler.JsonStringTypeHandler}::jsonb,
         #{readingVisibility}, #{annotationVisibility},
         #{profileTheme}, 0, 0, FALSE, NOW(), NOW())
     </insert>
 
     <update id="update">
         UPDATE user_social_profiles SET
-        display_name         = #{displayName},
-        tagline              = #{tagline},
-        location             = #{location},
-        website_url          = #{websiteUrl},
-        social_links         = #{socialLinks, typeHandler=com.naskah.demo.typehandler.JsonStringTypeHandler}::jsonb,
-        reading_visibility   = #{readingVisibility},
+        display_name = #{displayName},
+        tagline = #{tagline},
+        location = #{location},
+        website_url = #{websiteUrl},
+        social_links = #{socialLinks, typeHandler=com.masasilam.app.typehandler.JsonStringTypeHandler}::jsonb,
+        reading_visibility = #{readingVisibility},
         annotation_visibility = #{annotationVisibility},
-        profile_theme        = #{profileTheme},
-        updated_at           = NOW()
+        profile_theme = #{profileTheme},
+        updated_at = NOW()
         WHERE user_id = #{userId}
     </update>
 

@@ -1,0 +1,7 @@
+package com.masasilam.app.exception.custom;
+
+public class DatabaseQueryException extends RuntimeException {
+    public DatabaseQueryException() {
+        super();
+    }
+}

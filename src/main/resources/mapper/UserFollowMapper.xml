@@ -5,7 +5,7 @@
 <!-- ============================================================
      UserFollowMapper.xml
      ============================================================ -->
-<mapper namespace="com.naskah.demo.mapper.social.UserFollowMapper">
+<mapper namespace="com.masasilam.app.mapper.social.UserFollowMapper">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_follows (follower_id, following_id, created_at)
@@ -19,7 +19,7 @@
     </delete>
 
     <select id="findByFollowerAndFollowing"
-            resultType="com.naskah.demo.model.entity.social.UserFollow">
+            resultType="com.masasilam.app.model.entity.social.UserFollow">
         SELECT * FROM user_follows
         WHERE follower_id = #{followerId} AND following_id = #{followingId}
     </select>

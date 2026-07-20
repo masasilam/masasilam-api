@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.ProjectMemberMapper">
+<mapper namespace="com.masasilam.app.mapper.ProjectMemberMapper">
 
-    <select id="getProjectMemberByProjectIdAndUserId" resultType="com.naskah.demo.model.entity.ProjectMember">
+    <select id="getProjectMemberByProjectIdAndUserId" resultType="com.masasilam.app.model.entity.ProjectMember">
         SELECT * FROM project_members
         WHERE project_id = #{projectId}
         AND user_id = #{userId}
     </select>
 
-    <select id="getProjectMembersByProjectIdAndRole" resultType="com.naskah.demo.model.entity.ProjectMember">
+    <select id="getProjectMembersByProjectIdAndRole" resultType="com.masasilam.app.model.entity.ProjectMember">
         SELECT * FROM project_members
         WHERE project_id = #{projectId}
         AND role = #{role}
         AND is_active = true
     </select>
 
-    <insert id="insertProjectMember" parameterType="com.naskah.demo.model.entity.ProjectMember" useGeneratedKeys="true"
+    <insert id="insertProjectMember" parameterType="com.masasilam.app.model.entity.ProjectMember" useGeneratedKeys="true"
             keyProperty="id">
         INSERT INTO project_members (
         project_id,
@@ -41,7 +41,7 @@
     </select>
 
     <!-- Get project member role breakdown -->
-    <select id="getProjectMemberRoleBreakdown" resultType="com.naskah.demo.model.dto.response.MemberRoleSummary">
+    <select id="getProjectMemberRoleBreakdown" resultType="com.masasilam.app.model.dto.response.MemberRoleSummary">
         SELECT
         role,
         CASE
@@ -61,7 +61,7 @@
     </select>
 
     <!-- Get user project memberships -->
-    <select id="getUserProjectMemberships" resultType="com.naskah.demo.model.dto.response.ProjectMembershipResponse">
+    <select id="getUserProjectMemberships" resultType="com.masasilam.app.model.dto.response.ProjectMembershipResponse">
         SELECT
         pm.project_id as projectId,
         p.title as projectTitle,

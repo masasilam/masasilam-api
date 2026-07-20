@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.BookMapper">
+<mapper namespace="com.masasilam.app.mapper.BookMapper">
 
     <!-- ══════════════════════════════════════════════════════════
          BOOK CREATION
@@ -12,8 +12,7 @@
         SELECT COUNT(*) FROM books WHERE slug = #{slug}
     </select>
 
-    <insert id="insertBook" parameterType="com.naskah.demo.model.entity.Book"
-            useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertBook" parameterType="com.masasilam.app.model.entity.Book" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO books (
         title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
@@ -21,7 +20,7 @@
         total_word, total_pages, estimated_read_time,
         copyright_status_id, view_count, read_count, download_count,
         is_featured, is_active, published_at, category,
-        source, created_at, updated_at
+        source, first_published, first_publisher, created_at, updated_at
         ) VALUES (
         #{title}, #{slug}, #{subtitle}, #{seriesId}, #{seriesOrder}, #{edition},
         #{publicationYear}, #{publisher}, #{languageId}, #{description},
@@ -29,7 +28,7 @@
         #{totalWord}, #{totalPages}, #{estimatedReadTime},
         #{copyrightStatusId}, #{viewCount}, #{readCount}, #{downloadCount},
         #{isFeatured}, #{isActive}, #{publishedAt}, #{category},
-        #{source}, #{createdAt}, #{updatedAt}
+        #{source}, #{firstPublished}, #{firstPublisher}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -57,11 +56,11 @@
          BOOK RETRIEVAL
     ══════════════════════════════════════════════════════════ -->
 
-    <select id="findById" resultType="com.naskah.demo.model.entity.Book">
+    <select id="findById" resultType="com.masasilam.app.model.entity.Book">
         SELECT * FROM books WHERE id = #{id}
     </select>
 
-    <select id="findBySlug" resultType="com.naskah.demo.model.entity.Book">
+    <select id="findBySlug" resultType="com.masasilam.app.model.entity.Book">
         SELECT
         id, title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
@@ -75,11 +74,11 @@
         WHERE slug = #{slug}
     </select>
 
-    <select id="findBookBySlug" resultType="com.naskah.demo.model.entity.Book">
+    <select id="findBookBySlug" resultType="com.masasilam.app.model.entity.Book">
         SELECT * FROM books WHERE slug = #{slug}
     </select>
 
-    <select id="getDetailEbook" resultType="com.naskah.demo.model.entity.Book">
+    <select id="getDetailEbook" resultType="com.masasilam.app.model.entity.Book">
         SELECT
         id, title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
@@ -96,7 +95,7 @@
         SELECT id FROM books WHERE slug = #{slug}
     </select>
 
-    <select id="findAllBooksForSitemap" resultType="com.naskah.demo.model.entity.Book">
+    <select id="findAllBooksForSitemap" resultType="com.masasilam.app.model.entity.Book">
         SELECT id, title, slug, cover_image_url, updated_at, created_at, is_active
         FROM books
         WHERE is_active = true
@@ -126,7 +125,7 @@
          BOOK DETAIL RESPONSE
     ══════════════════════════════════════════════════════════ -->
 
-    <select id="getBookDetailBySlug" resultType="com.naskah.demo.model.dto.response.BookResponse">
+    <select id="getBookDetailBySlug" resultType="com.masasilam.app.model.dto.response.BookResponse">
         SELECT DISTINCT
         b.id,
         b.title,
@@ -151,6 +150,11 @@
         b.series_id,
         b.series_order,
         b.source,
+        b.first_published,
+        b.first_publisher,
+        bs.name                 AS series_name,
+        bs.slug                 AS series_slug,
+        bs.description          AS series_description,
         cs.name                 AS copyright_status,
         b.published_at,
         b.category,
@@ -186,6 +190,7 @@
         FROM books b
         JOIN languages l           ON b.language_id         = l.id
         JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN book_series bs   ON b.series_id           = bs.id
         LEFT JOIN (
         SELECT
         book_id,
@@ -298,7 +303,7 @@
         </where>
     </sql>
 
-    <select id="getBookListWithAdvancedFilters" resultType="com.naskah.demo.model.dto.response.BookResponse">
+    <select id="getBookListWithAdvancedFilters" resultType="com.masasilam.app.model.dto.response.BookResponse">
         SELECT b.id, b.title, b.slug, b.subtitle, b.edition, b.cover_image_url, b.publisher, b.publication_year, b.file_url, b.file_format, b.file_size, b.total_pages, b.description, b.estimated_read_time, l.name AS language, b.total_word, b.difficulty_level, b.view_count, b.read_count, b.download_count, b.series_id, b.series_order, b.source, cs.name AS copyright_status, b.published_at, b.category, b.created_at, b.updated_at, b.is_active, b.is_featured,
         (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM book_authors ba JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id) AS author_names,
         (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name) FROM book_authors ba JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id) AS author_slugs,
@@ -336,7 +341,7 @@
     </select>
 
     <select id="getBookListWithFilters"
-            resultType="com.naskah.demo.model.dto.response.BookResponse">
+            resultType="com.masasilam.app.model.dto.response.BookResponse">
         SELECT DISTINCT
         b.id, b.title, b.slug, b.edition, b.cover_image_url,
         b.publisher, b.publication_year, b.file_url,
@@ -420,11 +425,13 @@
          BOOK UPDATE / DELETE
     ══════════════════════════════════════════════════════════ -->
 
-    <update id="updateBook" parameterType="com.naskah.demo.model.entity.Book">
+    <update id="updateBook" parameterType="com.masasilam.app.model.entity.Book">
         UPDATE books SET
         title                = #{title},
         slug                 = #{slug},
         subtitle             = #{subtitle},
+        series_id            = #{seriesId},
+        series_order         = #{seriesOrder},
         edition              = #{edition},
         publication_year     = #{publicationYear},
         publisher            = #{publisher},
@@ -447,6 +454,8 @@
         source               = #{source},
         epub_generated_at    = #{epubGeneratedAt},
         file_url_archive     = #{fileUrlArchive},
+        first_published      = #{firstPublished},
+        first_publisher      = #{firstPublisher},
         file_url             = #{fileUrl},
         updated_at           = CURRENT_TIMESTAMP
         WHERE id = #{id}
@@ -480,13 +489,13 @@
          AUTHORS
     ══════════════════════════════════════════════════════════ -->
 
-    <select id="findAuthorsByBookId" resultType="com.naskah.demo.model.entity.Author">
+    <select id="findAuthorsByBookId" resultType="com.masasilam.app.model.entity.Author">
         SELECT a.* FROM authors a
         INNER JOIN book_authors ba ON a.id = ba.author_id
         WHERE ba.book_id = #{bookId}
     </select>
 
-    <select id="getBookAuthors" resultType="com.naskah.demo.model.entity.Author">
+    <select id="getBookAuthors" resultType="com.masasilam.app.model.entity.Author">
         SELECT a.* FROM authors a
         JOIN book_authors ba ON a.id = ba.author_id
         WHERE ba.book_id = #{bookId}
@@ -503,13 +512,13 @@
          GENRES
     ══════════════════════════════════════════════════════════ -->
 
-    <select id="getBookGenres" resultType="com.naskah.demo.model.entity.Genre">
+    <select id="getBookGenres" resultType="com.masasilam.app.model.entity.Genre">
         SELECT g.* FROM genres g
         JOIN book_genres bg ON g.id = bg.genre_id
         WHERE bg.book_id = #{bookId}
     </select>
 
-    <select id="findGenresByBookId" resultType="com.naskah.demo.model.entity.Genre">
+    <select id="findGenresByBookId" resultType="com.masasilam.app.model.entity.Genre">
         SELECT g.* FROM genres g
         JOIN book_genres bg ON g.id = bg.genre_id
         WHERE bg.book_id = #{bookId}
@@ -526,7 +535,7 @@
          CONTRIBUTORS
     ══════════════════════════════════════════════════════════ -->
 
-    <select id="findContributorsByBookId" resultType="com.naskah.demo.model.entity.Contributor">
+    <select id="findContributorsByBookId" resultType="com.masasilam.app.model.entity.Contributor">
         SELECT c.* FROM contributors c
         JOIN book_contributors bc ON c.id = bc.contributor_id
         WHERE bc.book_id = #{bookId}
@@ -600,7 +609,7 @@
     ══════════════════════════════════════════════════════════ -->
 
     <select id="getRecommendations"
-            resultType="com.naskah.demo.model.dto.response.BookRecommendationResponse">
+            resultType="com.masasilam.app.model.dto.response.BookRecommendationResponse">
         SELECT b.id, b.title, b.slug, b.cover_image_url,
         a.name AS author_name, g.name AS genre,
         COALESCE(AVG(br.rating), 0) AS average_rating,
@@ -624,7 +633,7 @@
         LIMIT #{limit}
     </select>
 
-    <select id="findBooksByGenreAndUser" resultType="com.naskah.demo.model.entity.Book">
+    <select id="findBooksByGenreAndUser" resultType="com.masasilam.app.model.entity.Book">
         SELECT DISTINCT b.* FROM books b
         JOIN book_genres    bg ON b.id = bg.book_id
         JOIN genres         g  ON bg.genre_id = g.id
@@ -656,4 +665,83 @@
         )
     </select>
 
+    <select id="getBooksBySeriesSlug" resultType="com.masasilam.app.model.dto.response.BookResponse">
+        SELECT DISTINCT
+        b.id,
+        b.title,
+        b.slug,
+        b.subtitle,
+        b.edition,
+        b.cover_image_url,
+        b.publisher,
+        b.publication_year,
+        b.file_url,
+        b.file_format,
+        b.file_size,
+        b.total_pages,
+        b.description,
+        b.estimated_read_time,
+        l.name AS language,
+        b.total_word,
+        b.difficulty_level,
+        b.view_count,
+        b.read_count,
+        b.download_count,
+        b.series_id,
+        b.series_order,
+        bs.name AS series_name,
+        bs.slug AS series_slug,
+        bs.description AS series_description,
+        b.first_published,
+        b.first_publisher,
+        cs.name AS copyright_status,
+        b.published_at,
+        b.category,
+        b.source,
+        b.created_at,
+        b.updated_at,
+        b.is_active,
+        b.is_featured,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name)
+        FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name)
+        FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_slugs,
+        (SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name)
+        FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id
+        WHERE ba.book_id = b.id) AS author_photo_urls,
+        COALESCE(br.average_rating, 0.0) AS average_rating,
+        COALESCE(br.total_ratings, 0) AS total_ratings
+        FROM books b
+        JOIN languages l ON b.language_id = l.id
+        JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN book_series bs ON b.series_id = bs.id
+        LEFT JOIN (
+        SELECT
+        book_id,
+        COUNT(*) AS total_ratings,
+        AVG(rating) AS average_rating
+        FROM book_ratings
+        WHERE rating IS NOT NULL
+        GROUP BY book_id
+        ) br ON b.id = br.book_id
+        WHERE bs.slug = #{seriesSlug}
+        AND b.is_active = true
+        ORDER BY b.series_order ASC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countBooksBySeriesSlug" resultType="int">
+        SELECT COUNT(DISTINCT b.id)
+        FROM books b
+        LEFT JOIN book_series bs
+        ON b.series_id = bs.id
+        WHERE bs.slug = #{seriesSlug}
+        AND b.is_active = true
+    </select>
 </mapper>

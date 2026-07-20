@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.ReadingGroupMapper">
+<mapper namespace="com.masasilam.app.mapper.social.ReadingGroupMapper">
 
-    <resultMap id="GroupEntityRM" type="com.naskah.demo.model.entity.social.ReadingGroup">
+    <resultMap id="GroupEntityRM" type="com.masasilam.app.model.entity.social.ReadingGroup">
         <id property="id" column="id"/>
         <result property="ownerId" column="owner_id"/>
         <result property="name" column="name"/>
@@ -27,7 +27,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="GroupResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingGroupResponse">
+    <resultMap id="GroupResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingGroupResponse">
         <result property="id" column="id"/>
         <result property="ownerId" column="owner_id"/>
         <result property="ownerUsername" column="owner_username"/>
@@ -54,7 +54,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="MemberRM" type="com.naskah.demo.model.dto.response.social.GroupMemberResponse">
+    <resultMap id="MemberRM" type="com.masasilam.app.model.dto.response.social.GroupMemberResponse">
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
         <result property="displayName" column="display_name"/>
@@ -64,7 +64,7 @@
         <result property="joinedAt" column="joined_at"/>
     </resultMap>
 
-    <resultMap id="ScheduleRM" type="com.naskah.demo.model.dto.response.social.GroupReadingScheduleResponse">
+    <resultMap id="ScheduleRM" type="com.masasilam.app.model.dto.response.social.GroupReadingScheduleResponse">
         <result property="id" column="id"/>
         <result property="groupId" column="group_id"/>
         <result property="entityType" column="entity_type"/>
@@ -82,7 +82,7 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <resultMap id="DiscussionRM" type="com.naskah.demo.model.dto.response.social.GroupDiscussionResponse">
+    <resultMap id="DiscussionRM" type="com.masasilam.app.model.dto.response.social.GroupDiscussionResponse">
         <result property="id" column="id"/>
         <result property="groupId" column="group_id"/>
         <result property="scheduleId" column="schedule_id"/>
@@ -256,7 +256,7 @@
         WHERE group_id = #{groupId} AND user_id = #{userId}
     </update>
 
-    <select id="findMember" resultType="com.naskah.demo.model.entity.social.ReadingGroupMember">
+    <select id="findMember" resultType="com.masasilam.app.model.entity.social.ReadingGroupMember">
         SELECT * FROM reading_group_members WHERE group_id = #{groupId} AND user_id = #{userId}
     </select>
 
@@ -319,7 +319,7 @@
         UPDATE group_reading_schedules SET is_completed = TRUE WHERE id = #{id}
     </update>
 
-    <select id="findScheduleById" resultType="com.naskah.demo.model.entity.social.GroupReadingSchedule">
+    <select id="findScheduleById" resultType="com.masasilam.app.model.entity.social.GroupReadingSchedule">
         SELECT * FROM group_reading_schedules WHERE id = #{id}
     </select>
 
@@ -365,7 +365,7 @@
         UPDATE group_discussions SET is_deleted = TRUE, updated_at = NOW() WHERE id = #{id}
     </update>
 
-    <select id="findDiscussionById" resultType="com.naskah.demo.model.entity.social.GroupDiscussion">
+    <select id="findDiscussionById" resultType="com.masasilam.app.model.entity.social.GroupDiscussion">
         SELECT * FROM group_discussions WHERE id = #{id}
     </select>
 
@@ -460,12 +460,12 @@
         WHERE id = #{id}
     </update>
 
-    <select id="findJoinRequest" resultType="com.naskah.demo.model.entity.social.GroupJoinRequest">
+    <select id="findJoinRequest" resultType="com.masasilam.app.model.entity.social.GroupJoinRequest">
         SELECT * FROM group_join_requests WHERE group_id = #{groupId} AND user_id = #{userId}
     </select>
 
     <select id="findPendingRequests"
-            resultType="com.naskah.demo.model.dto.response.social.GroupJoinRequestResponse">
+            resultType="com.masasilam.app.model.dto.response.social.GroupJoinRequestResponse">
         SELECT r.id, r.group_id, r.user_id, u.username,
         u.profile_picture_url AS user_photo,
         r.message, r.status, r.created_at
@@ -489,12 +489,12 @@
         UPDATE group_polls SET is_closed = TRUE WHERE id = #{id}
     </update>
 
-    <select id="findPollById" resultType="com.naskah.demo.model.entity.social.GroupPoll">
+    <select id="findPollById" resultType="com.masasilam.app.model.entity.social.GroupPoll">
         SELECT * FROM group_polls WHERE id = #{id}
     </select>
 
     <select id="findPollsByGroup"
-            resultType="com.naskah.demo.model.dto.response.social.GroupPollResponse">
+            resultType="com.masasilam.app.model.dto.response.social.GroupPollResponse">
         SELECT
         p.id, p.group_id, p.created_by,
         u.username AS creator_username,
@@ -514,7 +514,7 @@
         VALUES (#{pollId}, #{userId}, #{optionId}, NOW())
     </insert>
 
-    <select id="findPollVote" resultType="com.naskah.demo.model.entity.social.GroupPollVote">
+    <select id="findPollVote" resultType="com.masasilam.app.model.entity.social.GroupPollVote">
         SELECT * FROM group_poll_votes WHERE poll_id = #{pollId} AND user_id = #{userId}
     </select>
 

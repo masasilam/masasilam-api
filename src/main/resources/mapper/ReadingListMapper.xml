@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.ReadingListMapper">
+<mapper namespace="com.masasilam.app.mapper.social.ReadingListMapper">
 
-    <resultMap id="ListEntityRM" type="com.naskah.demo.model.entity.social.ReadingList">
+    <resultMap id="ListEntityRM" type="com.masasilam.app.model.entity.social.ReadingList">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="title" column="title"/>
@@ -24,7 +24,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="ListResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingListResponse">
+    <resultMap id="ListResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingListResponse">
         <result property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
@@ -49,7 +49,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="ItemResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingListItemResponse">
+    <resultMap id="ItemResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingListItemResponse">
         <result property="id" column="id"/>
         <result property="entityType" column="entity_type"/>
         <result property="entityId" column="entity_id"/>
@@ -231,7 +231,7 @@
         DELETE FROM reading_list_items WHERE id = #{id}
     </delete>
 
-    <select id="findItem" resultType="com.naskah.demo.model.entity.social.ReadingListItem">
+    <select id="findItem" resultType="com.masasilam.app.model.entity.social.ReadingListItem">
         SELECT * FROM reading_list_items
         WHERE list_id = #{listId} AND entity_type = #{entityType} AND entity_id = #{entityId}
     </select>
@@ -299,7 +299,7 @@
 
     <!-- ── ENTITY LISTS ───────────────────────────────────────────── -->
     <select id="findListsContainingEntity"
-            resultType="com.naskah.demo.model.dto.response.social.ReadingListSummaryResponse">
+            resultType="com.masasilam.app.model.dto.response.social.ReadingListSummaryResponse">
         SELECT
         rl.id, rl.title, rl.slug, rl.cover_image_url,
         rl.item_count, rl.like_count,
@@ -319,5 +319,10 @@
 
     <select id="findBySlugGlobal" resultMap="ListEntityRM">
         SELECT * FROM reading_lists WHERE slug = #{slug} AND is_active = TRUE LIMIT 1
+    </select>
+
+    <!-- ReadingListMapper.xml -->
+    <select id="getMaxSortOrder" resultType="java.lang.Integer">
+        SELECT MAX(sort_order) FROM reading_list_items WHERE list_id = #{listId}
     </select>
 </mapper>

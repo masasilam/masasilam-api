@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.SocialAnnotationMapper">
+<mapper namespace="com.masasilam.app.mapper.social.SocialAnnotationMapper">
 
-    <resultMap id="AnnotationRM" type="com.naskah.demo.model.dto.response.social.SocialAnnotationResponse">
+    <resultMap id="AnnotationRM" type="com.masasilam.app.model.dto.response.social.SocialAnnotationResponse">
         <result property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
@@ -33,7 +33,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="AnnCommentRM" type="com.naskah.demo.model.dto.response.social.AnnotationCommentResponse">
+    <resultMap id="AnnCommentRM" type="com.masasilam.app.model.dto.response.social.AnnotationCommentResponse">
         <result property="id" column="id"/>
         <result property="annotationId" column="annotation_id"/>
         <result property="userId" column="user_id"/>
@@ -86,7 +86,7 @@
         UPDATE social_annotations SET is_active = FALSE, updated_at = NOW() WHERE id = #{id}
     </update>
 
-    <select id="findById" resultType="com.naskah.demo.model.entity.social.SocialAnnotation">
+    <select id="findById" resultType="com.masasilam.app.model.entity.social.SocialAnnotation">
         SELECT * FROM social_annotations WHERE id = #{id}
     </select>
 
@@ -201,7 +201,7 @@
     <update id="softDeleteComment">
         UPDATE social_annotation_comments SET is_deleted = TRUE WHERE id = #{id}
     </update>
-    <select id="findCommentById" resultType="com.naskah.demo.model.entity.social.SocialAnnotationComment">
+    <select id="findCommentById" resultType="com.masasilam.app.model.entity.social.SocialAnnotationComment">
         SELECT * FROM social_annotation_comments WHERE id = #{id}
     </select>
     <select id="findCommentsByAnnotation" resultMap="AnnCommentRM">

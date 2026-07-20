@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.naskah.demo.mapper.UserMapper">
+<mapper namespace="com.masasilam.app.mapper.UserMapper">
 
-    <select id="findUserByUsername" resultType="com.naskah.demo.model.entity.User">
+    <select id="findUserByUsername" resultType="com.masasilam.app.model.entity.User">
         SELECT *
         FROM users
         WHERE username = #{username}
     </select>
 
-    <select id="findUserRoles" resultType="com.naskah.demo.model.entity.Role">
+    <select id="findUserRoles" resultType="com.masasilam.app.model.entity.Role">
         SELECT r.*
         FROM roles r
         JOIN user_roles ur ON r.id = ur.role_id
         WHERE ur.user_id = #{userId}
     </select>
 
-    <insert id="insertUserActivity" parameterType="com.naskah.demo.model.entity.UserActivity" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertUserActivity" parameterType="com.masasilam.app.model.entity.UserActivity" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_activities
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -44,11 +44,11 @@
         WHERE id = #{userId}
     </update>
 
-    <select id="findUserByEmail" resultType="com.naskah.demo.model.entity.User">
+    <select id="findUserByEmail" resultType="com.masasilam.app.model.entity.User">
         SELECT * FROM users WHERE email = #{email}
     </select>
 
-    <insert id="insertUser" parameterType="com.naskah.demo.model.entity.User" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertUser" parameterType="com.masasilam.app.model.entity.User" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
         username, email, password_hash, full_name, profile_picture_url, bio,
         total_books_read, reading_streak_days, is_active, email_verified, status,
@@ -67,7 +67,7 @@
         VALUES (#{id}, #{token}, #{expiresAt})
     </insert>
 
-    <select id="findUserById" resultType="com.naskah.demo.model.entity.User">
+    <select id="findUserById" resultType="com.masasilam.app.model.entity.User">
         SELECT * FROM users WHERE id = #{id}
     </select>
 
@@ -82,7 +82,7 @@
         WHERE user_id = #{id}
     </delete>
 
-    <select id="findRoleByName" resultType="com.naskah.demo.model.entity.Role">
+    <select id="findRoleByName" resultType="com.masasilam.app.model.entity.Role">
         SELECT * FROM roles WHERE name = #{roleName}
     </select>
 
@@ -113,7 +113,7 @@
         WHERE user_id = #{userId}
     </delete>
 
-    <select id="findAllUsers" resultType="com.naskah.demo.model.dto.response.UserResponse">
+    <select id="findAllUsers" resultType="com.masasilam.app.model.dto.response.UserResponse">
         SELECT
         id,
         username,
@@ -131,7 +131,7 @@
         ORDER BY created_at DESC
     </select>
 
-    <update id="updateUser" parameterType="com.naskah.demo.model.entity.User">
+    <update id="updateUser" parameterType="com.masasilam.app.model.entity.User">
         UPDATE users
         <set>
             <if test="username != null">username = #{username},</if>
@@ -195,7 +195,7 @@
 <!--        ORDER BY u.id-->
 <!--    </select>-->
 
-<!--    <select id="findUserById" resultType="com.naskah.demo.model.entity.User">-->
+<!--    <select id="findUserById" resultType="com.naskah.appmodel.entity.User">-->
 <!--        SELECT * FROM users WHERE id = #{userId} AND is_active = TRUE-->
 <!--    </select>-->
 

@@ -2,15 +2,15 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.NewspaperMapper">
+<mapper namespace="com.masasilam.app.mapper.NewspaperMapper">
 
-    <select id="getAllCategories" resultType="com.naskah.demo.model.dto.newspaper.NewspaperCategoryResponse">
+    <select id="getAllCategories" resultType="com.masasilam.app.model.dto.newspaper.NewspaperCategoryResponse">
         SELECT category as slug, COUNT(*) as articleCount
         FROM newspaper_articles WHERE is_active = true
         GROUP BY category ORDER BY category
     </select>
 
-    <select id="getAllSources" resultType="com.naskah.demo.model.dto.newspaper.NewspaperSourceResponse">
+    <select id="getAllSources" resultType="com.masasilam.app.model.dto.newspaper.NewspaperSourceResponse">
         SELECT ns.id, ns.name, ns.location, ns.description, COUNT(na.id) as articleCount
         FROM newspaper_sources ns
         LEFT JOIN newspaper_articles na ON ns.id = na.source_id AND na.is_active = true
@@ -29,7 +29,7 @@
         </if>
     </select>
 
-    <select id="getOverallStats" resultType="com.naskah.demo.model.dto.newspaper.NewspaperStatsResponse">
+    <select id="getOverallStats" resultType="com.masasilam.app.model.dto.newspaper.NewspaperStatsResponse">
         SELECT
         COUNT(*) as totalArticles,
         COUNT(DISTINCT source_id) as totalSources,
@@ -43,7 +43,7 @@
     <!-- ARTICLE QUERIES -->
     <!-- ============================================ -->
 
-    <select id="getArticlesByCategory" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getArticlesByCategory" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date  as publishDate,
@@ -88,7 +88,7 @@
         <if test="criteria.importance != null">AND na.importance = #{criteria.importance}</if>
     </select>
 
-    <select id="getArticlesByDate" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getArticlesByDate" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date  as publishDate,
@@ -128,7 +128,7 @@
     <!-- ============================================ -->
 
     <select id="findArticleByCategoryDateAndSlug"
-            resultType="com.naskah.demo.model.entity.newspaper.NewspaperArticle">
+            resultType="com.masasilam.app.model.entity.newspaper.NewspaperArticle">
         SELECT * FROM newspaper_articles
         WHERE category = #{categorySlug}
         AND publish_date = #{date}
@@ -142,7 +142,7 @@
            (sebelumnya alias "htmlContent" → field tidak ada di DTO → null)
     -->
     <select id="getArticleDetailBySlug"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleDetailResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
         SELECT
         na.id,
         na.slug,
@@ -177,7 +177,7 @@
 
     <!-- ✅ FIX: sama — html_content → bodyOriginal -->
     <select id="getArticleDetailById"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleDetailResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
         SELECT
         na.id,
         na.slug,
@@ -214,7 +214,7 @@
     <!-- SEARCH -->
     <!-- ============================================ -->
 
-    <select id="searchArticles" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="searchArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date   as publishDate,
@@ -260,7 +260,7 @@
     <!-- ON THIS DAY -->
     <!-- ============================================ -->
 
-    <select id="getArticlesOnThisDay" resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getArticlesOnThisDay" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date   as publishDate,
@@ -290,7 +290,7 @@
     <!-- ============================================ -->
 
     <select id="getAnalyticsOverview"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperAnalyticsResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperAnalyticsResponse">
         SELECT
         COUNT(*)           as totalArticles,
         SUM(view_count)    as totalViews,
@@ -303,7 +303,7 @@
     </select>
 
     <select id="getTrendingArticles"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date   as publishDate,
@@ -324,7 +324,7 @@
     <!-- ============================================ -->
 
     <select id="getRelatedArticles"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date   as publishDate,
@@ -339,7 +339,7 @@
     </select>
 
     <select id="getSameDateArticles"
-            resultType="com.naskah.demo.model.dto.newspaper.NewspaperArticleResponse">
+            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
         na.publish_date   as publishDate,
@@ -446,7 +446,7 @@
         )
     </select>
 
-    <select id="findById" resultType="com.naskah.demo.model.entity.newspaper.NewspaperArticle">
+    <select id="findById" resultType="com.masasilam.app.model.entity.newspaper.NewspaperArticle">
         SELECT * FROM newspaper_articles WHERE id = #{id}
     </select>
 

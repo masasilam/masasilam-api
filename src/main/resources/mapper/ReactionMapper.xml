@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.ReactionMapper">
+<mapper namespace="com.masasilam.app.mapper.ReactionMapper">
 
     <!-- Result Map -->
-    <resultMap id="ReactionResultMap" type="com.naskah.demo.model.entity.Reaction">
+    <resultMap id="ReactionResultMap" type="com.masasilam.app.model.entity.Reaction">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="bookId" column="book_id"/>
@@ -19,7 +19,7 @@
     <!-- ============ BASIC CRUD ============ -->
 
     <!-- Insert new reaction -->
-    <insert id="insertReaction" parameterType="com.naskah.demo.model.entity.Reaction" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertReaction" parameterType="com.masasilam.app.model.entity.Reaction" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reactions (
         user_id, book_id, reaction_type, rating, comment, title,
         parent_id, created_at, updated_at
@@ -30,7 +30,7 @@
     </insert>
 
     <!-- Update existing reaction -->
-    <update id="updateReaction" parameterType="com.naskah.demo.model.entity.Reaction">
+    <update id="updateReaction" parameterType="com.masasilam.app.model.entity.Reaction">
         UPDATE reactions SET
         reaction_type = #{reactionType},
         rating = #{rating},
@@ -133,7 +133,7 @@
     <!-- ============ STATISTICS ============ -->
 
     <!-- Get reaction statistics for a book -->
-    <select id="getReactionStats" resultType="com.naskah.demo.model.dto.response.ReactionStatsResponse">
+    <select id="getReactionStats" resultType="com.masasilam.app.model.dto.response.ReactionStatsResponse">
         SELECT
         COUNT(CASE WHEN reaction_type = 'RATING' AND parent_id IS NULL THEN 1 END) as totalRatings,
         COUNT(CASE WHEN reaction_type = 'COMMENT' AND parent_id IS NULL THEN 1 END) as totalComments,

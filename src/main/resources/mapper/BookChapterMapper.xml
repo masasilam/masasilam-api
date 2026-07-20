@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.BookChapterMapper">
+<mapper namespace="com.masasilam.app.mapper.BookChapterMapper">
 
     <!-- Result Map -->
-    <resultMap id="ChapterResultMap" type="com.naskah.demo.model.entity.BookChapter">
+    <resultMap id="ChapterResultMap" type="com.masasilam.app.model.entity.BookChapter">
         <id property="id" column="id"/>
         <result property="bookId" column="book_id"/>
         <result property="chapterNumber" column="chapter_number"/>

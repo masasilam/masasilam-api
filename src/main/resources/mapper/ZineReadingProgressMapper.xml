@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.ZineReadingProgressMapper">
+<mapper namespace="com.masasilam.app.mapper.ZineReadingProgressMapper">
 
-    <resultMap id="ZineReadingProgressResultMap" type="com.naskah.demo.model.entity.ZineReadingProgress">
+    <resultMap id="ZineReadingProgressResultMap" type="com.masasilam.app.model.entity.ZineReadingProgress">
         <id     property="id"                  column="id"/>
         <result property="userId"              column="user_id"/>
         <result property="zineId"              column="zine_id"/>

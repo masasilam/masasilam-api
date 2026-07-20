@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.naskah.demo.mapper.ProjectReactionMapper">
+<mapper namespace="com.masasilam.app.mapper.ProjectReactionMapper">
 
-    <resultMap id="ProjectReactionResultMap" type="com.naskah.demo.model.entity.ProjectReaction">
+    <resultMap id="ProjectReactionResultMap" type="com.masasilam.app.model.entity.ProjectReaction">
         <id property="id" column="id" />
         <result property="projectId" column="project_id" />
         <result property="userId" column="user_id" />
         <result property="reactionType" column="reaction_type"
-                javaType="com.naskah.demo.model.enums.ReactionType"
+                javaType="com.masasilam.app.model.enums.ReactionType"
                 jdbcType="VARCHAR"/>
         <result property="createdAt" column="created_at" />
         <result property="updatedAt" column="updated_at" />
     </resultMap>
 
-    <resultMap id="ReactionSummaryResultMap" type="com.naskah.demo.model.dto.response.ReactionSummary">
+    <resultMap id="ReactionSummaryResultMap" type="com.masasilam.app.model.dto.response.ReactionSummary">
         <result property="reactionType" column="reaction_type"
-                javaType="com.naskah.demo.model.enums.ReactionType"
+                javaType="com.masasilam.app.model.enums.ReactionType"
                 jdbcType="VARCHAR"/>
         <result property="count" column="reaction_count" />
     </resultMap>

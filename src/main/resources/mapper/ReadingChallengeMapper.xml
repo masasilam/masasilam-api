@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.ReadingChallengeMapper">
+<mapper namespace="com.masasilam.app.mapper.social.ReadingChallengeMapper">
 
-    <resultMap id="ChallengeEntityRM" type="com.naskah.demo.model.entity.social.ReadingChallenge">
+    <resultMap id="ChallengeEntityRM" type="com.masasilam.app.model.entity.social.ReadingChallenge">
         <id property="id" column="id"/>
         <result property="createdBy" column="created_by"/>
         <result property="title" column="title"/>
@@ -13,10 +13,10 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="challengeType" column="challenge_type"/>
         <result property="entityTypes" column="entity_types"
-                typeHandler="com.naskah.demo.typehandler.StringArrayTypeHandler"/>
+                typeHandler="com.masasilam.app.typehandler.StringArrayTypeHandler"/>
         <result property="targetCount" column="target_count"/>
         <result property="requiredGenres" column="required_genres"
-                typeHandler="com.naskah.demo.typehandler.StringArrayTypeHandler"/>
+                typeHandler="com.masasilam.app.typehandler.StringArrayTypeHandler"/>
         <result property="requiredListId" column="required_list_id"/>
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
@@ -31,7 +31,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="ChallengeResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingChallengeResponse">
+    <resultMap id="ChallengeResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingChallengeResponse">
         <result property="id" column="id"/>
         <result property="createdBy" column="created_by"/>
         <result property="creatorUsername" column="creator_username"/>
@@ -41,10 +41,10 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="challengeType" column="challenge_type"/>
         <result property="entityTypes" column="entity_types"
-                typeHandler="com.naskah.demo.typehandler.StringArrayTypeHandler"/>
+                typeHandler="com.masasilam.app.typehandler.StringArrayTypeHandler"/>
         <result property="targetCount" column="target_count"/>
         <result property="requiredGenres" column="required_genres"
-                typeHandler="com.naskah.demo.typehandler.StringArrayTypeHandler"/>
+                typeHandler="com.masasilam.app.typehandler.StringArrayTypeHandler"/>
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
         <result property="xpReward" column="xp_reward"/>
@@ -60,7 +60,7 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <resultMap id="ProgressItemRM" type="com.naskah.demo.model.dto.response.social.ChallengeProgressItemResponse">
+    <resultMap id="ProgressItemRM" type="com.masasilam.app.model.dto.response.social.ChallengeProgressItemResponse">
         <result property="id" column="id"/>
         <result property="entityType" column="entity_type"/>
         <result property="entityId" column="entity_id"/>
@@ -71,7 +71,7 @@
     </resultMap>
 
     <resultMap id="LeaderboardRM"
-               type="com.naskah.demo.model.dto.response.social.ChallengeLeaderboardResponse$LeaderboardEntryResponse">
+               type="com.masasilam.app.model.dto.response.social.ChallengeLeaderboardResponse$LeaderboardEntryResponse">
         <result property="rank" column="rank"/>
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
@@ -107,9 +107,9 @@
         VALUES
         (#{createdBy}, #{title}, #{slug}, #{description}, #{coverImageUrl},
         #{challengeType},
-        #{entityTypes, typeHandler=com.naskah.demo.typehandler.StringArrayTypeHandler},
+        #{entityTypes, typeHandler=com.masasilam.app.typehandler.StringArrayTypeHandler},
         #{targetCount},
-        #{requiredGenres, typeHandler=com.naskah.demo.typehandler.StringArrayTypeHandler},
+        #{requiredGenres, typeHandler=com.masasilam.app.typehandler.StringArrayTypeHandler},
         #{requiredListId}, #{startDate}, #{endDate}, #{xpReward},
         #{badgeName}, #{badgeImageUrl}, 0, 0,
         #{isOfficial}, TRUE, NOW(), NOW())
@@ -208,7 +208,7 @@
         WHERE id = #{id}
     </update>
 
-    <select id="findParticipant" resultType="com.naskah.demo.model.entity.social.ChallengeParticipant">
+    <select id="findParticipant" resultType="com.masasilam.app.model.entity.social.ChallengeParticipant">
         SELECT * FROM challenge_participants WHERE challenge_id = #{challengeId} AND user_id = #{userId}
     </select>
 

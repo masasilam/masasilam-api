@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.PageCommentMapper">
+<mapper namespace="com.masasilam.app.mapper.PageCommentMapper">
 
-    <resultMap id="PageCommentResponseMap" type="com.naskah.demo.model.dto.response.PageCommentResponse">
+    <resultMap id="PageCommentResponseMap" type="com.masasilam.app.model.dto.response.PageCommentResponse">
         <id property="id" column="id"/>
         <result property="content" column="content"/>
         <result property="commentType" column="comment_type"/>
@@ -16,7 +16,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <insert id="insertPageComment" parameterType="com.naskah.demo.model.entity.PageComment" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertPageComment" parameterType="com.masasilam.app.model.entity.PageComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO page_comments (
         page_id, user_id, content, comment_type, parent_comment_id,
         is_edited, is_deleted, created_at, updated_at
@@ -26,7 +26,7 @@
         )
     </insert>
 
-    <select id="getPageCommentById" resultType="com.naskah.demo.model.entity.PageComment">
+    <select id="getPageCommentById" resultType="com.masasilam.app.model.entity.PageComment">
         SELECT * FROM page_comments WHERE id = #{parentCommentId}
     </select>
 

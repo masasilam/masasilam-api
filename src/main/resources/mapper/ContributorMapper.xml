@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.ContributorMapper">
+<mapper namespace="com.masasilam.app.mapper.ContributorMapper">
 
-    <resultMap id="ContributorResultMap" type="com.naskah.demo.model.entity.Contributor">
+    <resultMap id="ContributorResultMap" type="com.masasilam.app.model.entity.Contributor">
         <id   property="id"         column="id"/>
         <result property="name"       column="name"/>
         <result property="slug"       column="slug"/>
@@ -55,7 +55,7 @@
          INSERT CONTRIBUTOR
     ═══════════════════════════════════════════════════ -->
     <insert id="insertContributor"
-            parameterType="com.naskah.demo.model.entity.Contributor"
+            parameterType="com.masasilam.app.model.entity.Contributor"
             useGeneratedKeys="true"
             keyProperty="id">
         INSERT INTO contributors (name, slug, role, created_at, updated_at)

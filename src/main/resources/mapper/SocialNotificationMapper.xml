@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.SocialNotificationMapper">
+<mapper namespace="com.masasilam.app.mapper.social.SocialNotificationMapper">
 
-    <resultMap id="NotifRM" type="com.naskah.demo.model.dto.response.social.NotificationResponse">
+    <resultMap id="NotifRM" type="com.masasilam.app.model.dto.response.social.NotificationResponse">
         <result property="id" column="id"/>
         <result property="senderId" column="sender_id"/>
         <result property="senderUsername" column="sender_username"/>
@@ -13,7 +13,7 @@
         <result property="entityType" column="entity_type"/>
         <result property="entityId" column="entity_id"/>
         <result property="message" column="message"/>
-        <result property="data" column="data" typeHandler="com.naskah.demo.typehandler.JsonMapTypeHandler"/>
+        <result property="data" column="data" typeHandler="com.masasilam.app.typehandler.JsonMapTypeHandler"/>
         <result property="isRead" column="is_read"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
@@ -23,7 +23,7 @@
         (recipient_id, sender_id, type, entity_type, entity_id, message, data, is_read, created_at)
         VALUES
         (#{recipientId}, #{senderId}, #{type}, #{entityType}, #{entityId},
-        #{message}, #{data, typeHandler=com.naskah.demo.typehandler.JsonMapTypeHandler}, FALSE, NOW())
+        #{message}, #{data, typeHandler=com.masasilam.app.typehandler.JsonMapTypeHandler}, FALSE, NOW())
     </insert>
 
     <update id="markRead">

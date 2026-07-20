@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.BookRatingMapper">
+<mapper namespace="com.masasilam.app.mapper.BookRatingMapper">
 
-    <resultMap id="BookRatingResultMap" type="com.naskah.demo.model.entity.BookRating">
+    <resultMap id="BookRatingResultMap" type="com.masasilam.app.model.entity.BookRating">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="bookId" column="book_id"/>
@@ -12,7 +12,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="BookRatingStatsResultMap" type="com.naskah.demo.model.dto.response.BookRatingStatsResponse">
+    <resultMap id="BookRatingStatsResultMap" type="com.masasilam.app.model.dto.response.BookRatingStatsResponse">
         <result property="bookId" column="book_id"/>
         <result property="averageRating" column="average_rating"/>
         <result property="totalRatings" column="total_ratings"/>
@@ -23,12 +23,12 @@
         <result property="rating1Count" column="rating_1_count"/>
     </resultMap>
 
-    <insert id="insert" parameterType="com.naskah.demo.model.entity.BookRating" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="com.masasilam.app.model.entity.BookRating" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO book_ratings (user_id, book_id, rating, created_at, updated_at)
         VALUES (#{userId}, #{bookId}, #{rating}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <update id="update" parameterType="com.naskah.demo.model.entity.BookRating">
+    <update id="update" parameterType="com.masasilam.app.model.entity.BookRating">
         UPDATE book_ratings
         SET rating = #{rating},
         updated_at = #{updatedAt}
@@ -51,7 +51,7 @@
         WHERE user_id = #{userId} AND book_id = #{bookId}
     </select>
 
-    <select id="getBookRatingStats" resultType="com.naskah.demo.model.dto.response.BookRatingStatsResponse">
+    <select id="getBookRatingStats" resultType="com.masasilam.app.model.dto.response.BookRatingStatsResponse">
         SELECT
         #{bookId} AS bookId,
         COALESCE(AVG(rating), 0.0) AS averageRating,

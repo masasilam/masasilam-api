@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.NotificationMapper">
+<mapper namespace="com.masasilam.app.mapper.NotificationMapper">
 
-    <resultMap id="NotificationResponseMap" type="com.naskah.demo.model.dto.response.NotificationResponse">
+    <resultMap id="NotificationResponseMap" type="com.masasilam.app.model.dto.response.NotificationResponse">
         <id property="id" column="id"/>
         <result property="message" column="message"/>
         <result property="type" column="type"/>
@@ -24,7 +24,7 @@
         LIMIT #{i1} OFFSET #{i}
     </select>
 
-    <insert id="insertNotification" parameterType="com.naskah.demo.model.entity.Notification" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertNotification" parameterType="com.masasilam.app.model.entity.Notification" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO notifications (
         user_id, message, type, project_id, page_number,
         related_entity_id, is_read, created_at

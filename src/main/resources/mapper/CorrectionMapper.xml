@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.CorrectionMapper">
+<mapper namespace="com.masasilam.app.mapper.CorrectionMapper">
 
-    <resultMap id="CorrectionResultMap" type="com.naskah.demo.model.entity.ContentCorrection">
+    <resultMap id="CorrectionResultMap" type="com.masasilam.app.model.entity.ContentCorrection">
         <id property="id" column="id"/>
         <result property="bookId" column="book_id"/>
         <result property="chapterId" column="chapter_id"/>
@@ -28,21 +28,21 @@
         <result property="submittedByUsername" column="submitted_by_username"/>
     </resultMap>
 
-    <insert id="insertCorrection"
-            useGeneratedKeys="true"
-            keyProperty="id">
+    <insert id="insertCorrection" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO content_correction (
         book_id, chapter_id, submitted_by,
         original_text, corrected_text,
         context_before, context_after,
         start_position, end_position,
-        user_note, status, created_at
+        user_note, status, created_at,
+        epub_cfi, section_href
         ) VALUES (
         #{bookId}, #{chapterId}, #{submittedBy},
         #{originalText}, #{correctedText},
         #{contextBefore}, #{contextAfter},
         #{startPosition}, #{endPosition},
-        #{userNote}, 'PENDING', NOW()
+        #{userNote}, 'PENDING', NOW(),
+        #{epubCfi}, #{sectionHref}
         )
     </insert>
 
@@ -167,6 +167,24 @@
         FROM content_correction
         WHERE status = CAST(#{status} AS correction_status)
         AND submitted_by = #{userId}
+    </select>
+
+    <!-- Ambil semua koreksi PENDING milik user untuk satu buku -->
+    <select id="findPendingByBookAndUser" resultMap="CorrectionResultMap">
+        SELECT
+        cc.*,
+        bc.title AS chapter_title,
+        bc.chapter_number,
+        b.title AS book_title,
+        u.username AS submitted_by_username
+        FROM content_correction cc
+        JOIN book_chapters bc ON cc.chapter_id = bc.id
+        JOIN books b ON cc.book_id = b.id
+        JOIN users u ON cc.submitted_by = u.id
+        WHERE cc.book_id = #{bookId}
+        AND cc.submitted_by = #{userId}
+        AND cc.status = 'PENDING'
+        ORDER BY cc.created_at DESC
     </select>
 
 </mapper>

@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.ZineRatingMapper">
+<mapper namespace="com.masasilam.app.mapper.ZineRatingMapper">
 
-    <resultMap id="ZineRatingResultMap" type="com.naskah.demo.model.entity.ZineRating">
+    <resultMap id="ZineRatingResultMap" type="com.masasilam.app.model.entity.ZineRating">
         <id     property="id"        column="id"/>
         <result property="userId"    column="user_id"/>
         <result property="zineId"    column="zine_id"/>
@@ -13,7 +13,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="ZineRatingStatsResultMap" type="com.naskah.demo.model.dto.response.ZineRatingStatsResponse">
+    <resultMap id="ZineRatingStatsResultMap" type="com.masasilam.app.model.dto.response.ZineRatingStatsResponse">
         <result property="zineId"        column="zine_id"/>
         <result property="averageRating" column="average_rating"/>
         <result property="totalRatings"  column="total_ratings"/>

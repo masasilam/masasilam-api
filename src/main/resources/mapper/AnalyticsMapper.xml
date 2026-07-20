@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.AnalyticsMapper">
+<mapper namespace="com.masasilam.app.mapper.AnalyticsMapper">
 
     <!-- Get book overview metrics -->
     <select id="getBookOverviewMetrics" resultType="java.util.HashMap">

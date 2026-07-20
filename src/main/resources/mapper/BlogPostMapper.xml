@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.BlogPostMapper">
+<mapper namespace="com.masasilam.app.mapper.BlogPostMapper">
 
     <!--
     ╔══════════════════════════════════════════════════════════════╗
@@ -25,12 +25,13 @@
 
     <!-- ═══════════════════════ Result Maps ═══════════════════════ -->
 
-    <resultMap id="BlogPostResultMap" type="com.naskah.demo.model.entity.BlogPost">
+    <resultMap id="BlogPostResultMap" type="com.masasilam.app.model.entity.BlogPost">
         <id     column="id"                   property="id"/>
         <result column="title"                property="title"/>
         <result column="slug"                 property="slug"/>
         <result column="content"              property="content"/>
         <result column="excerpt"              property="excerpt"/>
+        <result column="source"               property="source"/>
         <result column="featured_image_url"   property="featuredImage"/>
         <result column="status"               property="status"/>
         <result column="user_id"              property="authorId"/>
@@ -46,12 +47,13 @@
     </resultMap>
 
     <!-- ✅ FIX: tambah content agar editor bisa load konten saat edit -->
-    <resultMap id="BlogPostResponseMap" type="com.naskah.demo.model.dto.response.BlogPostResponse">
+    <resultMap id="BlogPostResponseMap" type="com.masasilam.app.model.dto.response.BlogPostResponse">
         <id     column="id"                 property="id"/>
         <result column="title"              property="title"/>
         <result column="slug"               property="slug"/>
         <result column="content"            property="content"/>
         <result column="excerpt"            property="excerpt"/>
+        <result column="source"             property="source"/>
         <result column="featured_image_url" property="featuredImage"/>
         <result column="status"             property="status"/>
         <result column="view_count"         property="viewCount"/>
@@ -66,12 +68,13 @@
         <result column="tags"               property="tags"/>
     </resultMap>
 
-    <resultMap id="BlogPostDetailResponseMap" type="com.naskah.demo.model.dto.response.BlogPostDetailResponse">
+    <resultMap id="BlogPostDetailResponseMap" type="com.masasilam.app.model.dto.response.BlogPostDetailResponse">
         <id     column="id"                 property="id"/>
         <result column="title"              property="title"/>
         <result column="slug"               property="slug"/>
         <result column="content"            property="content"/>
         <result column="excerpt"            property="excerpt"/>
+        <result column="source"             property="source"/>
         <result column="featured_image_url" property="featuredImage"/>
         <result column="status"             property="status"/>
         <result column="view_count"         property="viewCount"/>
@@ -89,7 +92,7 @@
         <result column="linked_books"       property="linkedBooks"/>
     </resultMap>
 
-    <resultMap id="BlogCommentResultMap" type="com.naskah.demo.model.entity.BlogComment">
+    <resultMap id="BlogCommentResultMap" type="com.masasilam.app.model.entity.BlogComment">
         <id     column="id"                property="id"/>
         <result column="post_id"           property="blogPostId"/>
         <result column="user_id"           property="userId"/>
@@ -100,7 +103,7 @@
         <result column="created_at"        property="createdAt"/>
     </resultMap>
 
-    <resultMap id="BlogCommentResponseMap" type="com.naskah.demo.model.dto.response.BlogCommentResponse">
+    <resultMap id="BlogCommentResponseMap" type="com.masasilam.app.model.dto.response.BlogCommentResponse">
         <id     column="id"                property="id"/>
         <result column="post_id"           property="blogPostId"/>
         <result column="user_id"           property="userId"/>
@@ -115,21 +118,23 @@
 
     <!-- ═══════════════════════ Blog Post CRUD ═══════════════════════ -->
 
-    <insert id="insertBlogPost" parameterType="com.naskah.demo.model.entity.BlogPost"
+    <insert id="insertBlogPost" parameterType="com.masasilam.app.model.entity.BlogPost"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO blog_posts (
         title, slug, content, excerpt, featured_image_url, status, user_id,
         is_featured, view_count, like_count, comment_count,
+        source,
         scheduled_at, published_at, created_at, updated_at
         ) VALUES (
         #{title}, #{slug}, #{content}, #{excerpt}, #{featuredImage}, #{status}, #{authorId},
         #{isFeatured, jdbcType=BOOLEAN},
         #{viewCount}, #{likeCount}, #{commentCount},
+        #{source, jdbcType=VARCHAR},
         #{scheduledAt}, #{publishedAt}, #{createdAt}, #{updatedAt}
         )
     </insert>
 
-    <update id="updateBlogPost" parameterType="com.naskah.demo.model.entity.BlogPost">
+    <update id="updateBlogPost" parameterType="com.masasilam.app.model.entity.BlogPost">
         UPDATE blog_posts SET
         <if test="title != null">title = #{title},</if>
         <if test="slug != null">slug = #{slug},</if>
@@ -138,6 +143,7 @@
         <if test="featuredImage != null">featured_image_url = #{featuredImage},</if>
         <if test="status != null">status = #{status},</if>
         <if test="isFeatured != null">is_featured = #{isFeatured},</if>
+        <if test="source != null">source = #{source},</if>
         <if test="scheduledAt != null">scheduled_at = #{scheduledAt},</if>
         <if test="publishedAt != null">published_at = #{publishedAt},</if>
         updated_at = #{updatedAt}
@@ -175,7 +181,7 @@
 
     <select id="getBlogPostBySlug" resultMap="BlogPostDetailResponseMap">
         SELECT
-        bp.id, bp.title, bp.slug, bp.content, bp.excerpt, bp.featured_image_url,
+        bp.id, bp.title, bp.slug, bp.source, bp.content, bp.excerpt, bp.featured_image_url,
         bp.status, bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at, bp.user_id,
         u.full_name           AS author_name,
@@ -391,7 +397,7 @@
 
     <select id="getRelatedBlogPosts" resultMap="BlogPostResponseMap">
         SELECT DISTINCT
-        bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
+        bp.id, bp.title, bp.slug, bp.excerpt, bp.source, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
         u.full_name           AS author_name,
@@ -530,13 +536,13 @@
 
     <!-- ═══════════════════════ Comments ═══════════════════════ -->
 
-    <insert id="insertBlogComment" parameterType="com.naskah.demo.model.entity.BlogComment"
+    <insert id="insertBlogComment" parameterType="com.masasilam.app.model.entity.BlogComment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO blog_comments (post_id, user_id, content, parent_comment_id, is_approved, created_at)
         VALUES (#{blogPostId}, #{userId}, #{content}, #{parentId}, true, #{createdAt})
     </insert>
 
-    <update id="updateBlogComment" parameterType="com.naskah.demo.model.entity.BlogComment">
+    <update id="updateBlogComment" parameterType="com.masasilam.app.model.entity.BlogComment">
         UPDATE blog_comments SET content = #{content} WHERE id = #{id}
     </update>
 
@@ -619,7 +625,7 @@
         SELECT COUNT(*) FROM blog_posts WHERE user_id = #{userId} AND status = 'DRAFT'
     </select>
 
-    <select id="getMonthlyStatsByUser" resultType="com.naskah.demo.model.dto.response.MonthlyStatsResponse">
+    <select id="getMonthlyStatsByUser" resultType="com.masasilam.app.model.dto.response.MonthlyStatsResponse">
         SELECT
         TO_CHAR(created_at, 'YYYY-MM')  AS month,
         COUNT(*)                        AS posts,

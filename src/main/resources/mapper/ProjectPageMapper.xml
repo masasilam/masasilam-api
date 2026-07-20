@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.naskah.demo.mapper.ProjectPageMapper">
+<mapper namespace="com.masasilam.app.mapper.ProjectPageMapper">
 
-    <insert id="insertProjectPage" parameterType="com.naskah.demo.model.entity.ProjectPage" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertProjectPage" parameterType="com.masasilam.app.model.entity.ProjectPage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_pages (
         project_id, page_number, image_url, transcribed_text,
         original_filename, ocr_status, ocr_confidence, created_at, updated_at
@@ -19,7 +19,7 @@
         )
     </insert>
 
-    <select id="getProjectPageByProjectIdAndPageNumber" resultType="com.naskah.demo.model.entity.ProjectPage">
+    <select id="getProjectPageByProjectIdAndPageNumber" resultType="com.masasilam.app.model.entity.ProjectPage">
         SELECT * FROM project_pages
         WHERE project_id = #{projectId}
         AND page_number = #{pageNumber}

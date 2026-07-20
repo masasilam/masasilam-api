@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.BookReviewReplyMapper">
+<mapper namespace="com.masasilam.app.mapper.BookReviewReplyMapper">
 
-    <resultMap id="BookReviewReplyResultMap" type="com.naskah.demo.model.entity.BookReviewReply">
+    <resultMap id="BookReviewReplyResultMap" type="com.masasilam.app.model.entity.BookReviewReply">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="reviewId" column="review_id"/>
@@ -15,13 +15,13 @@
         <result property="deletedAt" column="deleted_at"/>
     </resultMap>
 
-    <insert id="insert" parameterType="com.naskah.demo.model.entity.BookReviewReply"
+    <insert id="insert" parameterType="com.masasilam.app.model.entity.BookReviewReply"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO book_review_replies (user_id, review_id, parent_reply_id, content, created_at, updated_at)
         VALUES (#{userId}, #{reviewId}, #{parentReplyId}, #{content}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <update id="update" parameterType="com.naskah.demo.model.entity.BookReviewReply">
+    <update id="update" parameterType="com.masasilam.app.model.entity.BookReviewReply">
         UPDATE book_review_replies
         SET content = #{content},
         updated_at = #{updatedAt}

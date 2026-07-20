@@ -2,13 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.ZineMapper">
+<mapper namespace="com.masasilam.app.mapper.ZineMapper">
 
     <!-- ═══════════════════════════════════════════
          RESULT MAPS
     ═══════════════════════════════════════════ -->
 
-    <resultMap id="ZineResultMap" type="com.naskah.demo.model.entity.Zine">
+    <resultMap id="ZineResultMap" type="com.masasilam.app.model.entity.Zine">
         <id     property="id"                column="id"/>
         <result property="title"             column="title"/>
         <result property="slug"              column="slug"/>
@@ -40,9 +40,12 @@
         <result property="difficultyLevel"   column="difficulty_level"/>
         <result property="createdAt"         column="created_at"/>
         <result property="updatedAt"         column="updated_at"/>
+        <result property="firstPublisher"     column="first_publisher"/>
+        <result property="firstPublishedDate" column="first_published_date"/>
+        <result property="collectionName"     column="collection_name"/>
     </resultMap>
 
-    <resultMap id="ZineResponseResultMap" type="com.naskah.demo.model.dto.response.ZineResponse">
+    <resultMap id="ZineResponseResultMap" type="com.masasilam.app.model.dto.response.ZineResponse">
         <id     property="id"                column="id"/>
         <result property="title"             column="title"/>
         <result property="slug"              column="slug"/>
@@ -74,6 +77,9 @@
         <result property="totalRatings"      column="total_ratings"/>
         <result property="createdAt"         column="created_at"/>
         <result property="updatedAt"         column="updated_at"/>
+        <result property="firstPublisher"     column="first_publisher"/>
+        <result property="firstPublishedDate" column="first_published_date"/>
+        <result property="collectionName"     column="collection_name"/>
     </resultMap>
 
     <!-- ═══════════════════════════════════════════
@@ -89,7 +95,7 @@
         z.total_word, z.total_pages, z.estimated_read_time,
         z.is_active, z.is_featured, z.published_at,
         z.category, z.source, z.difficulty_level,
-        z.created_at, z.updated_at,
+        z.created_at, z.updated_at, z.collection_name, z.first_publisher, z.first_published_date,
         l.name AS language_name,
         cs.name AS copyright_status_name,
         COALESCE(AVG(zr.rating), 0) AS average_rating,
@@ -191,6 +197,7 @@
         total_word, total_pages, estimated_read_time,
         is_active, is_featured, published_at,
         category, source, difficulty_level,
+        collection_name, first_publisher, first_published_date,
         created_at, updated_at
         ) VALUES (
         #{title}, #{slug}, #{subtitle}, #{volume}, #{issueNumber},
@@ -201,38 +208,42 @@
         #{totalWord}, #{totalPages}, #{estimatedReadTime},
         #{isActive}, #{isFeatured}, #{publishedAt},
         #{category}, #{source}, #{difficultyLevel},
+        #{collectionName}, #{firstPublisher}, #{firstPublishedDate},
         #{createdAt}, #{updatedAt}
         )
     </insert>
 
     <update id="updateZine">
         UPDATE zines SET
-        title             = #{title},
-        slug              = #{slug},
-        subtitle          = #{subtitle},
-        volume            = #{volume},
-        issue_number      = #{issueNumber},
-        publication_year  = #{publicationYear},
-        publisher         = #{publisher},
-        language_id       = #{languageId},
-        description       = #{description},
-        file_url          = #{fileUrl},
-        file_url_archive  = #{fileUrlArchive},
-        file_path         = #{filePath},
-        cover_image_url   = #{coverImageUrl},
-        file_format       = #{fileFormat},
-        file_size         = #{fileSize},
+        title               = #{title},
+        slug                = #{slug},
+        subtitle            = #{subtitle},
+        volume              = #{volume},
+        issue_number        = #{issueNumber},
+        publication_year    = #{publicationYear},
+        publisher           = #{publisher},
+        language_id         = #{languageId},
+        description         = #{description},
+        file_url            = #{fileUrl},
+        file_url_archive    = #{fileUrlArchive},
+        file_path           = #{filePath},
+        cover_image_url     = #{coverImageUrl},
+        file_format         = #{fileFormat},
+        file_size           = #{fileSize},
         copyright_status_id = #{copyrightStatusId},
-        total_word        = #{totalWord},
-        total_pages       = #{totalPages},
+        total_word          = #{totalWord},
+        total_pages         = #{totalPages},
         estimated_read_time = #{estimatedReadTime},
-        is_active         = #{isActive},
-        is_featured       = #{isFeatured},
-        published_at      = #{publishedAt},
-        category          = #{category},
-        source            = #{source},
-        difficulty_level  = #{difficultyLevel},
-        updated_at        = #{updatedAt}
+        is_active           = #{isActive},
+        is_featured         = #{isFeatured},
+        published_at        = #{publishedAt},
+        category            = #{category},
+        source              = #{source},
+        difficulty_level    = #{difficultyLevel},
+        collection_name     = #{collectionName},
+        first_publisher     = #{firstPublisher},
+        first_published_date = #{firstPublishedDate},
+        updated_at          = #{updatedAt}
         WHERE id = #{id}
     </update>
 
@@ -337,7 +348,7 @@
          RELATIONSHIPS
     ═══════════════════════════════════════════ -->
 
-    <select id="findAuthorsByZineId" resultType="com.naskah.demo.model.entity.Author">
+    <select id="findAuthorsByZineId" resultType="com.masasilam.app.model.entity.Author">
         SELECT a.* FROM authors a
         JOIN zine_authors za ON za.author_id = a.id
         WHERE za.zine_id = #{zineId}
@@ -397,7 +408,7 @@
          RECOMMENDATIONS (untuk dashboard)
     ═══════════════════════════════════════════ -->
 
-    <select id="getZineRecommendations" resultType="com.naskah.demo.model.dto.response.BookRecommendationResponse">
+    <select id="getZineRecommendations" resultType="com.masasilam.app.model.dto.response.BookRecommendationResponse">
         SELECT
         z.id           AS bookId,
         z.slug         AS bookSlug,
@@ -441,5 +452,12 @@
     <update id="incrementReadCount">
         UPDATE zines SET read_count = read_count + 1 WHERE id = #{zineId}
     </update>
+
+    <select id="findEarliestPublicationYearByCollection" resultType="java.lang.Integer">
+        SELECT MIN(z.publication_year)
+        FROM zines z
+        WHERE z.is_active = true
+        AND z.collection_name ILIKE #{collectionName}
+    </select>
 
 </mapper>

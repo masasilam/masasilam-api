@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.ChapterReviewMapper">
+<mapper namespace="com.masasilam.app.mapper.ChapterReviewMapper">
 
-    <resultMap id="ChapterReviewResultMap" type="com.naskah.demo.model.entity.ChapterReview">
+    <resultMap id="ChapterReviewResultMap" type="com.masasilam.app.model.entity.ChapterReview">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="bookId" column="book_id"/>

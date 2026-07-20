@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.ReadingTwinMapper">
+<mapper namespace="com.masasilam.app.mapper.social.ReadingTwinMapper">
 
-    <resultMap id="TwinResponseRM" type="com.naskah.demo.model.dto.response.social.ReadingTwinResponse">
+    <resultMap id="TwinResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingTwinResponse">
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
         <result property="displayName" column="display_name"/>
@@ -29,7 +29,7 @@
         last_calculated  = NOW()
     </insert>
 
-    <select id="findByUsers" resultType="com.naskah.demo.model.entity.social.ReadingTwin">
+    <select id="findByUsers" resultType="com.masasilam.app.model.entity.social.ReadingTwin">
         SELECT * FROM reading_twins
         WHERE user_id_a = LEAST(#{userIdA}, #{userIdB})
         AND user_id_b = GREATEST(#{userIdA}, #{userIdB})

@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.EpubBookmarkMapper">
+<mapper namespace="com.masasilam.app.mapper.EpubBookmarkMapper">
 
-    <resultMap id="EpubBookmarkRM" type="com.naskah.demo.model.entity.EpubBookmark">
+    <resultMap id="EpubBookmarkRM" type="com.masasilam.app.model.entity.EpubBookmark">
         <id     property="id"        column="id"/>
         <result property="userId"    column="user_id"/>
         <result property="bookId"    column="book_id"/>

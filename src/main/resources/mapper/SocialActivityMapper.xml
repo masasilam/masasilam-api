@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.naskah.demo.mapper.social.SocialActivityMapper">
+<mapper namespace="com.masasilam.app.mapper.social.SocialActivityMapper">
 
-    <resultMap id="ActivityRM" type="com.naskah.demo.model.entity.social.SocialActivity">
+    <resultMap id="ActivityRM" type="com.masasilam.app.model.entity.social.SocialActivity">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="activityType" column="activity_type"/>
@@ -13,7 +13,7 @@
         <result property="entitySlug" column="entity_slug"/>
         <result property="entityTitle" column="entity_title"/>
         <result property="entityCover" column="entity_cover"/>
-        <result property="metadata" column="metadata" typeHandler="com.naskah.demo.typehandler.JsonTypeHandler"/>
+        <result property="metadata" column="metadata" typeHandler="com.masasilam.app.typehandler.JsonTypeHandler"/>
         <result property="visibility" column="visibility"/>
         <result property="likeCount" column="like_count"/>
         <result property="commentCount" column="comment_count"/>
@@ -21,7 +21,7 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <resultMap id="FeedItemRM" type="com.naskah.demo.model.dto.response.social.ActivityFeedItemResponse">
+    <resultMap id="FeedItemRM" type="com.masasilam.app.model.dto.response.social.ActivityFeedItemResponse">
         <result property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
@@ -34,14 +34,14 @@
         <result property="entitySlug" column="entity_slug"/>
         <result property="entityTitle" column="entity_title"/>
         <result property="entityCover" column="entity_cover"/>
-        <result property="metadata" column="metadata" typeHandler="com.naskah.demo.typehandler.JsonMapTypeHandler"/>
+        <result property="metadata" column="metadata" typeHandler="com.masasilam.app.typehandler.JsonMapTypeHandler"/>
         <result property="likeCount" column="like_count"/>
         <result property="commentCount" column="comment_count"/>
         <result property="isLikedByMe" column="is_liked_by_me"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <resultMap id="CommentRM" type="com.naskah.demo.model.dto.response.social.ActivityCommentResponse">
+    <resultMap id="CommentRM" type="com.masasilam.app.model.dto.response.social.ActivityCommentResponse">
         <result property="id" column="id"/>
         <result property="activityId" column="activity_id"/>
         <result property="userId" column="user_id"/>
@@ -81,7 +81,8 @@
         like_count, comment_count, is_active, created_at)
         VALUES
         (#{userId}, #{activityType}, #{entityType}, #{entityId}, #{entitySlug},
-        #{entityTitle}, #{entityCover}, #{metadata, typeHandler=com.naskah.demo.typehandler.JsonMapTypeHandler}, #{visibility},
+        #{entityTitle}, #{entityCover}, #{metadata, typeHandler=com.masasilam.app.typehandler.JsonMapTypeHandler},
+        #{visibility},
         0, 0, TRUE, NOW())
     </insert>
 
@@ -175,7 +176,7 @@
         WHERE activity_id = #{activityId} AND user_id = #{userId}
     </delete>
 
-    <select id="findLike" resultType="com.naskah.demo.model.entity.social.ActivityLike">
+    <select id="findLike" resultType="com.masasilam.app.model.entity.social.ActivityLike">
         SELECT * FROM activity_likes
         WHERE activity_id = #{activityId} AND user_id = #{userId}
     </select>
@@ -205,7 +206,7 @@
         UPDATE activity_comments SET is_deleted = TRUE WHERE id = #{id}
     </update>
 
-    <select id="findCommentById" resultType="com.naskah.demo.model.entity.social.ActivityComment">
+    <select id="findCommentById" resultType="com.masasilam.app.model.entity.social.ActivityComment">
         SELECT * FROM activity_comments WHERE id = #{id}
     </select>
 

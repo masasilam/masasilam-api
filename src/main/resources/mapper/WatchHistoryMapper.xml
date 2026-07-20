@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.WatchHistoryMapper">
+
+    <resultMap id="WatchHistoryResultMap" type="com.masasilam.app.model.film.WatchHistory">
+        <id     property="id"              column="id"/>
+        <result property="filmId"          column="film_id"/>
+        <result property="userId"          column="user_id"/>
+        <result property="viewerHash"      column="viewer_hash"/>
+        <result property="progressSeconds" column="progress_seconds"/>
+        <result property="durationSeconds" column="duration_seconds"/>
+        <result property="providerType"    column="provider_type"/>
+        <result property="videoUrl"        column="video_url"/>
+        <result property="lastWatchedAt"   column="last_watched_at"/>
+        <result property="completed"       column="completed"/>
+    </resultMap>
+
+    <select id="findByUserAndFilm" resultMap="WatchHistoryResultMap">
+        SELECT * FROM watch_history
+        WHERE  user_id = #{userId}
+        AND  film_id = #{filmId}
+        LIMIT  1
+    </select>
+
+    <select id="findByHashAndFilm" resultMap="WatchHistoryResultMap">
+        SELECT * FROM watch_history
+        WHERE  viewer_hash = #{viewerHash}
+        AND  film_id     = #{filmId}
+        LIMIT  1
+    </select>
+
+    <!-- Fitur "Continue Watching" — film-film yang belum selesai ditonton -->
+    <select id="findByUser" resultMap="WatchHistoryResultMap">
+        SELECT * FROM watch_history
+        WHERE  user_id = #{userId}
+        ORDER  BY last_watched_at DESC
+        LIMIT  #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO watch_history
+        (film_id, user_id, viewer_hash,
+        progress_seconds, duration_seconds,
+        provider_type, video_url,
+        last_watched_at, completed)
+        VALUES
+        (#{filmId}, #{userId}, #{viewerHash},
+        #{progressSeconds}, #{durationSeconds},
+        #{providerType}, #{videoUrl},
+        NOW(), #{completed})
+    </insert>
+
+    <update id="update">
+        UPDATE watch_history
+        SET    progress_seconds = #{progressSeconds},
+        duration_seconds = #{durationSeconds},
+        provider_type    = #{providerType},
+        video_url        = #{videoUrl},
+        last_watched_at  = NOW(),
+        completed        = #{completed}
+        WHERE  id = #{id}
+    </update>
+
+</mapper>

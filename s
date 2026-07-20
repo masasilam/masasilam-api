@@ -24,13 +24,13 @@
 [1m--- a/src/main/java/com/naskah/demo/controller/book/EpubAnnotationController.java[m
 [1m+++ b/src/main/java/com/naskah/demo/controller/book/EpubAnnotationController.java[m
 [36m@@ -1,7 +1,6 @@[m
- package com.naskah.demo.controller.book;[m
+ package com.naskah.app.controller.book;[m
  [m
-[31m-import com.naskah.demo.model.dto.request.EpubAnnotationRequest;[m
-[31m-import com.naskah.demo.model.dto.request.EpubBookmarkRequest;[m
-[32m+[m[32mimport com.naskah.demo.model.dto.request.*;[m
- import com.naskah.demo.model.dto.response.*;[m
- import com.naskah.demo.service.EpubAnnotationService;[m
+[31m-import com.naskah.app.model.dto.request.EpubAnnotationRequest;[m
+[31m-import com.naskah.app.model.dto.request.EpubBookmarkRequest;[m
+[32m+[m[32mimport com.naskah.app.model.dto.request.*;[m
+ import com.naskah.app.model.dto.response.*;[m
+ import com.naskah.app.service.EpubAnnotationService;[m
  import jakarta.validation.Valid;[m
 [36m@@ -16,10 +15,11 @@[m [mimport org.springframework.web.bind.annotation.*;[m
   * Mengapa dipisah dari BookChapterController:[m
@@ -125,26 +125,26 @@
 [1mindex 86608e9..edf1ca8 100644[m
 [1m--- a/src/main/java/com/naskah/demo/service/impl/EpubAnnotationServiceImpl.java[m
 [1m+++ b/src/main/java/com/naskah/demo/service/impl/EpubAnnotationServiceImpl.java[m
-[36m@@ -2,17 +2,10 @@[m [mpackage com.naskah.demo.service.impl;[m
+[36m@@ -2,17 +2,10 @@[m [mpackage com.naskah.app.service.impl;[m
  [m
- import com.naskah.demo.exception.custom.DataNotFoundException;[m
- import com.naskah.demo.exception.custom.UnauthorizedException;[m
-[31m-import com.naskah.demo.mapper.BookMapper;[m
-[31m-import com.naskah.demo.mapper.EpubAnnotationMapper;[m
-[31m-import com.naskah.demo.mapper.EpubBookmarkMapper;[m
-[31m-import com.naskah.demo.mapper.UserMapper;[m
-[31m-import com.naskah.demo.model.dto.request.EpubAnnotationRequest;[m
-[31m-import com.naskah.demo.model.dto.request.EpubBookmarkRequest;[m
-[32m+[m[32mimport com.naskah.demo.mapper.*;[m
-[32m+[m[32mimport com.naskah.demo.model.dto.request.*;[m
- import com.naskah.demo.model.dto.response.*;[m
-[31m-import com.naskah.demo.model.entity.Book;[m
-[31m-import com.naskah.demo.model.entity.EpubAnnotation;[m
-[31m-import com.naskah.demo.model.entity.EpubBookmark;[m
-[31m-import com.naskah.demo.model.entity.User;[m
-[32m+[m[32mimport com.naskah.demo.model.entity.*;[m
- import com.naskah.demo.service.EpubAnnotationService;[m
- import com.naskah.demo.util.interceptor.HeaderHolder;[m
+ import com.naskah.app.exception.custom.DataNotFoundException;[m
+ import com.naskah.app.exception.custom.UnauthorizedException;[m
+[31m-import com.naskah.app.mapper.BookMapper;[m
+[31m-import com.naskah.app.mapper.EpubAnnotationMapper;[m
+[31m-import com.naskah.app.mapper.EpubBookmarkMapper;[m
+[31m-import com.naskah.app.mapper.UserMapper;[m
+[31m-import com.naskah.app.model.dto.request.EpubAnnotationRequest;[m
+[31m-import com.naskah.app.model.dto.request.EpubBookmarkRequest;[m
+[32m+[m[32mimport com.naskah.app.mapper.*;[m
+[32m+[m[32mimport com.naskah.app.model.dto.request.*;[m
+ import com.naskah.app.model.dto.response.*;[m
+[31m-import com.naskah.app.model.entity.Book;[m
+[31m-import com.naskah.app.model.entity.EpubAnnotation;[m
+[31m-import com.naskah.app.model.entity.EpubBookmark;[m
+[31m-import com.naskah.app.model.entity.User;[m
+[32m+[m[32mimport com.naskah.app.model.entity.*;[m
+ import com.naskah.app.service.EpubAnnotationService;[m
+ import com.naskah.app.util.interceptor.HeaderHolder;[m
  import lombok.RequiredArgsConstructor;[m
 [36m@@ -21,6 +14,7 @@[m [mimport org.springframework.http.HttpStatus;[m
  import org.springframework.stereotype.Service;[m

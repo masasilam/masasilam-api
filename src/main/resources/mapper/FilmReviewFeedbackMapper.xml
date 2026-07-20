@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.FilmReviewFeedbackMapper">
+
+    <resultMap id="FilmReviewFeedbackResultMap" type="com.masasilam.app.model.film.FilmReviewFeedback">
+        <id     property="id"        column="id"/>
+        <result property="reviewId"  column="review_id"/>
+        <result property="userId"    column="user_id"/>
+        <result property="isHelpful" column="is_helpful"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByUserAndReview" resultMap="FilmReviewFeedbackResultMap">
+        SELECT * FROM film_review_feedback
+        WHERE  user_id   = #{userId}
+        AND  review_id = #{reviewId}
+        LIMIT  1
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO film_review_feedback
+        (review_id, user_id, is_helpful, created_at, updated_at)
+        VALUES
+        (#{reviewId}, #{userId}, #{isHelpful}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE film_review_feedback
+        SET    is_helpful = #{isHelpful},
+        updated_at = NOW()
+        WHERE  id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM film_review_feedback WHERE id = #{id}
+    </delete>
+
+</mapper>

@@ -1,4 +1,4 @@
-package com.naskah.app;
+package com.masasilam.app;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

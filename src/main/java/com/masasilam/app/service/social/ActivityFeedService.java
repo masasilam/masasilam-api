@@ -1,0 +1,18 @@
+package com.masasilam.app.service.social;
+
+import com.masasilam.app.model.dto.request.social.*;
+import com.masasilam.app.model.dto.response.*;
+import com.masasilam.app.model.dto.response.social.*;
+
+public interface ActivityFeedService {
+    DataResponse<FeedPageResponse> getFollowingFeed(int page, int limit);
+    DataResponse<FeedPageResponse> getPublicFeed(int page, int limit);
+    DataResponse<FeedPageResponse> getUserFeed(Long userId, int page, int limit);
+    DataResponse<Void> likeActivity(Long activityId);
+    DataResponse<Void> unlikeActivity(Long activityId);
+    DataResponse<ActivityCommentResponse> commentOnActivity(Long activityId, ActivityCommentRequest request);
+    DataResponse<ActivityCommentResponse> updateActivityComment(Long commentId, ActivityCommentRequest request);
+    DataResponse<Void> deleteActivityComment(Long commentId);
+    DataResponse<FeedPageResponse> getActivityComments(Long activityId, int page, int limit);
+    void publishActivity(Long userId, String activityType, String entityType, Long entityId, String entitySlug, String entityTitle, String entityCover, String metadataJson, String visibility);
+}
