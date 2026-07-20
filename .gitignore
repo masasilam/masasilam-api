@@ -1,4 +1,6 @@
 HELP.md
+
+# Maven
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -14,10 +16,11 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
+out/
 
 ### NetBeans ###
 /nbproject/private/
@@ -32,7 +35,6 @@ build/
 ### VS Code ###
 .vscode/
 
-echo "
 # Log files
 *.log
 replay_pid*.log
@@ -41,6 +43,6 @@ replay_pid*.log
 storage/
 uploads/
 
-# File aneh
-mvn
-s" >> .gitignore
+# OS
+.DS_Store
+Thumbs.db

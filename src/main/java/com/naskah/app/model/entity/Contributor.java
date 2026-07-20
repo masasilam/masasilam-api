@@ -1,0 +1,17 @@
+package com.naskah.app.model.entity;
+
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+public class Contributor {
+    private Long id;
+    private String name;
+    private String slug;
+    private String role;
+    private String websiteUrl;
+    private Integer totalBooks;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

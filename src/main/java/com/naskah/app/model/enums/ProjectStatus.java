@@ -1,0 +1,17 @@
+package com.naskah.app.model.enums;
+
+public enum ProjectStatus {
+    PLANNING,
+    ACTIVE,
+    READY_FOR_COMPLETION,
+    TRANSCRIPTION_COMPLETE,
+    EDITING_COMPLETE,
+    ILLUSTRATION_COMPLETE,
+    TRANSLATION_COMPLETE,
+    FORMATTING,
+    COMMUNITY_REVIEW,
+    COMPLETED,
+    PUBLISHED,
+    EBOOK_GENERATED,
+    ARCHIVED
+}
