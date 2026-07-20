@@ -1,0 +1,56 @@
+package com.masasilam.app.mapper;
+
+import com.masasilam.app.model.dto.response.AuthorResponse;
+import com.masasilam.app.model.entity.Author;
+import org.apache.ibatis.annotations.*;
+
+import java.util.List;
+
+@Mapper
+public interface AuthorMapper {
+    Author findAuthorByName(@Param("name") String name);
+    void updateAuthor(Author author);
+    void insertAuthor(Author author);
+    List<AuthorResponse> findAuthorsByBookId(@Param("bookId") Long bookId);
+
+    @Select("<script>" +
+            "SELECT * FROM authors " +
+            "<where>" +
+            "  <if test='search != null and search != \"\"'>" +
+            "    name LIKE CONCAT('%', #{search}, '%')" +
+            "  </if>" +
+            "</where>" +
+            "ORDER BY ${sortColumn} ASC " +
+            "LIMIT #{limit} OFFSET #{offset}" +
+            "</script>")
+    List<Author> findAllWithPagination(@Param("offset") int offset,
+                                       @Param("limit") int limit,
+                                       @Param("search") String search,
+                                       @Param("sortColumn") String sortColumn);
+
+    @Select("<script>" +
+            "SELECT COUNT(*) FROM authors " +
+            "<where>" +
+            "  <if test='search != null and search != \"\"'>" +
+            "    name LIKE CONCAT('%', #{search}, '%')" +
+            "  </if>" +
+            "</where>" +
+            "</script>")
+    int countAll(@Param("search") String search);
+
+    @Select("SELECT * FROM authors WHERE slug = #{slug}")
+    Author findAuthorBySlug(@Param("slug") String slug);
+
+    @Select("SELECT id, name, slug, updated_at, created_at " +
+            "FROM authors " +
+            "WHERE id IN (SELECT DISTINCT author_id FROM book_authors) " +
+            "ORDER BY name ASC")
+    @Results({
+            @Result(property = "id", column = "id"),
+            @Result(property = "name", column = "name"),
+            @Result(property = "slug", column = "slug"),
+            @Result(property = "updatedAt", column = "updated_at"),
+            @Result(property = "createdAt", column = "created_at")
+    })
+    List<Author> findAllAuthors();
+}

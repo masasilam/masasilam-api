@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.FilmMapper">
+
+    <!-- ============================================================
+         ResultMaps
+         ============================================================ -->
+
+    <resultMap id="FilmResultMap" type="com.masasilam.app.model.film.Film">
+        <id property="id" column="id"/>
+        <result property="wikidataQid" column="wikidata_qid"/>
+        <result property="slug" column="slug"/>
+        <result property="judul" column="judul"/>
+        <result property="titleEng" column="title_eng"/>
+        <result property="tahunRilis" column="tahun_rilis"/>
+        <result property="jenis" column="jenis"/>
+        <result property="deskripsi" column="deskripsi"/>
+        <result property="catatan" column="catatan"/>
+        <result property="durasi" column="durasi"/>
+        <result property="negaraAsal" column="negara_asal"/>
+        <result property="color" column="color"/>
+        <result property="originalLanguage" column="original_language"/>
+        <result property="posterUrl" column="poster_url"/>
+        <result property="imageUrls" column="image_urls"/>
+        <result property="copyrightStatusId" column="copyright_status_id"/>
+        <result property="videoUrl" column="video_url"/>
+        <result property="trailerUrl" column="trailer_url"/>
+        <result property="subtitleUrl" column="subtitle_url"/>
+        <result property="followedBy" column="followed_by"/>
+        <result property="partOfSeries" column="part_of_series"/>
+        <result property="filePath" column="file_path"/>
+        <result property="budget" column="budget"/>
+        <result property="budgetDisplay" column="budget_display"/>
+    </resultMap>
+
+    <resultMap id="PersonResultMap" type="com.masasilam.app.model.film.Person">
+        <id property="id" column="id"/>
+        <result property="wikidataQid" column="wikidata_qid"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="photoUrl" column="photo_url"/>
+    </resultMap>
+
+    <resultMap id="CompanyResultMap" type="com.masasilam.app.model.film.Company">
+        <id property="id" column="id"/>
+        <result property="wikidataQid" column="wikidata_qid"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="logoUrl" column="logo_url"/>
+    </resultMap>
+
+    <!-- ============================================================
+         Film CRUD
+         ============================================================ -->
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO film (
+        wikidata_qid, slug, judul, title_eng,
+        tahun_rilis, jenis, deskripsi, catatan, durasi,
+        negara_asal, original_language, color,
+        poster_url, image_urls, trailer_url,
+        followed_by, part_of_series
+        ) VALUES (
+        #{wikidataQid}, #{slug}, #{judul}, #{titleEng},
+        #{tahunRilis}, #{jenis}, #{deskripsi}, #{catatan}, #{durasi},
+        #{negaraAsal}, #{originalLanguage}, #{color},
+        #{posterUrl}, #{imageUrls}, #{trailerUrl},
+        #{followedBy}, #{partOfSeries}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE film
+        <set>
+            <if test="judul != null">judul = #{judul},</if>
+            <if test="titleEng != null">title_eng = #{titleEng},</if>
+            <if test="tahunRilis != null">tahun_rilis = #{tahunRilis},</if>
+            <if test="jenis != null">jenis = #{jenis},</if>
+            <if test="deskripsi != null">deskripsi = #{deskripsi},</if>
+            <if test="catatan != null">catatan = #{catatan},</if>
+            <if test="durasi != null">durasi = #{durasi},</if>
+            <if test="negaraAsal != null">negara_asal = #{negaraAsal},</if>
+            <if test="originalLanguage != null">original_language = #{originalLanguage},</if>
+            <if test="color != null">color = #{color},</if>
+            <if test="posterUrl != null">poster_url = #{posterUrl},</if>
+            <if test="imageUrls != null">image_urls = #{imageUrls},</if>
+            <if test="trailerUrl != null">trailer_url = #{trailerUrl},</if>
+            <if test="followedBy != null">followed_by = #{followedBy},</if>
+            <if test="partOfSeries != null">part_of_series = #{partOfSeries},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM film WHERE id = #{id}
+    </delete>
+
+    <select id="findBySlug" resultMap="FilmResultMap">
+        SELECT * FROM film WHERE slug = #{slug}
+    </select>
+
+    <select id="findAll" resultMap="FilmResultMap">
+        SELECT * FROM film ORDER BY tahun_rilis DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM film
+    </select>
+
+    <select id="search" resultMap="FilmResultMap">
+        SELECT * FROM film
+        WHERE judul ILIKE '%' || #{query} || '%'
+        OR title_eng ILIKE '%' || #{query} || '%'
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearch" resultType="int">
+        SELECT COUNT(*) FROM film
+        WHERE judul ILIKE '%' || #{query} || '%'
+        OR title_eng ILIKE '%' || #{query} || '%'
+    </select>
+
+    <select id="findById" resultMap="FilmResultMap">
+        SELECT * FROM film WHERE id = #{id}
+    </select>
+
+    <!-- ============================================================
+         Genre
+         ============================================================ -->
+
+    <insert id="insertGenre">
+        INSERT INTO film_genre (film_id, genre)
+        VALUES (#{filmId}, #{genre})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="findGenresByFilmId" resultType="string">
+        SELECT genre FROM film_genre WHERE film_id = #{filmId} ORDER BY id
+    </select>
+
+    <delete id="deleteGenresByFilmId">
+        DELETE FROM film_genre WHERE film_id = #{filmId}
+    </delete>
+
+    <!-- ============================================================
+         Person
+         ============================================================ -->
+
+    <insert id="insertPerson" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO person (wikidata_qid, name, slug, photo_url, description)
+        VALUES (#{wikidataQid}, #{name}, #{slug}, #{photoUrl}, #{description})
+        ON CONFLICT (slug) DO NOTHING
+    </insert>
+
+    <update id="updatePerson">
+        UPDATE person
+        <set>
+            <if test="photoUrl != null">photo_url = #{photoUrl},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findPersonBySlug" resultMap="PersonResultMap">
+        SELECT id, wikidata_qid, name, slug, description, photo_url
+        FROM person
+        WHERE slug = #{slug}
+    </select>
+
+    <insert id="insertFilmPerson">
+        INSERT INTO film_person (film_id, person_id, role)
+        VALUES (#{filmId}, #{personId}, #{role})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="findPersonsByFilmIdAndRole" resultMap="PersonResultMap">
+        SELECT p.id, p.wikidata_qid, p.name, p.slug, p.description, p.photo_url
+        FROM person p
+        JOIN film_person fp ON fp.person_id = p.id
+        WHERE fp.film_id = #{filmId}
+        AND fp.role = #{role}
+        ORDER BY fp.id
+    </select>
+
+    <delete id="deletePersonsByFilmIdAndRole">
+        DELETE FROM film_person
+        WHERE film_id = #{filmId} AND role = #{role}
+    </delete>
+
+    <delete id="deletePersonsByFilmId">
+        DELETE FROM film_person WHERE film_id = #{filmId}
+    </delete>
+
+    <!-- ============================================================
+         Company
+         ============================================================ -->
+
+    <insert id="insertCompany" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO company (wikidata_qid, name, slug, logo_url, description)
+        VALUES (#{wikidataQid}, #{name}, #{slug}, #{logoUrl}, #{description})
+        ON CONFLICT (slug) DO NOTHING
+    </insert>
+
+    <update id="updateCompany">
+        UPDATE company
+        <set>
+            <if test="logoUrl != null">logo_url = #{logoUrl},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findCompanyBySlug" resultMap="CompanyResultMap">
+        SELECT id, wikidata_qid, name, slug, description, logo_url
+        FROM company
+        WHERE slug = #{slug}
+    </select>
+
+    <insert id="insertFilmProductionCompany">
+        INSERT INTO film_production_company (film_id, company_id)
+        VALUES (#{filmId}, #{companyId})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <insert id="insertFilmDistributor">
+        INSERT INTO film_distributor (film_id, company_id)
+        VALUES (#{filmId}, #{companyId})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="findProductionCompaniesByFilmId" resultMap="CompanyResultMap">
+        SELECT c.id, c.wikidata_qid, c.name, c.slug, c.description, c.logo_url
+        FROM company c
+        JOIN film_production_company fpc ON fpc.company_id = c.id
+        WHERE fpc.film_id = #{filmId}
+        ORDER BY fpc.id
+    </select>
+
+    <select id="findDistributorsByFilmId" resultMap="CompanyResultMap">
+        SELECT c.id, c.wikidata_qid, c.name, c.slug, c.description, c.logo_url
+        FROM company c
+        JOIN film_distributor fd ON fd.company_id = c.id
+        WHERE fd.film_id = #{filmId}
+        ORDER BY fd.id
+    </select>
+
+    <delete id="deleteProductionCompaniesByFilmId">
+        DELETE FROM film_production_company WHERE film_id = #{filmId}
+    </delete>
+
+    <delete id="deleteDistributorsByFilmId">
+        DELETE FROM film_distributor WHERE film_id = #{filmId}
+    </delete>
+
+    <!-- ============================================================
+         Location
+         ============================================================ -->
+
+    <insert id="insertLocation">
+        INSERT INTO film_location (film_id, type, location)
+        VALUES (#{filmId}, #{type}, #{name})
+    </insert>
+
+    <select id="findLocationsByFilmIdAndType" resultType="string">
+        SELECT location
+        FROM film_location
+        WHERE film_id = #{filmId}
+        AND type = #{type}
+        ORDER BY id
+    </select>
+
+    <delete id="deleteLocationsByFilmId">
+        DELETE FROM film_location WHERE film_id = #{filmId}
+    </delete>
+
+    <!-- ============================================================
+         Alias
+         ============================================================ -->
+
+    <insert id="insertAlias">
+        INSERT INTO film_alias (film_id, alias, language)
+        VALUES (#{filmId}, #{alias}, #{language})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="findAliasesByFilmIdAndLanguage" resultType="string">
+        SELECT alias FROM film_alias
+        WHERE film_id = #{filmId} AND language = #{language}
+        ORDER BY id
+    </select>
+
+    <delete id="deleteAliasesByFilmId">
+        DELETE FROM film_alias WHERE film_id = #{filmId}
+    </delete>
+
+    <!-- ============================================================
+         Financial / Review / Rating (delete only)
+         ============================================================ -->
+
+    <delete id="deleteBoxOfficeByFilmId">
+        DELETE FROM film_box_office WHERE film_id = #{filmId}
+    </delete>
+
+    <delete id="deleteReviewsByFilmId">
+        DELETE FROM film_review WHERE film_id = #{filmId}
+    </delete>
+
+    <delete id="deleteContentRatingsByFilmId">
+        DELETE FROM film_content_rating WHERE film_id = #{filmId}
+    </delete>
+
+</mapper>

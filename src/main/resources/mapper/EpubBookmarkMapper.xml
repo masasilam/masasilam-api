@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.EpubBookmarkMapper">
+
+    <resultMap id="EpubBookmarkRM" type="com.masasilam.app.model.entity.EpubBookmark">
+        <id     property="id"        column="id"/>
+        <result property="userId"    column="user_id"/>
+        <result property="bookId"    column="book_id"/>
+        <result property="zineId"    column="zine_id"/>
+        <result property="cfi"       column="cfi"/>
+        <result property="label"     column="label"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findByUserAndBook" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, zine_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findByUserAndZine" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, zine_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId} AND zine_id = #{zineId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findById" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, zine_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO epub_bookmarks (user_id, book_id, zine_id, cfi, label, created_at)
+        VALUES (#{userId}, #{bookId}, #{zineId}, #{cfi}, #{label}, #{createdAt})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM epub_bookmarks WHERE id = #{id}
+    </delete>
+
+    <select id="countByUser" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM epub_bookmarks WHERE user_id = #{userId}
+    </select>
+
+    <select id="countByUserAndBook" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM epub_bookmarks
+        WHERE user_id = #{userId} AND book_id = #{bookId}
+    </select>
+
+    <select id="findByUser" resultMap="EpubBookmarkRM">
+        SELECT id, user_id, book_id, zine_id, cfi, label, created_at
+        FROM epub_bookmarks
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+</mapper>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.ReadingGoalMapper">
+
+    <resultMap id="ReadingGoalRM" type="com.masasilam.app.model.entity.ReadingGoal">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="goal_type" property="goalType"/>
+        <result column="target_value" property="targetValue"/>
+        <result column="current_value" property="currentValue"/>
+        <result column="unit" property="unit"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="status" property="status"/>
+        <result column="completed_at" property="completedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_goals (
+        user_id, title, description, goal_type,
+        target_value, current_value, unit,
+        start_date, end_date, status,
+        created_at, updated_at
+        ) VALUES (
+        #{userId}, #{title}, #{description}, #{goalType},
+        #{targetValue}, 0, #{unit},
+        #{startDate}, #{endDate}, 'ACTIVE',
+        NOW(), NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE reading_goals SET
+        title = #{title},
+        description = #{description},
+        goal_type = #{goalType},
+        target_value = #{targetValue},
+        unit = #{unit},
+        start_date = #{startDate},
+        end_date = #{endDate},
+        updated_at = NOW()
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM reading_goals
+        WHERE id = #{id} AND user_id = #{userId}
+    </delete>
+
+    <select id="findById" resultMap="ReadingGoalRM">
+        SELECT * FROM reading_goals WHERE id = #{id}
+    </select>
+
+    <select id="findByUser" resultMap="ReadingGoalRM">
+        SELECT * FROM reading_goals
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="findActiveByUser" resultMap="ReadingGoalRM">
+        SELECT * FROM reading_goals
+        WHERE user_id = #{userId} AND status = 'ACTIVE'
+        ORDER BY end_date ASC
+    </select>
+
+    <select id="findCompletedByUser" resultMap="ReadingGoalRM">
+        SELECT * FROM reading_goals
+        WHERE user_id = #{userId} AND status = 'COMPLETED'
+        ORDER BY completed_at DESC
+    </select>
+
+    <select id="countByUser" resultType="int">
+        SELECT COUNT(*) FROM reading_goals WHERE user_id = #{userId}
+    </select>
+
+    <select id="countActiveByUser" resultType="int">
+        SELECT COUNT(*) FROM reading_goals
+        WHERE user_id = #{userId} AND status = 'ACTIVE'
+    </select>
+
+    <select id="countCompletedByUser" resultType="int">
+        SELECT COUNT(*) FROM reading_goals
+        WHERE user_id = #{userId} AND status = 'COMPLETED'
+    </select>
+
+    <select id="countThisMonthByUser" resultType="int">
+        SELECT COUNT(*) FROM reading_goals
+        WHERE user_id = #{userId}
+        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
+    </select>
+
+    <update id="updateCurrentValue">
+        UPDATE reading_goals SET
+        current_value = #{currentValue},
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="markCompleted">
+        UPDATE reading_goals SET
+        status = 'COMPLETED',
+        completed_at = NOW(),
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>

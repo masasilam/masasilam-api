@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.social.ReadingListMapper">
+
+    <resultMap id="ListEntityRM" type="com.masasilam.app.model.entity.social.ReadingList">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isFeatured" column="is_featured"/>
+        <result property="itemCount" column="item_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="forkCount" column="fork_count"/>
+        <result property="forkedFromId" column="forked_from_id"/>
+        <result property="tags" column="tags"/>
+        <result property="isActive" column="is_active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ListResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingListResponse">
+        <result property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="userPhoto" column="user_photo"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="description" column="description"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="visibility" column="visibility"/>
+        <result property="isFeatured" column="is_featured"/>
+        <result property="itemCount" column="item_count"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="forkCount" column="fork_count"/>
+        <result property="forkedFromId" column="forked_from_id"/>
+        <result property="forkedFromTitle" column="forked_from_title"/>
+        <result property="tags" column="tags"/>
+        <result property="isLikedByMe" column="is_liked_by_me"/>
+        <result property="isFollowedByMe" column="is_followed_by_me"/>
+        <result property="isOwner" column="is_owner"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ItemResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingListItemResponse">
+        <result property="id" column="id"/>
+        <result property="entityType" column="entity_type"/>
+        <result property="entityId" column="entity_id"/>
+        <result property="entitySlug" column="entity_slug"/>
+        <result property="entityTitle" column="entity_title"/>
+        <result property="entityCover" column="entity_cover"/>
+        <result property="note" column="note"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="addedAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="listSelectBase">
+        SELECT
+        rl.id,
+        rl.user_id,
+        u.username,
+        u.profile_picture_url           AS user_photo,
+        rl.title,
+        rl.slug,
+        rl.description,
+        rl.cover_image_url,
+        rl.visibility,
+        rl.is_featured,
+        rl.item_count,
+        rl.like_count,
+        rl.view_count,
+        rl.fork_count,
+        rl.forked_from_id,
+        rf.title                         AS forked_from_title,
+        array_to_string(rl.tags, ',')    AS tags
+    </sql>
+
+    <!-- ── INSERT ──────────────────────────────────────────────── -->
+    <insert id="insertList" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_lists
+        (user_id, title, slug, description, cover_image_url,
+        visibility, is_featured, item_count, like_count, view_count,
+        fork_count, forked_from_id, tags, is_active, created_at, updated_at)
+        VALUES
+        (#{userId}, #{title}, #{slug}, #{description}, #{coverImageUrl},
+        #{visibility}, FALSE, 0, 0, 0,
+        0, #{forkedFromId},
+        #{tags}::text[],
+        TRUE, NOW(), NOW())
+    </insert>
+
+    <update id="updateList">
+        UPDATE reading_lists SET
+        title          = #{title},
+        description    = #{description},
+        cover_image_url = #{coverImageUrl},
+        visibility     = #{visibility},
+        tags           = #{tags}::text[],
+        updated_at     = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteList">
+        UPDATE reading_lists SET is_active = FALSE, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultMap="ListEntityRM">
+        SELECT * FROM reading_lists WHERE id = #{id} AND is_active = TRUE
+    </select>
+
+    <select id="findBySlug" resultMap="ListEntityRM">
+        SELECT * FROM reading_lists WHERE user_id = #{userId} AND slug = #{slug} AND is_active = TRUE
+    </select>
+
+    <!-- ── DETAIL ───────────────────────────────────────────────── -->
+    <select id="getListDetail" resultMap="ListResponseRM">
+        <include refid="listSelectBase"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_list_likes rll
+        WHERE rll.list_id = rl.id AND rll.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_list_follows rlf
+        WHERE rlf.list_id = rl.id AND rlf.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_followed_by_me,
+        (rl.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner,
+        rl.created_at,
+        rl.updated_at
+        FROM reading_lists rl
+        JOIN users u ON u.id = rl.user_id
+        LEFT JOIN reading_lists rf ON rf.id = rl.forked_from_id
+        WHERE rl.id = #{listId} AND rl.is_active = TRUE
+    </select>
+
+    <!-- ── BY USER ───────────────────────────────────────────────── -->
+    <select id="findByUser" resultMap="ListResponseRM">
+        <include refid="listSelectBase"/>,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_list_likes rll
+        WHERE rll.list_id = rl.id AND rll.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_liked_by_me,
+        CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
+        EXISTS(SELECT 1 FROM reading_list_follows rlf
+        WHERE rlf.list_id = rl.id AND rlf.user_id = #{currentUserId, jdbcType=BIGINT})
+        ELSE FALSE END AS is_followed_by_me,
+        (rl.user_id = #{currentUserId, jdbcType=BIGINT}) AS is_owner,
+        rl.created_at, rl.updated_at
+        FROM reading_lists rl
+        JOIN users u ON u.id = rl.user_id
+        LEFT JOIN reading_lists rf ON rf.id = rl.forked_from_id
+        WHERE rl.user_id = #{userId}
+        AND rl.is_active = TRUE
+        AND (
+        rl.visibility = 'public'
+        OR rl.user_id = #{currentUserId, jdbcType=BIGINT}
+        OR (rl.visibility = 'followers'
+        AND #{currentUserId, jdbcType=BIGINT} IS NOT NULL
+        AND EXISTS(
+        SELECT 1 FROM user_follows
+        WHERE follower_id = #{currentUserId, jdbcType=BIGINT}
+        AND following_id = #{userId}
+        ))
+        )
+        ORDER BY rl.updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- ── PUBLIC LISTS ─────────────────────────────────────────── -->
+    <select id="findPublicLists" resultMap="ListResponseRM">
+        <include refid="listSelectBase"/>,
+        FALSE AS is_liked_by_me,
+        FALSE AS is_followed_by_me,
+        FALSE AS is_owner,
+        rl.created_at, rl.updated_at
+        FROM reading_lists rl
+        JOIN users u ON u.id = rl.user_id
+        LEFT JOIN reading_lists rf ON rf.id = rl.forked_from_id
+        WHERE rl.is_active = TRUE
+        AND rl.visibility = 'public'
+        <if test="search != null and search != ''">
+            AND (rl.title ILIKE '%' || #{search} || '%'
+            OR rl.description ILIKE '%' || #{search} || '%')
+        </if>
+        <if test="tag != null and tag != ''">
+            AND #{tag} = ANY(rl.tags)
+        </if>
+        ORDER BY rl.like_count DESC, rl.updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUser" resultType="int">
+        SELECT COUNT(*) FROM reading_lists WHERE user_id = #{userId} AND is_active = TRUE
+    </select>
+
+    <select id="countPublicLists" resultType="int">
+        SELECT COUNT(*) FROM reading_lists
+        WHERE is_active = TRUE AND visibility = 'public'
+        <if test="search != null and search != ''">
+            AND (title ILIKE '%' || #{search} || '%' OR description ILIKE '%' || #{search} || '%')
+        </if>
+        <if test="tag != null and tag != ''">
+            AND #{tag} = ANY(tags)
+        </if>
+    </select>
+
+    <!-- ── ITEMS ─────────────────────────────────────────────────── -->
+    <insert id="insertItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_list_items
+        (list_id, entity_type, entity_id, entity_slug, entity_title,
+        entity_cover, added_by, note, sort_order, created_at)
+        VALUES
+        (#{listId}, #{entityType}, #{entityId}, #{entitySlug}, #{entityTitle},
+        #{entityCover}, #{addedBy}, #{note},
+        COALESCE((SELECT MAX(sort_order)+1 FROM reading_list_items WHERE list_id = #{listId}), 0),
+        NOW())
+    </insert>
+
+    <delete id="deleteItem">
+        DELETE FROM reading_list_items
+        WHERE list_id = #{listId} AND entity_type = #{entityType} AND entity_id = #{entityId}
+    </delete>
+
+    <delete id="deleteItemById">
+        DELETE FROM reading_list_items WHERE id = #{id}
+    </delete>
+
+    <select id="findItem" resultType="com.masasilam.app.model.entity.social.ReadingListItem">
+        SELECT * FROM reading_list_items
+        WHERE list_id = #{listId} AND entity_type = #{entityType} AND entity_id = #{entityId}
+    </select>
+
+    <select id="findItemsByList" resultMap="ItemResponseRM">
+        SELECT * FROM reading_list_items
+        WHERE list_id = #{listId}
+        ORDER BY sort_order ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="updateItemOrder">
+        UPDATE reading_list_items SET sort_order = #{sortOrder} WHERE id = #{itemId}
+    </update>
+
+    <select id="countItemsByList" resultType="int">
+        SELECT COUNT(*) FROM reading_list_items WHERE list_id = #{listId}
+    </select>
+
+    <!-- ── LIKES ─────────────────────────────────────────────────── -->
+    <insert id="insertLike">
+        INSERT INTO reading_list_likes (list_id, user_id, created_at)
+        VALUES (#{listId}, #{userId}, NOW())
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM reading_list_likes WHERE list_id = #{listId} AND user_id = #{userId}
+    </delete>
+
+    <select id="isLiked" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM reading_list_likes WHERE list_id = #{listId} AND user_id = #{userId})
+    </select>
+
+    <update id="incrementLikeCount">
+        UPDATE reading_lists SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementLikeCount">
+        UPDATE reading_lists SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
+    </update>
+
+    <!-- ── FOLLOWS ────────────────────────────────────────────────── -->
+    <insert id="insertFollow">
+        INSERT INTO reading_list_follows (list_id, user_id, created_at)
+        VALUES (#{listId}, #{userId}, NOW())
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteFollow">
+        DELETE FROM reading_list_follows WHERE list_id = #{listId} AND user_id = #{userId}
+    </delete>
+
+    <select id="isFollowed" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM reading_list_follows WHERE list_id = #{listId} AND user_id = #{userId})
+    </select>
+
+    <update id="incrementForkCount">
+        UPDATE reading_lists SET fork_count = fork_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="incrementViewCount">
+        UPDATE reading_lists SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- ── ENTITY LISTS ───────────────────────────────────────────── -->
+    <select id="findListsContainingEntity"
+            resultType="com.masasilam.app.model.dto.response.social.ReadingListSummaryResponse">
+        SELECT
+        rl.id, rl.title, rl.slug, rl.cover_image_url,
+        rl.item_count, rl.like_count,
+        array_to_string(rl.tags, ',') AS tags
+        FROM reading_lists rl
+        JOIN reading_list_items rli ON rli.list_id = rl.id
+        WHERE rli.entity_type = #{entityType}
+        AND rli.entity_id   = #{entityId}
+        AND rl.is_active    = TRUE
+        AND (
+        rl.visibility = 'public'
+        OR rl.user_id = #{currentUserId, jdbcType=BIGINT}
+        )
+        ORDER BY rl.like_count DESC
+        LIMIT 10
+    </select>
+
+    <select id="findBySlugGlobal" resultMap="ListEntityRM">
+        SELECT * FROM reading_lists WHERE slug = #{slug} AND is_active = TRUE LIMIT 1
+    </select>
+
+    <!-- ReadingListMapper.xml -->
+    <select id="getMaxSortOrder" resultType="java.lang.Integer">
+        SELECT MAX(sort_order) FROM reading_list_items WHERE list_id = #{listId}
+    </select>
+</mapper>

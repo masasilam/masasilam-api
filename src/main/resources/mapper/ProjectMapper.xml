@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.naskah.demo.mapper.ProjectMapper">
+<mapper namespace="com.masasilam.app.mapper.ProjectMapper">
 
-    <resultMap id="ProjectResponseMap" type="com.naskah.demo.model.dto.response.ProjectResponse">
+    <resultMap id="ProjectResponseMap" type="com.masasilam.app.model.dto.response.ProjectResponse">
         <!-- Basic info -->
         <id property="id" column="id"/>
         <result property="title" column="title"/>
@@ -82,7 +82,7 @@
     </select>
 
     <!-- Fixed insert with proper PostgreSQL enum casting -->
-    <insert id="insertProject" parameterType="com.naskah.demo.model.entity.Project" useGeneratedKeys="true"
+    <insert id="insertProject" parameterType="com.masasilam.app.model.entity.Project" useGeneratedKeys="true"
             keyProperty="id">
         INSERT INTO projects (
         title, description, author, original_source, difficulty, status, priority,
@@ -105,7 +105,7 @@
     </insert>
 
     <!-- ADD THIS: Update Project method -->
-    <update id="updateProject" parameterType="com.naskah.demo.model.entity.Project">
+    <update id="updateProject" parameterType="com.masasilam.app.model.entity.Project">
         UPDATE projects
         <set>
             <if test="title != null">title = #{title},</if>
@@ -162,13 +162,13 @@
         WHERE p.id = #{id}
     </select>
 
-    <select id="getProjectBySlug" resultType="com.naskah.demo.model.entity.Project">
+    <select id="getProjectBySlug" resultType="com.masasilam.app.model.entity.Project">
         SELECT * FROM projects
         WHERE slug = #{slug}
     </select>
 
     <!-- Get project entity -->
-    <select id="getProjectByIdEntity" resultType="com.naskah.demo.model.entity.Project">
+    <select id="getProjectByIdEntity" resultType="com.masasilam.app.model.entity.Project">
         SELECT * FROM projects WHERE id = #{projectId}
     </select>
 
@@ -254,7 +254,7 @@
     </select>
 
     <!-- Insert quality assessment -->
-    <insert id="insertQualityAssessment" parameterType="com.naskah.demo.model.entity.ProjectQualityAssessment"
+    <insert id="insertQualityAssessment" parameterType="com.masasilam.app.model.entity.ProjectQualityAssessment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_quality_assessments (
         project_id, assessor_id, quality_score, content_accuracy, language_quality,
@@ -290,7 +290,7 @@
     </update>
 
     <!-- Get recent project activity -->
-    <select id="getRecentProjectActivity" resultType="com.naskah.demo.model.dto.response.ProjectActivityResponse">
+    <select id="getRecentProjectActivity" resultType="com.masasilam.app.model.dto.response.ProjectActivityResponse">
         SELECT
         pa.id,
         pa.activity_type,
@@ -318,7 +318,7 @@
     </select>
 
     <!-- Get user recent activity -->
-    <select id="getUserRecentActivity" resultType="com.naskah.demo.model.dto.response.UserActivityResponse">
+    <select id="getUserRecentActivity" resultType="com.masasilam.app.model.dto.response.UserActivityResponse">
         SELECT
         pa.id,
         pa.activity_type,
@@ -350,7 +350,7 @@
     </update>
 
     <!-- Insert project activity -->
-    <insert id="insertProjectActivity" parameterType="com.naskah.demo.model.entity.ProjectActivity"
+    <insert id="insertProjectActivity" parameterType="com.masasilam.app.model.entity.ProjectActivity"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_activities (
         project_id, user_id, activity_type, description, page_number, metadata, created_at

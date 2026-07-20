@@ -1,0 +1,15 @@
+package com.masasilam.app.model.dto.response;
+
+import lombok.Data;
+
+@Data
+public class ReactionStatsResponse {
+    private Long totalRatings;
+    private Long totalAngry;
+    private Long totalLikes;
+    private Long totalLoves;
+    private Long totalDislikes;
+    private Long totalSad;
+    private Long totalComments;
+    private Double averageRating;
+}

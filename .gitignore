@@ -1,4 +1,6 @@
 HELP.md
+
+# Maven
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -14,10 +16,11 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
+out/
 
 ### NetBeans ###
 /nbproject/private/
@@ -31,3 +34,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Log files
+*.log
+replay_pid*.log
+
+# Storage & uploads
+storage/
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db

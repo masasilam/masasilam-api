@@ -1,40 +1,42 @@
-# Ignore target directory (akan dibuild di container)
+# Build artifacts
 target/
+*.jar
+*.war
+*.class
 
-# Ignore IDE files
+# IDE
 .idea/
 .vscode/
 *.iml
 *.ipr
 *.iws
+.classpath
+.project
+.settings/
 
-# Ignore OS files
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Logs
+logs/
+*.log
+
+# OS files
 .DS_Store
 Thumbs.db
 
-# Ignore Git files
-.git/
-.gitignore
+# Test files
+src/test/
+**/test/
 
-# Ignore logs
-*.log
-logs/
-
-# Ignore temporary files
-*.tmp
-*.temp
-
-# Ignore documentation
+# Documentation
 README.md
+*.md
 docs/
 
-# Ignore Docker files (kecuali Dockerfile)
-.dockerignore
-
-# Ignore testing files
-src/test/
-*.test
-
-# Ignore backup files
-*.backup
-*.bak
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile

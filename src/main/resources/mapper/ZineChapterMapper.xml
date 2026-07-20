@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.ZineChapterMapper">
+
+    <!-- ===== RESULT MAP ===== -->
+    <resultMap id="ZineChapterResultMap" type="com.masasilam.app.model.entity.BookChapter">
+        <id     property="id"              column="id"/>
+        <!-- bookId field dipakai untuk menyimpan zine_id -->
+        <result property="bookId"          column="zine_id"/>
+        <result property="chapterNumber"   column="chapter_number"/>
+        <result property="parentChapterId" column="parent_chapter_id"/>
+        <result property="chapterLevel"    column="chapter_level"/>
+        <result property="title"           column="title"/>
+        <result property="slug"            column="slug"/>
+        <result property="content"         column="content"/>
+        <result property="htmlContent"     column="html_content"/>
+        <result property="wordCount"       column="word_count"/>
+        <result property="createdAt"       column="created_at"/>
+        <result property="updatedAt"       column="updated_at"/>
+    </resultMap>
+
+    <!-- ===== INSERT ===== -->
+    <insert id="insertChapter"
+            parameterType="com.masasilam.app.model.entity.BookChapter"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO zine_chapters (
+        zine_id,
+        chapter_number,
+        parent_chapter_id,
+        chapter_level,
+        title,
+        slug,
+        content,
+        html_content,
+        word_count,
+        created_at,
+        updated_at
+        ) VALUES (
+        #{bookId},
+        #{chapterNumber},
+        #{parentChapterId},
+        #{chapterLevel},
+        #{title},
+        #{slug},
+        #{content},
+        #{htmlContent},
+        #{wordCount},
+        #{createdAt},
+        #{updatedAt}
+        )
+    </insert>
+
+    <!-- ===== UPDATE ===== -->
+    <update id="updateChapter"
+            parameterType="com.masasilam.app.model.entity.BookChapter">
+        UPDATE zine_chapters SET
+        chapter_number    = #{chapterNumber},
+        parent_chapter_id = #{parentChapterId},
+        chapter_level     = #{chapterLevel},
+        title             = #{title},
+        slug              = #{slug},
+        content           = #{content},
+        html_content      = #{htmlContent},
+        word_count        = #{wordCount},
+        updated_at        = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ===== SELECT BY NUMBER ===== -->
+    <select id="findChapterByNumber"
+            resultMap="ZineChapterResultMap">
+        SELECT *
+        FROM zine_chapters
+        WHERE zine_id        = #{zineId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <!-- ===== SELECT ALL BY ZINE ===== -->
+    <select id="findChaptersByZineId"
+            resultMap="ZineChapterResultMap">
+        SELECT *
+        FROM zine_chapters
+        WHERE zine_id = #{zineId}
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- ===== FULL-TEXT SEARCH ===== -->
+    <select id="searchInZine"
+            resultMap="ZineChapterResultMap">
+        SELECT *
+        FROM zine_chapters
+        WHERE zine_id = #{zineId}
+        AND to_tsvector('indonesian', coalesce(content, ''))
+        @@ plainto_tsquery('indonesian', #{query})
+        ORDER BY chapter_number ASC
+    </select>
+
+    <!-- ===== DELETE ALL BY ZINE ===== -->
+    <delete id="deleteChaptersByZineId">
+        DELETE FROM zine_chapters
+        WHERE zine_id = #{zineId}
+    </delete>
+
+    <!-- ===== DELETE BY ID ===== -->
+    <delete id="deleteChapterById">
+        DELETE FROM zine_chapters
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

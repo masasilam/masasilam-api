@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.ZineReviewFeedbackMapper">
+
+    <resultMap id="ZineReviewFeedbackResultMap" type="com.masasilam.app.model.entity.ZineReviewFeedback">
+        <id     property="id"         column="id"/>
+        <result property="userId"     column="user_id"/>
+        <result property="reviewId"   column="review_id"/>
+        <result property="isHelpful"  column="is_helpful"/>
+        <result property="createdAt"  column="created_at"/>
+        <result property="updatedAt"  column="updated_at"/>
+    </resultMap>
+
+    <!-- ── INSERT ──────────────────────────────────────────────────────────── -->
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO zine_review_feedbacks (
+        user_id, review_id, is_helpful, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{reviewId}, #{isHelpful}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ── UPDATE ──────────────────────────────────────────────────────────── -->
+
+    <update id="update">
+        UPDATE zine_review_feedbacks
+        SET is_helpful = #{isHelpful},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- ── DELETE (hard delete — feedback tidak perlu soft delete) ─────────── -->
+
+    <delete id="delete">
+        DELETE FROM zine_review_feedbacks WHERE id = #{id}
+    </delete>
+
+    <!-- ── FIND BY USER AND REVIEW ────────────────────────────────────────── -->
+
+    <select id="findByUserAndReview" resultMap="ZineReviewFeedbackResultMap">
+        SELECT * FROM zine_review_feedbacks
+        WHERE user_id  = #{userId}
+        AND review_id = #{reviewId}
+    </select>
+
+</mapper>

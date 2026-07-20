@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- ============================================================
+     UserFollowMapper.xml
+     ============================================================ -->
+<mapper namespace="com.masasilam.app.mapper.social.UserFollowMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_follows (follower_id, following_id, created_at)
+        VALUES (#{followerId}, #{followingId}, NOW())
+        ON CONFLICT (follower_id, following_id) DO NOTHING
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM user_follows
+        WHERE follower_id = #{followerId} AND following_id = #{followingId}
+    </delete>
+
+    <select id="findByFollowerAndFollowing"
+            resultType="com.masasilam.app.model.entity.social.UserFollow">
+        SELECT * FROM user_follows
+        WHERE follower_id = #{followerId} AND following_id = #{followingId}
+    </select>
+
+    <select id="isFollowing" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM user_follows
+        WHERE follower_id = #{followerId} AND following_id = #{followingId}
+        )
+    </select>
+
+    <select id="countMutualFollows" resultType="int">
+        SELECT COUNT(*) FROM user_follows f1
+        JOIN user_follows f2
+        ON f1.following_id = f2.follower_id
+        AND f2.following_id = f1.follower_id
+        WHERE f1.follower_id = #{userIdA}
+    </select>
+
+</mapper>

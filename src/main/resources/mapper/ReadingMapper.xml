@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.naskah.demo.mapper.ReadingMapper">
+<mapper namespace="com.masasilam.app.mapper.ReadingMapper">
 
-    <select id="findReadingProgressByUserAndBook" resultType="com.naskah.demo.model.entity.ReadingProgress">
+    <select id="findReadingProgressByUserAndBook" resultType="com.masasilam.app.model.entity.ReadingProgress">
         SELECT *
         FROM reading_progress
         WHERE user_id = #{userId}
         AND book_id = #{bookId}
     </select>
 
-    <insert id="insertReadingProgress" parameterType="com.naskah.demo.model.entity.ReadingProgress" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertReadingProgress" parameterType="com.masasilam.app.model.entity.ReadingProgress" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_progress
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -44,7 +44,7 @@
         </trim>
     </insert>
 
-    <update id="updateReadingProgress" parameterType="com.naskah.demo.model.entity.ReadingProgress">
+    <update id="updateReadingProgress" parameterType="com.masasilam.app.model.entity.ReadingProgress">
         UPDATE reading_progress
         <set>
             <if test="currentPage != null">current_page = #{currentPage},</if>
@@ -62,7 +62,7 @@
         WHERE id = #{id}
     </update>
 
-    <insert id="insertReadingSession" parameterType="com.naskah.demo.model.entity.ReadingSession" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertReadingSession" parameterType="com.masasilam.app.model.entity.ReadingSession" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_sessions
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>

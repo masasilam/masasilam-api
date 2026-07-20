@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.ZineRatingMapper">
+
+    <resultMap id="ZineRatingResultMap" type="com.masasilam.app.model.entity.ZineRating">
+        <id     property="id"        column="id"/>
+        <result property="userId"    column="user_id"/>
+        <result property="zineId"    column="zine_id"/>
+        <result property="rating"    column="rating"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="ZineRatingStatsResultMap" type="com.masasilam.app.model.dto.response.ZineRatingStatsResponse">
+        <result property="zineId"        column="zine_id"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="totalRatings"  column="total_ratings"/>
+        <result property="rating50Count" column="rating_50"/>
+        <result property="rating45Count" column="rating_45"/>
+        <result property="rating40Count" column="rating_40"/>
+        <result property="rating35Count" column="rating_35"/>
+        <result property="rating30Count" column="rating_30"/>
+        <result property="rating25Count" column="rating_25"/>
+        <result property="rating20Count" column="rating_20"/>
+        <result property="rating15Count" column="rating_15"/>
+        <result property="rating10Count" column="rating_10"/>
+        <result property="rating05Count" column="rating_05"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO zine_ratings (user_id, zine_id, rating, created_at, updated_at)
+        VALUES (#{userId}, #{zineId}, #{rating}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update">
+        UPDATE zine_ratings
+        SET rating = #{rating}, updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM zine_ratings WHERE id = #{id}
+    </delete>
+
+    <select id="findByUserAndZine" resultMap="ZineRatingResultMap">
+        SELECT * FROM zine_ratings
+        WHERE user_id = #{userId} AND zine_id = #{zineId}
+    </select>
+
+    <select id="getZineRatingStats" resultMap="ZineRatingStatsResultMap">
+        SELECT
+        #{zineId}                                          AS zine_id,
+        COALESCE(AVG(rating), 0)                          AS average_rating,
+        COUNT(*)                                          AS total_ratings,
+        COUNT(*) FILTER (WHERE rating = 5.0)              AS rating_50,
+        COUNT(*) FILTER (WHERE rating = 4.5)              AS rating_45,
+        COUNT(*) FILTER (WHERE rating = 4.0)              AS rating_40,
+        COUNT(*) FILTER (WHERE rating = 3.5)              AS rating_35,
+        COUNT(*) FILTER (WHERE rating = 3.0)              AS rating_30,
+        COUNT(*) FILTER (WHERE rating = 2.5)              AS rating_25,
+        COUNT(*) FILTER (WHERE rating = 2.0)              AS rating_20,
+        COUNT(*) FILTER (WHERE rating = 1.5)              AS rating_15,
+        COUNT(*) FILTER (WHERE rating = 1.0)              AS rating_10,
+        COUNT(*) FILTER (WHERE rating = 0.5)              AS rating_05
+        FROM zine_ratings
+        WHERE zine_id = #{zineId}
+    </select>
+
+    <select id="findAllUserRatings" resultType="java.util.Map">
+        SELECT id, zine_id, rating, created_at
+        FROM zine_ratings
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>
