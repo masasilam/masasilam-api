@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.social.ReadingListMapper">
-
     <resultMap id="ListEntityRM" type="com.masasilam.app.model.entity.social.ReadingList">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -66,7 +64,7 @@
         rl.id,
         rl.user_id,
         u.username,
-        u.profile_picture_url           AS user_photo,
+        u.profile_picture_url AS user_photo,
         rl.title,
         rl.slug,
         rl.description,
@@ -78,11 +76,10 @@
         rl.view_count,
         rl.fork_count,
         rl.forked_from_id,
-        rf.title                         AS forked_from_title,
-        array_to_string(rl.tags, ',')    AS tags
+        rf.title AS forked_from_title,
+        array_to_string(rl.tags, ',') AS tags
     </sql>
 
-    <!-- ── INSERT ──────────────────────────────────────────────── -->
     <insert id="insertList" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_lists
         (user_id, title, slug, description, cover_image_url,
@@ -98,12 +95,12 @@
 
     <update id="updateList">
         UPDATE reading_lists SET
-        title          = #{title},
-        description    = #{description},
+        title = #{title},
+        description = #{description},
         cover_image_url = #{coverImageUrl},
-        visibility     = #{visibility},
-        tags           = #{tags}::text[],
-        updated_at     = NOW()
+        visibility = #{visibility},
+        tags = #{tags}::text[],
+        updated_at = NOW()
         WHERE id = #{id}
     </update>
 
@@ -119,7 +116,6 @@
         SELECT * FROM reading_lists WHERE user_id = #{userId} AND slug = #{slug} AND is_active = TRUE
     </select>
 
-    <!-- ── DETAIL ───────────────────────────────────────────────── -->
     <select id="getListDetail" resultMap="ListResponseRM">
         <include refid="listSelectBase"/>,
         CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
@@ -139,7 +135,6 @@
         WHERE rl.id = #{listId} AND rl.is_active = TRUE
     </select>
 
-    <!-- ── BY USER ───────────────────────────────────────────────── -->
     <select id="findByUser" resultMap="ListResponseRM">
         <include refid="listSelectBase"/>,
         CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
@@ -172,7 +167,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ── PUBLIC LISTS ─────────────────────────────────────────── -->
     <select id="findPublicLists" resultMap="ListResponseRM">
         <include refid="listSelectBase"/>,
         FALSE AS is_liked_by_me,
@@ -210,7 +204,6 @@
         </if>
     </select>
 
-    <!-- ── ITEMS ─────────────────────────────────────────────────── -->
     <insert id="insertItem" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_list_items
         (list_id, entity_type, entity_id, entity_slug, entity_title,
@@ -251,7 +244,6 @@
         SELECT COUNT(*) FROM reading_list_items WHERE list_id = #{listId}
     </select>
 
-    <!-- ── LIKES ─────────────────────────────────────────────────── -->
     <insert id="insertLike">
         INSERT INTO reading_list_likes (list_id, user_id, created_at)
         VALUES (#{listId}, #{userId}, NOW())
@@ -274,7 +266,6 @@
         UPDATE reading_lists SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
     </update>
 
-    <!-- ── FOLLOWS ────────────────────────────────────────────────── -->
     <insert id="insertFollow">
         INSERT INTO reading_list_follows (list_id, user_id, created_at)
         VALUES (#{listId}, #{userId}, NOW())
@@ -297,9 +288,7 @@
         UPDATE reading_lists SET view_count = view_count + 1 WHERE id = #{id}
     </update>
 
-    <!-- ── ENTITY LISTS ───────────────────────────────────────────── -->
-    <select id="findListsContainingEntity"
-            resultType="com.masasilam.app.model.dto.response.social.ReadingListSummaryResponse">
+    <select id="findListsContainingEntity" resultType="com.masasilam.app.model.dto.response.social.ReadingListSummaryResponse">
         SELECT
         rl.id, rl.title, rl.slug, rl.cover_image_url,
         rl.item_count, rl.like_count,
@@ -307,8 +296,8 @@
         FROM reading_lists rl
         JOIN reading_list_items rli ON rli.list_id = rl.id
         WHERE rli.entity_type = #{entityType}
-        AND rli.entity_id   = #{entityId}
-        AND rl.is_active    = TRUE
+        AND rli.entity_id = #{entityId}
+        AND rl.is_active = TRUE
         AND (
         rl.visibility = 'public'
         OR rl.user_id = #{currentUserId, jdbcType=BIGINT}
@@ -321,7 +310,6 @@
         SELECT * FROM reading_lists WHERE slug = #{slug} AND is_active = TRUE LIMIT 1
     </select>
 
-    <!-- ReadingListMapper.xml -->
     <select id="getMaxSortOrder" resultType="java.lang.Integer">
         SELECT MAX(sort_order) FROM reading_list_items WHERE list_id = #{listId}
     </select>

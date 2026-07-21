@@ -12,7 +12,7 @@
     <update id="reactivateProjectFollow">
         UPDATE project_follows
         SET is_active = TRUE,
-        followed_at = NOW() -- atau #{followedAt} jika perlu
+        followed_at = NOW()
         WHERE id = #{id}
     </update>
 

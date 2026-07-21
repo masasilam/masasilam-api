@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.social.ReadingTwinMapper">
-
     <resultMap id="TwinResponseRM" type="com.masasilam.app.model.dto.response.social.ReadingTwinResponse">
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
@@ -25,8 +23,8 @@
         )
         ON CONFLICT (user_id_a, user_id_b) DO UPDATE SET
         similarity_score = EXCLUDED.similarity_score,
-        common_count     = EXCLUDED.common_count,
-        last_calculated  = NOW()
+        common_count = EXCLUDED.common_count,
+        last_calculated = NOW()
     </insert>
 
     <select id="findByUsers" resultType="com.masasilam.app.model.entity.social.ReadingTwin">
@@ -66,11 +64,10 @@
     </select>
 
     <select id="findUsersToCompare" resultType="long">
-        -- Users who read the same books/content as this user
         SELECT DISTINCT rp2.user_id
         FROM reading_progress rp1
         JOIN reading_progress rp2
-        ON  rp2.book_id = rp1.book_id
+        ON rp2.book_id = rp1.book_id
         AND rp2.user_id != #{userId}
         AND rp2.percentage_completed >= 10
         WHERE rp1.user_id = #{userId}
@@ -79,7 +76,7 @@
         SELECT DISTINCT rp4.user_id
         FROM reading_progress rp3
         JOIN reading_progress rp4
-        ON  rp4.zine_id = rp3.zine_id
+        ON rp4.zine_id = rp3.zine_id
         AND rp4.user_id != #{userId}
         AND rp4.percentage_completed >= 10
         WHERE rp3.user_id = #{userId}
@@ -92,5 +89,4 @@
         WHERE (user_id_a = #{userId} OR user_id_b = #{userId})
         AND last_calculated &lt; NOW() - INTERVAL '7 days'
     </delete>
-
 </mapper>
