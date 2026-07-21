@@ -2,10 +2,10 @@ package com.masasilam.app.service.common.impl;
 
 import com.masasilam.app.exception.custom.DataNotFoundException;
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.BookChapterMapper;
-import com.masasilam.app.mapper.BookMapper;
-import com.masasilam.app.mapper.CorrectionMapper;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.book.BookChapterMapper;
+import com.masasilam.app.mapper.book.BookMapper;
+import com.masasilam.app.mapper.collaboration.CorrectionMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.SubmitCorrectionRequest;
 import com.masasilam.app.model.dto.response.CorrectionResponse;
 import com.masasilam.app.model.dto.response.DataResponse;

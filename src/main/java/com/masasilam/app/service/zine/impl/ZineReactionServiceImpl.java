@@ -2,7 +2,8 @@ package com.masasilam.app.service.zine.impl;
 
 import com.masasilam.app.exception.custom.DataNotFoundException;
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.*;
+import com.masasilam.app.mapper.user.UserMapper;
+import com.masasilam.app.mapper.zine.*;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.*;

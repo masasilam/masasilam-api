@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.masasilam.app.mapper.ProjectPageMapper">
 
+<mapper namespace="com.masasilam.app.mapper.collaboration.ProjectPageMapper">
     <insert id="insertProjectPage" parameterType="com.masasilam.app.model.entity.ProjectPage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_pages (
         project_id, page_number, image_url, transcribed_text,
@@ -70,7 +70,6 @@
         AND page_number = #{pageNumber}
     </update>
 
-    <!-- Update content methods -->
     <update id="updateTranslationContent">
         UPDATE project_pages
         SET translation_content = #{workContent},
@@ -127,7 +126,6 @@
         AND page_number = #{pageNumber}
     </update>
 
-    <!-- Mark completion methods -->
     <update id="markTranslationCompleted">
         UPDATE project_pages
         SET translation_completed_by = #{userId},
@@ -182,7 +180,6 @@
         AND page_number = #{pageNumber}
     </update>
 
-    <!-- Get completed pages count methods -->
     <select id="getCompletedTranslationPagesCount" resultType="int">
         SELECT COUNT(*) FROM project_pages
         WHERE project_id = #{projectId}
@@ -213,7 +210,6 @@
         AND transcription_completed_by IS NOT NULL
     </select>
 
-    <!-- Update page timestamp -->
     <update id="updatePageLastModified">
         UPDATE project_pages
         SET last_modified = #{now}
@@ -221,7 +217,6 @@
         AND page_number = #{pageNumber}
     </update>
 
-    <!-- Update page reaction count -->
     <update id="updatePageReactionCount">
         UPDATE project_pages
         SET reaction_count = #{reactionCount},
@@ -229,7 +224,6 @@
         WHERE id = #{pageId}
     </update>
 
-    <!-- Update page comment count -->
     <update id="updatePageCommentCount">
         UPDATE project_pages
         SET comment_count = #{commentCount},
@@ -237,7 +231,6 @@
         WHERE id = #{pageId}
     </update>
 
-    <!-- Get user task count methods -->
     <select id="getUserEditingCount" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM project_pages
         WHERE editor_id = #{userId}
@@ -267,5 +260,4 @@
         SELECT COUNT(*) FROM project_pages
         WHERE reviewer_id = #{userId}
     </select>
-
 </mapper>

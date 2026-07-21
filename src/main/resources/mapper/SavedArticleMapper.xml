@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.newspaper.SavedArticleMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO saved_articles (user_id, article_id, collection_name, notes, created_at)
+        VALUES (#{userId}, #{articleId}, #{collectionName}, #{notes}, #{createdAt})
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM saved_articles
+        WHERE id = #{id}
+    </delete>
+
+    <select id="findByUserAndArticle" resultType="com.masasilam.app.model.entity.newspaper.SavedArticle">
+        SELECT *
+        FROM saved_articles
+        WHERE user_id = #{userId}
+        AND article_id = #{articleId}
+    </select>
+</mapper>

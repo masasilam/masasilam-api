@@ -1,48 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.FilmReviewMapper">
-
-    <!-- ================================================================ -->
-    <!-- ResultMap                                                         -->
-    <!-- ================================================================ -->
-
+<mapper namespace="com.masasilam.app.mapper.film.FilmReviewMapper">
     <resultMap id="FilmReviewResultMap" type="com.masasilam.app.model.film.FilmReview">
-        <id     property="id"              column="id"/>
-        <result property="filmId"          column="film_id"/>
-        <result property="userId"          column="user_id"/>
-        <result property="title"           column="title"/>
-        <result property="content"         column="content"/>
-        <result property="helpfulCount"    column="helpful_count"/>
+        <id property="id" column="id"/>
+        <result property="filmId" column="film_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="helpfulCount" column="helpful_count"/>
         <result property="notHelpfulCount" column="not_helpful_count"/>
-        <result property="replyCount"      column="reply_count"/>
-        <result property="isDeleted"       column="is_deleted"/>
-        <result property="createdAt"       column="created_at"/>
-        <result property="updatedAt"       column="updated_at"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
-
-    <!-- ================================================================ -->
-    <!-- Queries                                                           -->
-    <!-- ================================================================ -->
 
     <select id="findById" resultMap="FilmReviewResultMap">
         SELECT * FROM film_review
-        WHERE  id = #{id} AND is_deleted = 0
+        WHERE id = #{id} AND is_deleted = 0
     </select>
 
     <select id="findByUserAndFilm" resultMap="FilmReviewResultMap">
         SELECT * FROM film_review
-        WHERE  user_id = #{userId}
-        AND  film_id = #{filmId}
-        AND  is_deleted = 0
-        LIMIT  1
+        WHERE user_id = #{userId}
+        AND film_id = #{filmId}
+        AND is_deleted = 0
+        LIMIT 1
     </select>
 
     <select id="findByFilmWithPagination" resultMap="FilmReviewResultMap">
         SELECT * FROM film_review
-        WHERE  film_id    = #{filmId}
-        AND  is_deleted = 0
+        WHERE film_id = #{filmId}
+        AND is_deleted = 0
         <choose>
             <when test="sortBy == 'helpful'">
                 ORDER BY helpful_count DESC, created_at DESC
@@ -54,19 +44,15 @@
                 ORDER BY created_at DESC
             </otherwise>
         </choose>
-        LIMIT  #{limit}
+        LIMIT #{limit}
         OFFSET #{offset}
     </select>
 
     <select id="countByFilm" resultType="int">
         SELECT COUNT(*)
-        FROM   film_review
-        WHERE  film_id = #{filmId} AND is_deleted = 0
+        FROM film_review
+        WHERE film_id = #{filmId} AND is_deleted = 0
     </select>
-
-    <!-- ================================================================ -->
-    <!-- Mutations                                                         -->
-    <!-- ================================================================ -->
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO film_review
@@ -81,47 +67,42 @@
 
     <update id="update">
         UPDATE film_review
-        SET    title      = #{title},
-        content    = #{content},
+        SET title = #{title},
+        content = #{content},
         updated_at = NOW()
-        WHERE  id = #{id}
+        WHERE id = #{id}
     </update>
 
     <update id="softDelete">
         UPDATE film_review
-        SET    is_deleted = 1, updated_at = NOW()
-        WHERE  id = #{id}
+        SET is_deleted = 1, updated_at = NOW()
+        WHERE id = #{id}
     </update>
 
     <update id="incrementReplyCount">
         UPDATE film_review
-        SET    reply_count = reply_count + 1, updated_at = NOW()
-        WHERE  id = #{id}
+        SET reply_count = reply_count + 1, updated_at = NOW()
+        WHERE id = #{id}
     </update>
 
     <update id="decrementReplyCount">
         UPDATE film_review
-        SET    reply_count = GREATEST(0, reply_count - 1), updated_at = NOW()
-        WHERE  id = #{id}
+        SET reply_count = GREATEST(0, reply_count - 1), updated_at = NOW()
+        WHERE id = #{id}
     </update>
 
-    <!--
-        Hitung ulang helpful_count dan not_helpful_count langsung dari
-        tabel film_review_feedback (selalu akurat, tidak ada drift).
-    -->
     <update id="updateHelpfulCounts">
         UPDATE film_review r
         SET
         r.helpful_count = (
         SELECT COUNT(*) FROM film_review_feedback f
-        WHERE  f.review_id = #{reviewId} AND f.is_helpful = 1
+        WHERE f.review_id = #{reviewId} AND f.is_helpful = 1
         ),
         r.not_helpful_count = (
         SELECT COUNT(*) FROM film_review_feedback f
-        WHERE  f.review_id = #{reviewId} AND f.is_helpful = 0
+        WHERE f.review_id = #{reviewId} AND f.is_helpful = 0
         ),
         r.updated_at = NOW()
         WHERE r.id = #{reviewId}
     </update>
-
 </mapper>

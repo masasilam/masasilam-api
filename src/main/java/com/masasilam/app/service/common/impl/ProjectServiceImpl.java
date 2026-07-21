@@ -1,7 +1,7 @@
 package com.masasilam.app.service.common.impl;
 
 import com.masasilam.app.exception.custom.DataNotFoundException;
-import com.masasilam.app.mapper.*;
+import com.masasilam.app.mapper.collaboration.*;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.entity.*;
 import com.masasilam.app.model.enums.*;

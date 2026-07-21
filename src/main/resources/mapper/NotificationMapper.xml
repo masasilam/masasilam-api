@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.NotificationMapper">
 
+<mapper namespace="com.masasilam.app.mapper.collaboration.NotificationMapper">
     <resultMap id="NotificationResponseMap" type="com.masasilam.app.model.dto.response.NotificationResponse">
         <id property="id" column="id"/>
         <result property="message" column="message"/>
@@ -33,5 +33,4 @@
         #{relatedEntityId}, #{isRead}, #{createdAt}
         )
     </insert>
-
 </mapper>

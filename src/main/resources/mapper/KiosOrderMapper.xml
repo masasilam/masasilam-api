@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.kios.KiosOrderMapper">
+    <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kios_orders (
+        order_number, user_id, status, subtotal, shipping_cost, tax,
+        total_amount, payment_method, payment_status, paid_at,
+        shipping_address, shipping_method, shipping_tracking_number,
+        shipping_courier, shipped_at, delivered_at, notes, admin_notes,
+        created_at, updated_at
+        ) VALUES (
+        #{orderNumber}, #{userId}, #{status}, #{subtotal},
+        #{shippingCost}, #{tax}, #{totalAmount}, #{paymentMethod},
+        #{paymentStatus}, #{paidAt}, #{shippingAddress}, #{shippingMethod},
+        #{shippingTrackingNumber}, #{shippingCourier}, #{shippedAt},
+        #{deliveredAt}, #{notes}, #{adminNotes}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <insert id="insertOrderItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO order_items (order_id, product_id, quantity, price, subtotal, created_at)
+        VALUES (#{orderId}, #{productId}, #{quantity}, #{price}, #{subtotal}, #{createdAt})
+    </insert>
+
+    <update id="updateOrder">
+        UPDATE kios_orders
+        SET status = #{status},
+        payment_status = #{paymentStatus},
+        paid_at = #{paidAt},
+        shipping_tracking_number = #{shippingTrackingNumber},
+        shipping_courier = #{shippingCourier},
+        shipped_at = #{shippedAt},
+        delivered_at = #{deliveredAt},
+        admin_notes = #{adminNotes},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findOrderByNumber" resultType="com.masasilam.app.model.entity.KiosOrder">
+        SELECT *
+        FROM kios_orders
+        WHERE order_number = #{orderNumber}
+    </select>
+
+    <select id="getOrderDetailByNumber" resultType="com.masasilam.app.model.dto.response.KiosOrderResponse">
+        SELECT *
+        FROM kios_orders
+        WHERE order_number = #{orderNumber}
+    </select>
+
+    <select id="findOrdersByUserId" resultType="com.masasilam.app.model.dto.response.KiosOrderResponse">
+        SELECT *
+        FROM kios_orders
+        WHERE user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countOrdersByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM kios_orders
+        WHERE user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <select id="findAllOrdersWithFilters" resultType="com.masasilam.app.model.dto.response.KiosOrderResponse">
+        SELECT *
+        FROM kios_orders
+        WHERE 1=1
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="search != null and search != ''">
+            AND (order_number ILIKE CONCAT('%', #{search}, '%')
+            OR shipping_address ILIKE CONCAT('%', #{search}, '%'))
+        </if>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAllOrdersWithFilters" resultType="int">
+        SELECT COUNT(*)
+        FROM kios_orders
+        WHERE 1=1
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="search != null and search != ''">
+            AND (order_number ILIKE CONCAT('%', #{search}, '%')
+            OR shipping_address ILIKE CONCAT('%', #{search}, '%'))
+        </if>
+    </select>
+
+    <select id="findOrderItemsByOrderId" resultType="com.masasilam.app.model.entity.OrderItem">
+        SELECT *
+        FROM order_items
+        WHERE order_id = #{orderId}
+    </select>
+
+    <select id="hasUserPurchasedProduct" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM kios_orders o
+        JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = #{userId}
+        AND oi.product_id = #{productId}
+        AND o.status = 'DELIVERED'
+    </select>
+
+    <select id="countAllOrders" resultType="long">
+        SELECT COUNT(*)
+        FROM kios_orders
+    </select>
+
+    <select id="countOrdersByStatus" resultType="long">
+        SELECT COUNT(*)
+        FROM kios_orders
+        WHERE status = #{status}
+    </select>
+
+    <select id="calculateTotalRevenue" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(total_amount), 0)
+        FROM kios_orders
+        WHERE payment_status = 'PAID'
+    </select>
+
+    <select id="countUniqueCustomers" resultType="long">
+        SELECT COUNT(DISTINCT user_id)
+        FROM kios_orders
+    </select>
+
+    <select id="getSalesStatsByPeriod" resultType="com.masasilam.app.model.dto.response.SalesStatsResponse">
+        SELECT *
+        FROM kios_orders
+        WHERE created_at >= NOW() - INTERVAL '1 ' || #{period}
+    </select>
+</mapper>

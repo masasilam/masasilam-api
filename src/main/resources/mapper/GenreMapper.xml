@@ -1,75 +1,76 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.GenreMapper">
-
-    <!-- Result Map -->
+<mapper namespace="com.masasilam.app.mapper.book.GenreMapper">
     <resultMap id="GenreResultMap" type="com.masasilam.app.model.entity.Genre">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="slug" column="slug"/>
         <result property="description" column="description"/>
+        <result property="colorHex" column="color_hex"/>
+        <result property="iconName" column="icon_name"/>
+        <result property="isFiction" column="is_fiction"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <!-- Find by name (exact match, case-insensitive) -->
     <select id="findByName" resultMap="GenreResultMap">
-        SELECT id, name, slug, description, created_at
+        SELECT id, name, slug, description, color_hex, icon_name, is_fiction, created_at
         FROM genres
         WHERE LOWER(name) = LOWER(#{name})
         LIMIT 1
     </select>
 
-    <!-- Find by slug -->
     <select id="findBySlug" resultMap="GenreResultMap">
-        SELECT id, name, slug, description, created_at
+        SELECT id, name, slug, description, color_hex, icon_name, is_fiction, created_at
         FROM genres
         WHERE slug = #{slug}
         LIMIT 1
     </select>
 
-    <!-- Find by ID -->
     <select id="findById" resultMap="GenreResultMap">
-        SELECT id, name, slug, description, created_at
+        SELECT id, name, slug, description, color_hex, icon_name, is_fiction, created_at
         FROM genres
         WHERE id = #{id}
     </select>
 
-    <!-- Find all genres -->
     <select id="findAll" resultMap="GenreResultMap">
-        SELECT id, name, slug, description, created_at
+        SELECT id, name, slug, description, color_hex, icon_name, is_fiction, created_at
         FROM genres
         ORDER BY name ASC
     </select>
 
-    <!-- Insert genre -->
+    <select id="findAllWithBookCount" resultMap="GenreResultMap">
+        SELECT g.*, COUNT(bg.book_id) AS book_count
+        FROM genres g
+        LEFT JOIN book_genres bg ON g.id = bg.genre_id
+        GROUP BY g.id
+        ORDER BY g.name ASC
+    </select>
+
     <insert id="insertGenre" parameterType="com.masasilam.app.model.entity.Genre" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO genres (name, slug, description, color_hex, icon_name, is_fiction)
-        VALUES (#{name}, #{slug}, #{description}, #{colorHex}, #{iconName}, #{isFiction})
+        INSERT INTO genres (name, slug, description, color_hex, icon_name, is_fiction, created_at)
+        VALUES (#{name}, #{slug}, #{description}, #{colorHex}, #{iconName}, #{isFiction}, NOW())
     </insert>
 
-    <!-- Update genre -->
-    <update id="updateGenre">
+    <update id="updateGenre" parameterType="com.masasilam.app.model.entity.Genre">
         UPDATE genres
-        SET
-        name = #{name},
+        SET name = #{name},
         slug = #{slug},
-        description = #{description}
+        description = #{description},
+        color_hex = #{colorHex},
+        icon_name = #{iconName},
+        is_fiction = #{isFiction}
         WHERE id = #{id}
     </update>
 
-    <!-- Delete genre -->
     <delete id="deleteGenre">
         DELETE FROM genres
         WHERE id = #{id}
     </delete>
 
-    <!-- Count by name -->
     <select id="countByName" resultType="int">
         SELECT COUNT(*)
         FROM genres
         WHERE LOWER(name) = LOWER(#{name})
     </select>
-
 </mapper>

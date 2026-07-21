@@ -1,90 +1,80 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.ZineMapper">
-
-    <!-- ═══════════════════════════════════════════
-         RESULT MAPS
-    ═══════════════════════════════════════════ -->
-
+<mapper namespace="com.masasilam.app.mapper.zine.ZineMapper">
     <resultMap id="ZineResultMap" type="com.masasilam.app.model.entity.Zine">
-        <id     property="id"                column="id"/>
-        <result property="title"             column="title"/>
-        <result property="slug"              column="slug"/>
-        <result property="subtitle"          column="subtitle"/>
-        <result property="volume"            column="volume"/>
-        <result property="issueNumber"       column="issue_number"/>
-        <result property="publicationYear"   column="publication_year"/>
-        <result property="publisher"         column="publisher"/>
-        <result property="languageId"        column="language_id"/>
-        <result property="description"       column="description"/>
-        <result property="fileUrl"           column="file_url"/>
-        <result property="fileUrlArchive"    column="file_url_archive"/>
-        <result property="filePath"          column="file_path"/>
-        <result property="coverImageUrl"     column="cover_image_url"/>
-        <result property="fileFormat"        column="file_format"/>
-        <result property="fileSize"          column="file_size"/>
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="volume" column="volume"/>
+        <result property="issueNumber" column="issue_number"/>
+        <result property="publicationYear" column="publication_year"/>
+        <result property="publisher" column="publisher"/>
+        <result property="languageId" column="language_id"/>
+        <result property="description" column="description"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="fileUrlArchive" column="file_url_archive"/>
+        <result property="filePath" column="file_path"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="fileFormat" column="file_format"/>
+        <result property="fileSize" column="file_size"/>
         <result property="copyrightStatusId" column="copyright_status_id"/>
-        <result property="viewCount"         column="view_count"/>
-        <result property="readCount"         column="read_count"/>
-        <result property="downloadCount"     column="download_count"/>
-        <result property="totalWord"         column="total_word"/>
-        <result property="totalPages"        column="total_pages"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="readCount" column="read_count"/>
+        <result property="downloadCount" column="download_count"/>
+        <result property="totalWord" column="total_word"/>
+        <result property="totalPages" column="total_pages"/>
         <result property="estimatedReadTime" column="estimated_read_time"/>
-        <result property="isActive"          column="is_active"/>
-        <result property="isFeatured"        column="is_featured"/>
-        <result property="publishedAt"       column="published_at"/>
-        <result property="category"          column="category"/>
-        <result property="source"            column="source"/>
-        <result property="difficultyLevel"   column="difficulty_level"/>
-        <result property="createdAt"         column="created_at"/>
-        <result property="updatedAt"         column="updated_at"/>
-        <result property="firstPublisher"     column="first_publisher"/>
+        <result property="isActive" column="is_active"/>
+        <result property="isFeatured" column="is_featured"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="category" column="category"/>
+        <result property="source" column="source"/>
+        <result property="difficultyLevel" column="difficulty_level"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="firstPublisher" column="first_publisher"/>
         <result property="firstPublishedDate" column="first_published_date"/>
-        <result property="collectionName"     column="collection_name"/>
+        <result property="collectionName" column="collection_name"/>
     </resultMap>
 
     <resultMap id="ZineResponseResultMap" type="com.masasilam.app.model.dto.response.ZineResponse">
-        <id     property="id"                column="id"/>
-        <result property="title"             column="title"/>
-        <result property="slug"              column="slug"/>
-        <result property="subtitle"          column="subtitle"/>
-        <result property="volume"            column="volume"/>
-        <result property="issueNumber"       column="issue_number"/>
-        <result property="publicationYear"   column="publication_year"/>
-        <result property="publisher"         column="publisher"/>
-        <result property="languageName"      column="language_name"/>
-        <result property="description"       column="description"/>
-        <result property="fileUrl"           column="file_url"/>
-        <result property="coverImageUrl"     column="cover_image_url"/>
-        <result property="fileFormat"        column="file_format"/>
-        <result property="fileSize"          column="file_size"/>
-        <result property="copyrightStatus"   column="copyright_status_name"/>
-        <result property="viewCount"         column="view_count"/>
-        <result property="readCount"         column="read_count"/>
-        <result property="downloadCount"     column="download_count"/>
-        <result property="totalWord"         column="total_word"/>
-        <result property="totalPages"        column="total_pages"/>
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="slug" column="slug"/>
+        <result property="subtitle" column="subtitle"/>
+        <result property="volume" column="volume"/>
+        <result property="issueNumber" column="issue_number"/>
+        <result property="publicationYear" column="publication_year"/>
+        <result property="publisher" column="publisher"/>
+        <result property="languageName" column="language_name"/>
+        <result property="description" column="description"/>
+        <result property="fileUrl" column="file_url"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="fileFormat" column="file_format"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="copyrightStatus" column="copyright_status_name"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="readCount" column="read_count"/>
+        <result property="downloadCount" column="download_count"/>
+        <result property="totalWord" column="total_word"/>
+        <result property="totalPages" column="total_pages"/>
         <result property="estimatedReadTime" column="estimated_read_time"/>
-        <result property="isActive"          column="is_active"/>
-        <result property="isFeatured"        column="is_featured"/>
-        <result property="publishedAt"       column="published_at"/>
-        <result property="category"          column="category"/>
-        <result property="source"            column="source"/>
-        <result property="difficultyLevel"   column="difficulty_level"/>
-        <result property="averageRating"     column="average_rating"/>
-        <result property="totalRatings"      column="total_ratings"/>
-        <result property="createdAt"         column="created_at"/>
-        <result property="updatedAt"         column="updated_at"/>
-        <result property="firstPublisher"     column="first_publisher"/>
+        <result property="isActive" column="is_active"/>
+        <result property="isFeatured" column="is_featured"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="category" column="category"/>
+        <result property="source" column="source"/>
+        <result property="difficultyLevel" column="difficulty_level"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="totalRatings" column="total_ratings"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="firstPublisher" column="first_publisher"/>
         <result property="firstPublishedDate" column="first_published_date"/>
-        <result property="collectionName"     column="collection_name"/>
+        <result property="collectionName" column="collection_name"/>
     </resultMap>
-
-    <!-- ═══════════════════════════════════════════
-         BASE SELECT FRAGMENT
-    ═══════════════════════════════════════════ -->
 
     <sql id="baseZineSelect">
         SELECT
@@ -183,10 +173,6 @@
         </if>
     </sql>
 
-    <!-- ═══════════════════════════════════════════
-         CRUD
-    ═══════════════════════════════════════════ -->
-
     <insert id="insertZine" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO zines (
         title, slug, subtitle, volume, issue_number,
@@ -215,45 +201,41 @@
 
     <update id="updateZine">
         UPDATE zines SET
-        title               = #{title},
-        slug                = #{slug},
-        subtitle            = #{subtitle},
-        volume              = #{volume},
-        issue_number        = #{issueNumber},
-        publication_year    = #{publicationYear},
-        publisher           = #{publisher},
-        language_id         = #{languageId},
-        description         = #{description},
-        file_url            = #{fileUrl},
-        file_url_archive    = #{fileUrlArchive},
-        file_path           = #{filePath},
-        cover_image_url     = #{coverImageUrl},
-        file_format         = #{fileFormat},
-        file_size           = #{fileSize},
+        title = #{title},
+        slug = #{slug},
+        subtitle = #{subtitle},
+        volume = #{volume},
+        issue_number = #{issueNumber},
+        publication_year = #{publicationYear},
+        publisher = #{publisher},
+        language_id = #{languageId},
+        description = #{description},
+        file_url = #{fileUrl},
+        file_url_archive = #{fileUrlArchive},
+        file_path = #{filePath},
+        cover_image_url = #{coverImageUrl},
+        file_format = #{fileFormat},
+        file_size = #{fileSize},
         copyright_status_id = #{copyrightStatusId},
-        total_word          = #{totalWord},
-        total_pages         = #{totalPages},
+        total_word = #{totalWord},
+        total_pages = #{totalPages},
         estimated_read_time = #{estimatedReadTime},
-        is_active           = #{isActive},
-        is_featured         = #{isFeatured},
-        published_at        = #{publishedAt},
-        category            = #{category},
-        source              = #{source},
-        difficulty_level    = #{difficultyLevel},
-        collection_name     = #{collectionName},
-        first_publisher     = #{firstPublisher},
+        is_active = #{isActive},
+        is_featured = #{isFeatured},
+        published_at = #{publishedAt},
+        category = #{category},
+        source = #{source},
+        difficulty_level = #{difficultyLevel},
+        collection_name = #{collectionName},
+        first_publisher = #{firstPublisher},
         first_published_date = #{firstPublishedDate},
-        updated_at          = #{updatedAt}
+        updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
 
     <delete id="deleteZine">
         DELETE FROM zines WHERE id = #{id}
     </delete>
-
-    <!-- ═══════════════════════════════════════════
-         FIND
-    ═══════════════════════════════════════════ -->
 
     <select id="findById" resultMap="ZineResultMap">
         SELECT * FROM zines WHERE id = #{id}
@@ -274,10 +256,6 @@
     <select id="countBySlug" resultType="int">
         SELECT COUNT(*) FROM zines WHERE slug = #{slug}
     </select>
-
-    <!-- ═══════════════════════════════════════════
-         DETAIL & LIST
-    ═══════════════════════════════════════════ -->
 
     <select id="getZineDetailBySlug" resultMap="ZineResponseResultMap">
         <include refid="baseZineSelect"/>
@@ -310,10 +288,6 @@
         </if>
     </select>
 
-    <!-- ═══════════════════════════════════════════
-         VIEW / ACTION TRACKING
-    ═══════════════════════════════════════════ -->
-
     <update id="incrementViewCountBySlug">
         UPDATE zines SET view_count = view_count + 1 WHERE slug = #{slug}
     </update>
@@ -343,10 +317,6 @@
             </otherwise>
         </choose>
     </insert>
-
-    <!-- ═══════════════════════════════════════════
-         RELATIONSHIPS
-    ═══════════════════════════════════════════ -->
 
     <select id="findAuthorsByZineId" resultType="com.masasilam.app.model.entity.Author">
         SELECT a.* FROM authors a
@@ -386,10 +356,6 @@
         DELETE FROM zine_contributors WHERE zine_id = #{zineId}
     </delete>
 
-    <!-- ═══════════════════════════════════════════
-         SITEMAP
-    ═══════════════════════════════════════════ -->
-
     <select id="findAllZinesForSitemap" resultMap="ZineResultMap">
         SELECT id, slug, title, updated_at FROM zines WHERE is_active = true ORDER BY updated_at DESC
     </select>
@@ -404,17 +370,13 @@
         ORDER BY bc.chapter_order
     </select>
 
-    <!-- ═══════════════════════════════════════════
-         RECOMMENDATIONS (untuk dashboard)
-    ═══════════════════════════════════════════ -->
-
     <select id="getZineRecommendations" resultType="com.masasilam.app.model.dto.response.BookRecommendationResponse">
         SELECT
-        z.id           AS bookId,
-        z.slug         AS bookSlug,
-        z.title        AS bookTitle,
+        z.id AS bookId,
+        z.slug AS bookSlug,
+        z.title AS bookTitle,
         z.cover_image_url AS coverImageUrl,
-        z.category     AS genre,
+        z.category AS genre,
         COALESCE(AVG(zr.rating), 0) AS averageRating
         FROM zines z
         LEFT JOIN zine_ratings zr ON zr.zine_id = z.id
@@ -459,5 +421,4 @@
         WHERE z.is_active = true
         AND z.collection_name ILIKE #{collectionName}
     </select>
-
 </mapper>

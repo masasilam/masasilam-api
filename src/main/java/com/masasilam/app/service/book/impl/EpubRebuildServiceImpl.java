@@ -1,9 +1,9 @@
 package com.masasilam.app.service.book.impl;
 
-import com.masasilam.app.mapper.BookChapterMapper;
-import com.masasilam.app.mapper.BookMapper;
-import com.masasilam.app.mapper.ContributorMapper;
-import com.masasilam.app.mapper.CorrectionMapper;
+import com.masasilam.app.mapper.book.BookChapterMapper;
+import com.masasilam.app.mapper.book.BookMapper;
+import com.masasilam.app.mapper.author.ContributorMapper;
+import com.masasilam.app.mapper.collaboration.CorrectionMapper;
 import com.masasilam.app.model.entity.Book;
 import com.masasilam.app.model.entity.BookChapter;
 import com.masasilam.app.model.entity.Contributor;

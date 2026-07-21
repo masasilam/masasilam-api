@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.kios.StockHistoryMapper">
+    <insert id="insertStockHistory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_history (product_id, quantity_change, type, reason, order_number, created_by, created_at)
+        VALUES (#{productId}, #{quantityChange}, #{type}, #{reason}, #{orderNumber}, #{createdBy}, #{createdAt})
+    </insert>
+
+    <select id="findByProductId" resultType="com.masasilam.app.model.entity.StockHistory">
+        SELECT *
+        FROM stock_history
+        WHERE product_id = #{productId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>

@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.ContributorMapper">
-
+<mapper namespace="com.masasilam.app.mapper.author.ContributorMapper">
     <resultMap id="ContributorResultMap" type="com.masasilam.app.model.entity.Contributor">
-        <id   property="id"         column="id"/>
-        <result property="name"       column="name"/>
-        <result property="slug"       column="slug"/>
-        <result property="role"       column="role"/>
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="slug" column="slug"/>
+        <result property="role" column="role"/>
         <result property="websiteUrl" column="website_url"/>
-        <result property="createdAt"  column="created_at"/>
-        <result property="updatedAt"  column="updated_at"/>
-        <!-- field virtual dari COUNT JOIN, tidak selalu ada -->
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
         <result property="totalBooks" column="total_books"/>
     </resultMap>
 
-    <!-- ═══════════════════════════════════════════════════
-         FIND BY NAME AND ROLE
-         Dipakai saat import epub — cegah duplikat contributor
-         dengan kombinasi nama + role yang sama
-    ═══════════════════════════════════════════════════ -->
     <select id="findByNameAndRole" resultMap="ContributorResultMap">
         SELECT *
         FROM contributors
@@ -30,10 +21,6 @@
         LIMIT 1
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         FIND BY NAME (tanpa role)
-         Dipakai EpubRebuildService untuk cek editor existing
-    ═══════════════════════════════════════════════════ -->
     <select id="findByName" resultMap="ContributorResultMap">
         SELECT *
         FROM contributors
@@ -41,9 +28,6 @@
         LIMIT 1
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         FIND BY SLUG
-    ═══════════════════════════════════════════════════ -->
     <select id="findBySlug" resultMap="ContributorResultMap">
         SELECT *
         FROM contributors
@@ -51,21 +35,11 @@
         LIMIT 1
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         INSERT CONTRIBUTOR
-    ═══════════════════════════════════════════════════ -->
-    <insert id="insertContributor"
-            parameterType="com.masasilam.app.model.entity.Contributor"
-            useGeneratedKeys="true"
-            keyProperty="id">
+    <insert id="insertContributor" parameterType="com.masasilam.app.model.entity.Contributor" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO contributors (name, slug, role, created_at, updated_at)
         VALUES (#{name}, #{slug}, #{role}, #{createdAt}, #{updatedAt})
     </insert>
 
-    <!-- ═══════════════════════════════════════════════════
-         FIND ALL WITH PAGINATION + FILTER
-         Termasuk total_books dari JOIN ke book_contributors
-    ═══════════════════════════════════════════════════ -->
     <select id="findAllWithPagination" resultMap="ContributorResultMap">
         SELECT
         c.*,
@@ -85,9 +59,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         COUNT ALL (untuk pagination)
-    ═══════════════════════════════════════════════════ -->
     <select id="countAll" resultType="int">
         SELECT COUNT(*)
         FROM contributors
@@ -101,26 +72,17 @@
         </where>
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         COUNT BOOK CONTRIBUTOR
-         Cek apakah relasi book-contributor sudah ada
-    ═══════════════════════════════════════════════════ -->
     <select id="countBookContributor" resultType="int">
         SELECT COUNT(*)
         FROM book_contributors
-        WHERE book_id        = #{bookId}
+        WHERE book_id = #{bookId}
         AND contributor_id = #{contributorId}
-        AND role           = #{role}
+        AND role = #{role}
     </select>
 
-    <!-- ═══════════════════════════════════════════════════
-         INSERT BOOK CONTRIBUTOR
-         ON CONFLICT DO NOTHING → aman dipanggil berkali-kali
-    ═══════════════════════════════════════════════════ -->
     <insert id="insertBookContributor">
         INSERT INTO book_contributors (book_id, contributor_id, role)
         VALUES (#{bookId}, #{contributorId}, #{role})
         ON CONFLICT (book_id, contributor_id, role) DO NOTHING
     </insert>
-
 </mapper>

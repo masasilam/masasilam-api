@@ -1,6 +1,6 @@
 package com.masasilam.app.controller.social;
 
-import com.masasilam.app.mapper.NewspaperMapper;
+import com.masasilam.app.mapper.newspaper.NewspaperMapper;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.dto.response.social.*;
 import jakarta.validation.constraints.Min;

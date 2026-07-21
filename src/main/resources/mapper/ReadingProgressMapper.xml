@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.ReadingProgressMapper">
-
+<mapper namespace="com.masasilam.app.mapper.reading.ReadingProgressMapper">
     <resultMap id="ReadingProgressResult" type="com.masasilam.app.model.entity.ReadingProgress">
-        <id     property="id"                  column="id"/>
-        <result property="userId"              column="user_id"/>
-        <result property="bookId"              column="book_id"/>
-        <result property="zineId"              column="zine_id"/>
-        <result property="currentPage"         column="current_page"/>
-        <result property="totalPages"          column="total_pages"/>
-        <result property="currentPosition"     column="current_position"/>
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="zineId" column="zine_id"/>
+        <result property="currentPage" column="current_page"/>
+        <result property="totalPages" column="total_pages"/>
+        <result property="currentPosition" column="current_position"/>
         <result property="percentageCompleted" column="percentage_completed"/>
-        <result property="readingTimeMinutes"  column="reading_time_minutes"/>
-        <result property="status"              column="status"/>
-        <result property="isFavorite"          column="is_favorite"/>
-        <result property="notes"               column="notes"/>
-        <result property="startedAt"           column="started_at"/>
-        <result property="completedAt"         column="completed_at"/>
-        <result property="lastReadAt"          column="last_read_at"/>
+        <result property="readingTimeMinutes" column="reading_time_minutes"/>
+        <result property="status" column="status"/>
+        <result property="isFavorite" column="is_favorite"/>
+        <result property="notes" column="notes"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="lastReadAt" column="last_read_at"/>
     </resultMap>
 
     <select id="findByUserAndBook" resultMap="ReadingProgressResult">
@@ -57,14 +55,14 @@
         UPDATE reading_progress
         SET
         percentage_completed = #{percentageCompleted},
-        current_page         = #{currentPage},
-        total_pages          = #{totalPages},
-        current_position     = COALESCE(#{currentPosition}, current_position),
+        current_page = #{currentPage},
+        total_pages = #{totalPages},
+        current_position = COALESCE(#{currentPosition}, current_position),
         reading_time_minutes = #{readingTimeMinutes},
-        status               = #{status},
-        last_read_at         = #{lastReadAt}
+        status = #{status},
+        last_read_at = #{lastReadAt}
         <if test="completedAt != null">
-            , completed_at   = #{completedAt}
+            , completed_at = #{completedAt}
         </if>
         WHERE id = #{id}
     </update>
@@ -73,8 +71,8 @@
         UPDATE reading_progress
         SET
         reading_time_minutes = #{readingTimeMinutes},
-        last_read_at         = #{lastReadAt},
-        current_position     = COALESCE(#{currentPosition}, current_position)
+        last_read_at = #{lastReadAt},
+        current_position = COALESCE(#{currentPosition}, current_position)
         WHERE id = #{id}
     </update>
 
@@ -94,16 +92,15 @@
         )
         ON CONFLICT (user_id, book_id)
         DO UPDATE SET
-        current_page         = EXCLUDED.current_page,
-        total_pages          = EXCLUDED.total_pages,
-        current_position     = EXCLUDED.current_position,
+        current_page = EXCLUDED.current_page,
+        total_pages = EXCLUDED.total_pages,
+        current_position = EXCLUDED.current_position,
         percentage_completed = EXCLUDED.percentage_completed,
         reading_time_minutes = EXCLUDED.reading_time_minutes,
-        status               = EXCLUDED.status,
-        is_favorite          = EXCLUDED.is_favorite,
-        notes                = EXCLUDED.notes,
-        completed_at         = EXCLUDED.completed_at,
-        last_read_at         = NOW()
+        status = EXCLUDED.status,
+        is_favorite = EXCLUDED.is_favorite,
+        notes = EXCLUDED.notes,
+        completed_at = EXCLUDED.completed_at,
+        last_read_at = NOW()
     </insert>
-
 </mapper>

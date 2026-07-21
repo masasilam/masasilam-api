@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.chapter.ChapterRatingMapper">
+    <insert id="upsertRating" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chapter_ratings (user_id, book_id, chapter_number, rating, created_at, updated_at)
+        VALUES (#{userId}, #{bookId}, #{chapterNumber}, #{rating}, #{createdAt}, #{updatedAt})
+        ON CONFLICT (user_id, book_id, chapter_number)
+        DO UPDATE SET rating = #{rating}, updated_at = #{updatedAt}
+    </insert>
+
+    <select id="findRating" resultType="com.masasilam.app.model.entity.ChapterRating">
+        SELECT *
+        FROM chapter_ratings
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <select id="getRatingSummary" resultType="map">
+        SELECT AVG(rating) AS average_rating,
+        COUNT(*) AS total_ratings
+        FROM chapter_ratings
+        WHERE book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </select>
+
+    <select id="getRatingDistribution" resultType="map">
+        SELECT rating,
+        COUNT(*) AS count
+        FROM chapter_ratings
+        WHERE book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+        GROUP BY rating
+    </select>
+
+    <delete id="deleteRating">
+        DELETE FROM chapter_ratings
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND chapter_number = #{chapterNumber}
+    </delete>
+
+    <select id="findUserBookRatings" resultType="com.masasilam.app.model.entity.ChapterRating">
+        SELECT *
+        FROM chapter_ratings
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        ORDER BY chapter_number
+    </select>
+
+    <select id="findAllUserRatings" resultType="map">
+        SELECT user_id, rating
+        FROM chapter_ratings
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

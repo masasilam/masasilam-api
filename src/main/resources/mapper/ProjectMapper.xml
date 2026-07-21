@@ -1,16 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.ProjectMapper">
 
+<mapper namespace="com.masasilam.app.mapper.collaboration.ProjectMapper">
     <resultMap id="ProjectResponseMap" type="com.masasilam.app.model.dto.response.ProjectResponse">
-        <!-- Basic info -->
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="description" column="description"/>
         <result property="author" column="author"/>
         <result property="originalSource" column="original_source"/>
-
-        <!-- Project metadata - Let MyBatis auto-map enums -->
         <result property="difficulty" column="difficulty"/>
         <result property="status" column="status"/>
         <result property="priority" column="priority"/>
@@ -18,29 +15,17 @@
         <result property="genre" column="genre"/>
         <result property="originalPublicationYear" column="original_publication_year"/>
         <result property="isPublicDomain" column="is_public_domain"/>
-
-        <!-- Progress tracking -->
         <result property="totalPages" column="total_pages"/>
         <result property="pagesCompleted" column="pages_completed"/>
         <result property="overallProgress" column="overall_progress"/>
-
-        <!-- Timeline -->
         <result property="startDate" column="start_date"/>
         <result property="expectedCompletionDate" column="expected_completion_date"/>
         <result property="actualCompletionDate" column="actual_completion_date"/>
-
-        <!-- Media & URLs -->
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="bookSlug" column="book_slug"/>
-
-        <!-- Community metrics -->
         <result property="contributorCount" column="contributor_count"/>
         <result property="commentCount" column="comment_count"/>
-
-        <!-- Quality metrics -->
         <result property="qualityScore" column="quality_score"/>
-
-        <!-- Audit info -->
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -81,9 +66,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- Fixed insert with proper PostgreSQL enum casting -->
-    <insert id="insertProject" parameterType="com.masasilam.app.model.entity.Project" useGeneratedKeys="true"
-            keyProperty="id">
+    <insert id="insertProject" parameterType="com.masasilam.app.model.entity.Project" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO projects (
         title, description, author, original_source, difficulty, status, priority,
         original_language, original_title, is_public_domain, copyright_status,
@@ -104,7 +87,6 @@
         )
     </insert>
 
-    <!-- ADD THIS: Update Project method -->
     <update id="updateProject" parameterType="com.masasilam.app.model.entity.Project">
         UPDATE projects
         <set>
@@ -122,15 +104,10 @@
             <if test="estimatedPages != null">estimated_pages = #{estimatedPages},</if>
             <if test="estimatedWordCount != null">estimated_word_count = #{estimatedWordCount},</if>
             <if test="totalPages != null">total_pages = #{totalPages},</if>
-            <if test="transcriptionCompletedPages != null">transcription_completed_pages =
-                #{transcriptionCompletedPages},
-            </if>
-            <if test="translationCompletedPages != null">translation_completed_pages = #{translationCompletedPages},
-            </if>
+            <if test="transcriptionCompletedPages != null">transcription_completed_pages = #{transcriptionCompletedPages},</if>
+            <if test="translationCompletedPages != null">translation_completed_pages = #{translationCompletedPages},</if>
             <if test="editingCompletedPages != null">editing_completed_pages = #{editingCompletedPages},</if>
-            <if test="illustrationCompletedPages != null">illustration_completed_pages =
-                #{illustrationCompletedPages},
-            </if>
+            <if test="illustrationCompletedPages != null">illustration_completed_pages = #{illustrationCompletedPages},</if>
             <if test="formattedPages != null">formatted_pages = #{formattedPages},</if>
             <if test="pagesCompleted != null">pages_completed = #{pagesCompleted},</if>
             <if test="overallProgress != null">overall_progress = #{overallProgress},</if>
@@ -167,12 +144,10 @@
         WHERE slug = #{slug}
     </select>
 
-    <!-- Get project entity -->
     <select id="getProjectByIdEntity" resultType="com.masasilam.app.model.entity.Project">
         SELECT * FROM projects WHERE id = #{projectId}
     </select>
 
-    <!-- Update progress methods -->
     <update id="updateTranslationCompletedPages">
         UPDATE projects
         SET translation_completed_pages = #{completedPages},
@@ -221,7 +196,6 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Update member count -->
     <update id="updateMemberCount">
         UPDATE projects
         SET member_count = #{memberCount},
@@ -229,14 +203,12 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Increment view count -->
     <update id="incrementViewCount">
         UPDATE projects
         SET view_count = COALESCE(view_count, 0) + 1
         WHERE id = #{id}
     </update>
 
-    <!-- Get projects by creator -->
     <select id="getProjectsByCreator" resultMap="ProjectResponseMap">
         SELECT
         p.*,
@@ -253,9 +225,7 @@
         WHERE p.created_by = #{userId}
     </select>
 
-    <!-- Insert quality assessment -->
-    <insert id="insertQualityAssessment" parameterType="com.masasilam.app.model.entity.ProjectQualityAssessment"
-            useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertQualityAssessment" parameterType="com.masasilam.app.model.entity.ProjectQualityAssessment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_quality_assessments (
         project_id, assessor_id, quality_score, content_accuracy, language_quality,
         formatting_quality, overall_readability, recommendations, created_at
@@ -265,7 +235,6 @@
         )
     </insert>
 
-    <!-- Update reaction count -->
     <update id="updateReactionCount">
         UPDATE projects
         SET reaction_count = #{reactionCount},
@@ -273,7 +242,6 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Update comment count -->
     <update id="updateCommentCount">
         UPDATE projects
         SET comment_count = #{commentCount},
@@ -281,7 +249,6 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Update follower count -->
     <update id="updateFollowerCount">
         UPDATE projects
         SET follower_count = #{followerCount},
@@ -289,7 +256,6 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Get recent project activity -->
     <select id="getRecentProjectActivity" resultType="com.masasilam.app.model.dto.response.ProjectActivityResponse">
         SELECT
         pa.id,
@@ -305,19 +271,16 @@
         LIMIT #{limit}
     </select>
 
-    <!-- Get user created project count -->
     <select id="getUserCreatedProjectCount" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM projects WHERE created_by = #{userId}
     </select>
 
-    <!-- Get user average quality score -->
     <select id="getUserAverageQualityScore" resultType="java.math.BigDecimal">
         SELECT COALESCE(AVG(quality_score), 0)
         FROM projects
         WHERE created_by = #{userId}
     </select>
 
-    <!-- Get user recent activity -->
     <select id="getUserRecentActivity" resultType="com.masasilam.app.model.dto.response.UserActivityResponse">
         SELECT
         pa.id,
@@ -334,14 +297,12 @@
         LIMIT #{limit}
     </select>
 
-    <!-- Get project average quality score -->
     <select id="getProjectAverageQualityScore" resultType="java.math.BigDecimal">
         SELECT COALESCE(AVG(quality_score), 0)
         FROM project_quality_assessments
         WHERE project_id = #{projectId}
     </select>
 
-    <!-- Update project quality score -->
     <update id="updateProjectQualityScore">
         UPDATE projects
         SET quality_score = #{averageScore},
@@ -349,9 +310,7 @@
         WHERE id = #{projectId}
     </update>
 
-    <!-- Insert project activity -->
-    <insert id="insertProjectActivity" parameterType="com.masasilam.app.model.entity.ProjectActivity"
-            useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertProjectActivity" parameterType="com.masasilam.app.model.entity.ProjectActivity" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_activities (
         project_id, user_id, activity_type, description, page_number, metadata, created_at
         ) VALUES (
@@ -359,5 +318,4 @@
         #{pageNumber}, #{metadata}, #{createdAt}
         )
     </insert>
-
 </mapper>

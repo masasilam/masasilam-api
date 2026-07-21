@@ -1,35 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.FilmVideoSourceMapper">
-
+<mapper namespace="com.masasilam.app.mapper.film.FilmVideoSourceMapper">
     <resultMap id="FilmVideoSourceResultMap" type="com.masasilam.app.model.film.FilmVideoSource">
-        <id     property="id"              column="id"/>
-        <result property="filmId"          column="film_id"/>
-        <result property="rawUrl"          column="raw_url"/>
-        <result property="providerType"    column="provider_type"/>
-        <result property="embedUrl"        column="embed_url"/>
-        <result property="directUrl"       column="direct_url"/>
-        <result property="thumbnailUrl"    column="thumbnail_url"/>
-        <result property="title"           column="title"/>
+        <id property="id" column="id"/>
+        <result property="filmId" column="film_id"/>
+        <result property="rawUrl" column="raw_url"/>
+        <result property="providerType" column="provider_type"/>
+        <result property="embedUrl" column="embed_url"/>
+        <result property="directUrl" column="direct_url"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="title" column="title"/>
         <result property="durationSeconds" column="duration_seconds"/>
-        <result property="isTrailer"       column="is_trailer"/>
-        <result property="isActive"        column="is_active"/>
-        <result property="priority"        column="priority"/>
-        <result property="createdAt"       column="created_at"/>
+        <result property="isTrailer" column="is_trailer"/>
+        <result property="isActive" column="is_active"/>
+        <result property="priority" column="priority"/>
+        <result property="createdAt" column="created_at"/>
     </resultMap>
 
     <select id="findByFilmId" resultMap="FilmVideoSourceResultMap">
         SELECT * FROM film_video_source
-        WHERE  film_id = #{filmId}
+        WHERE film_id = #{filmId}
         ORDER BY priority DESC, is_trailer DESC, created_at ASC
     </select>
 
     <select id="findActiveByFilmId" resultMap="FilmVideoSourceResultMap">
         SELECT * FROM film_video_source
-        WHERE  film_id  = #{filmId}
-        AND    is_active = true
+        WHERE film_id = #{filmId}
+        AND is_active = true
         ORDER BY priority DESC, is_trailer DESC, created_at ASC
     </select>
 
@@ -53,16 +51,16 @@
 
     <update id="update">
         UPDATE film_video_source SET
-        raw_url          = #{rawUrl},
-        provider_type    = #{providerType},
-        embed_url        = #{embedUrl},
-        direct_url       = #{directUrl},
-        thumbnail_url    = #{thumbnailUrl},
-        title            = #{title},
+        raw_url = #{rawUrl},
+        provider_type = #{providerType},
+        embed_url = #{embedUrl},
+        direct_url = #{directUrl},
+        thumbnail_url = #{thumbnailUrl},
+        title = #{title},
         duration_seconds = #{durationSeconds},
-        is_trailer       = #{isTrailer},
-        is_active        = #{isActive},
-        priority         = #{priority}
+        is_trailer = #{isTrailer},
+        is_active = #{isActive},
+        priority = #{priority}
         WHERE id = #{id}
     </update>
 
@@ -77,5 +75,4 @@
     <update id="deactivate">
         UPDATE film_video_source SET is_active = false WHERE id = #{id}
     </update>
-
 </mapper>

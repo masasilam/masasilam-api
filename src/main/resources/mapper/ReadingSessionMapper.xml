@@ -1,28 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.ReadingSessionMapper">
-
+<mapper namespace="com.masasilam.app.mapper.reading.ReadingSessionMapper">
     <resultMap id="ReadingSessionRM" type="com.masasilam.app.model.entity.ReadingSession">
-        <id     column="id"                     property="id"/>
-        <result column="user_id"                property="userId"/>
-        <result column="book_id"                property="bookId"/>
-        <result column="zine_id"                property="zineId"/>
-        <result column="session_id"             property="sessionId"/>
-        <result column="started_at"             property="startedAt"/>
-        <result column="ended_at"               property="endedAt"/>
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="book_id" property="bookId"/>
+        <result column="zine_id" property="zineId"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="ended_at" property="endedAt"/>
         <result column="total_duration_seconds" property="totalDurationSeconds"/>
-        <result column="start_chapter"          property="startChapter"/>
-        <result column="end_chapter"            property="endChapter"/>
-        <result column="chapters_read"          property="chaptersRead"/>
-        <result column="completion_delta"       property="completionDelta"/>
-        <result column="total_interactions"     property="totalInteractions"/>
-        <result column="session_type"           property="sessionType"/>
-        <result column="device_type"            property="deviceType"/>
-        <result column="device_id"              property="deviceId"/>
-        <result column="created_at"             property="createdAt"/>
-        <result column="updated_at"             property="updatedAt"/>
+        <result column="start_chapter" property="startChapter"/>
+        <result column="end_chapter" property="endChapter"/>
+        <result column="chapters_read" property="chaptersRead"/>
+        <result column="completion_delta" property="completionDelta"/>
+        <result column="total_interactions" property="totalInteractions"/>
+        <result column="session_type" property="sessionType"/>
+        <result column="device_type" property="deviceType"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insertSession" useGeneratedKeys="true" keyProperty="id">
@@ -42,14 +40,14 @@
 
     <update id="updateSession">
         UPDATE reading_sessions SET
-        ended_at               = #{endedAt},
+        ended_at = #{endedAt},
         total_duration_seconds = #{totalDurationSeconds},
-        chapters_read          = #{chaptersRead},
-        start_chapter          = #{startChapter},
-        end_chapter            = #{endChapter},
-        completion_delta       = #{completionDelta},
-        total_interactions     = #{totalInteractions},
-        updated_at             = #{updatedAt}
+        chapters_read = #{chaptersRead},
+        start_chapter = #{startChapter},
+        end_chapter = #{endChapter},
+        completion_delta = #{completionDelta},
+        total_interactions = #{totalInteractions},
+        updated_at = #{updatedAt}
         WHERE session_id = #{sessionId}
     </update>
 
@@ -121,7 +119,7 @@
         SELECT * FROM reading_sessions
         WHERE user_id = #{userId}
         AND started_at &gt;= #{start}
-        AND started_at &lt;  #{end}
+        AND started_at &lt; #{end}
         ORDER BY started_at
     </select>
 
@@ -131,5 +129,4 @@
         ORDER BY COALESCE(ended_at, started_at) DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
-
 </mapper>

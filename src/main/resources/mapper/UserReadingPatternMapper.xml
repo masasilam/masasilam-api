@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.reading.UserReadingPatternMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_reading_patterns (
+        user_id, book_id, total_reading_time_minutes, average_session_duration_minutes,
+        average_reading_speed_wpm, completion_speed_chapters_per_day,
+        preferred_reading_hour, sessions_count, created_at, updated_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{totalReadingTimeMinutes},
+        #{averageSessionDurationMinutes}, #{averageReadingSpeedWpm},
+        #{completionSpeedChaptersPerDay}, #{preferredReadingHour},
+        #{sessionsCount}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE user_reading_patterns
+        SET total_reading_time_minutes = #{totalReadingTimeMinutes},
+        average_session_duration_minutes = #{averageSessionDurationMinutes},
+        average_reading_speed_wpm = #{averageReadingSpeedWpm},
+        completion_speed_chapters_per_day = #{completionSpeedChaptersPerDay},
+        preferred_reading_hour = #{preferredReadingHour},
+        sessions_count = #{sessionsCount},
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="findPattern" resultType="com.masasilam.app.model.entity.UserReadingPattern">
+        SELECT *
+        FROM user_reading_patterns
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+    </select>
+
+    <select id="findByUserAndBook" resultType="com.masasilam.app.model.entity.UserReadingPattern">
+        SELECT *
+        FROM user_reading_patterns
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+    </select>
+</mapper>

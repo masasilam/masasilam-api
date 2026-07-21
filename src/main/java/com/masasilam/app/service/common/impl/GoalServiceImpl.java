@@ -1,10 +1,10 @@
 package com.masasilam.app.service.common.impl;
 
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.ReadingGoalMapper;
-import com.masasilam.app.mapper.ReadingProgressMapper;
-import com.masasilam.app.mapper.ReadingSessionMapper;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.reading.ReadingGoalMapper;
+import com.masasilam.app.mapper.reading.ReadingProgressMapper;
+import com.masasilam.app.mapper.reading.ReadingSessionMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.GoalRequest;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.ReadingGoal;

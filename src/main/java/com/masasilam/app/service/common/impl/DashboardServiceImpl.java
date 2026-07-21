@@ -1,7 +1,21 @@
 package com.masasilam.app.service.common.impl;
 
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.*;
+import com.masasilam.app.mapper.annotation.EpubAnnotationMapper;
+import com.masasilam.app.mapper.book.BookMapper;
+import com.masasilam.app.mapper.book.EpubBookmarkMapper;
+import com.masasilam.app.mapper.chapter.ChapterProgressMapper;
+import com.masasilam.app.mapper.chapter.ChapterRatingMapper;
+import com.masasilam.app.mapper.chapter.ChapterReviewMapper;
+import com.masasilam.app.mapper.chapter.SearchMapper;
+import com.masasilam.app.mapper.reading.ReadingActivityMapper;
+import com.masasilam.app.mapper.reading.ReadingProgressMapper;
+import com.masasilam.app.mapper.reading.ReadingSessionMapper;
+import com.masasilam.app.mapper.reading.UserReadingPatternMapper;
+import com.masasilam.app.mapper.user.UserMapper;
+import com.masasilam.app.mapper.zine.ZineMapper;
+import com.masasilam.app.mapper.zine.ZineReadingProgressMapper;
+import com.masasilam.app.mapper.zine.ZineReadingSessionMapper;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.dto.response.ZineDashboardDTOs.ZineInProgressResponse;
 import com.masasilam.app.model.entity.*;

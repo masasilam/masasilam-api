@@ -2,7 +2,7 @@ package com.masasilam.app.service.social.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.mapper.social.ReadingGroupMapper;
 import com.masasilam.app.model.dto.request.social.*;
 import com.masasilam.app.model.dto.response.*;

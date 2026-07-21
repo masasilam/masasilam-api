@@ -1,125 +1,98 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.BlogPostMapper">
 
-    <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  STRUKTUR TABEL AKTUAL                                       ║
-    ║  blog_posts:           id, user_id, title, slug, content,    ║
-    ║                        excerpt, featured_image_url, status,  ║
-    ║                        is_featured, view_count, comment_count║
-    ║                        like_count, reading_time_minutes,     ║
-    ║                        published_at, created_at, updated_at, ║
-    ║                        scheduled_at                          ║
-    ║  blog_post_likes:      id, post_id, user_id,                 ║
-    ║                        reaction_type, created_at             ║
-    ║  blog_comments:        id, post_id, user_id,                 ║
-    ║                        parent_comment_id, content,           ║
-    ║                        is_approved, like_count, created_at   ║
-    ║                        (TIDAK ada: updated_at)               ║
-    ║  blog_post_categories: blog_post_id, category_id             ║
-    ║  blog_post_tags:       blog_post_id, tag_id                  ║
-    ║  blog_post_books:      blog_post_id, book_id                 ║
-    ╚══════════════════════════════════════════════════════════════╝
-    -->
-
-    <!-- ═══════════════════════ Result Maps ═══════════════════════ -->
-
+<mapper namespace="com.masasilam.app.mapper.blog.BlogPostMapper">
     <resultMap id="BlogPostResultMap" type="com.masasilam.app.model.entity.BlogPost">
-        <id     column="id"                   property="id"/>
-        <result column="title"                property="title"/>
-        <result column="slug"                 property="slug"/>
-        <result column="content"              property="content"/>
-        <result column="excerpt"              property="excerpt"/>
-        <result column="source"               property="source"/>
-        <result column="featured_image_url"   property="featuredImage"/>
-        <result column="status"               property="status"/>
-        <result column="user_id"              property="authorId"/>
-        <result column="is_featured"          property="isFeatured"/>
-        <result column="view_count"           property="viewCount"/>
-        <result column="like_count"           property="likeCount"/>
-        <result column="comment_count"        property="commentCount"/>
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="content" property="content"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="source" property="source"/>
+        <result column="featured_image_url" property="featuredImage"/>
+        <result column="status" property="status"/>
+        <result column="user_id" property="authorId"/>
+        <result column="is_featured" property="isFeatured"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
         <result column="reading_time_minutes" property="readingTimeMinutes"/>
-        <result column="scheduled_at"         property="scheduledAt"/>
-        <result column="published_at"         property="publishedAt"/>
-        <result column="created_at"           property="createdAt"/>
-        <result column="updated_at"           property="updatedAt"/>
+        <result column="scheduled_at" property="scheduledAt"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
-    <!-- ✅ FIX: tambah content agar editor bisa load konten saat edit -->
     <resultMap id="BlogPostResponseMap" type="com.masasilam.app.model.dto.response.BlogPostResponse">
-        <id     column="id"                 property="id"/>
-        <result column="title"              property="title"/>
-        <result column="slug"               property="slug"/>
-        <result column="content"            property="content"/>
-        <result column="excerpt"            property="excerpt"/>
-        <result column="source"             property="source"/>
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="content" property="content"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="source" property="source"/>
         <result column="featured_image_url" property="featuredImage"/>
-        <result column="status"             property="status"/>
-        <result column="view_count"         property="viewCount"/>
-        <result column="like_count"         property="likeCount"/>
-        <result column="comment_count"      property="commentCount"/>
-        <result column="published_at"       property="publishedAt"/>
-        <result column="created_at"         property="createdAt"/>
-        <result column="updated_at"         property="updatedAt"/>
-        <result column="author_name"        property="authorName"/>
-        <result column="author_avatar"      property="authorAvatar"/>
-        <result column="categories"         property="categories"/>
-        <result column="tags"               property="tags"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="author_name" property="authorName"/>
+        <result column="author_avatar" property="authorAvatar"/>
+        <result column="categories" property="categories"/>
+        <result column="tags" property="tags"/>
     </resultMap>
 
     <resultMap id="BlogPostDetailResponseMap" type="com.masasilam.app.model.dto.response.BlogPostDetailResponse">
-        <id     column="id"                 property="id"/>
-        <result column="title"              property="title"/>
-        <result column="slug"               property="slug"/>
-        <result column="content"            property="content"/>
-        <result column="excerpt"            property="excerpt"/>
-        <result column="source"             property="source"/>
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="slug" property="slug"/>
+        <result column="content" property="content"/>
+        <result column="excerpt" property="excerpt"/>
+        <result column="source" property="source"/>
         <result column="featured_image_url" property="featuredImage"/>
-        <result column="status"             property="status"/>
-        <result column="view_count"         property="viewCount"/>
-        <result column="like_count"         property="likeCount"/>
-        <result column="comment_count"      property="commentCount"/>
-        <result column="published_at"       property="publishedAt"/>
-        <result column="created_at"         property="createdAt"/>
-        <result column="updated_at"         property="updatedAt"/>
-        <result column="user_id"            property="authorId"/>
-        <result column="author_name"        property="authorName"/>
-        <result column="author_avatar"      property="authorAvatar"/>
-        <result column="author_bio"         property="authorBio"/>
-        <result column="categories"         property="categories"/>
-        <result column="tags"               property="tags"/>
-        <result column="linked_books"       property="linkedBooks"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="published_at" property="publishedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="user_id" property="authorId"/>
+        <result column="author_name" property="authorName"/>
+        <result column="author_avatar" property="authorAvatar"/>
+        <result column="author_bio" property="authorBio"/>
+        <result column="categories" property="categories"/>
+        <result column="tags" property="tags"/>
+        <result column="linked_books" property="linkedBooks"/>
     </resultMap>
 
     <resultMap id="BlogCommentResultMap" type="com.masasilam.app.model.entity.BlogComment">
-        <id     column="id"                property="id"/>
-        <result column="post_id"           property="blogPostId"/>
-        <result column="user_id"           property="userId"/>
-        <result column="content"           property="content"/>
+        <id column="id" property="id"/>
+        <result column="post_id" property="blogPostId"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
         <result column="parent_comment_id" property="parentId"/>
-        <result column="is_approved"       property="isApproved"/>
-        <result column="like_count"        property="likeCount"/>
-        <result column="created_at"        property="createdAt"/>
+        <result column="is_approved" property="isApproved"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="created_at" property="createdAt"/>
     </resultMap>
 
     <resultMap id="BlogCommentResponseMap" type="com.masasilam.app.model.dto.response.BlogCommentResponse">
-        <id     column="id"                property="id"/>
-        <result column="post_id"           property="blogPostId"/>
-        <result column="user_id"           property="userId"/>
-        <result column="content"           property="content"/>
+        <id column="id" property="id"/>
+        <result column="post_id" property="blogPostId"/>
+        <result column="user_id" property="userId"/>
+        <result column="content" property="content"/>
         <result column="parent_comment_id" property="parentId"/>
-        <result column="like_count"        property="likeCount"/>
-        <result column="created_at"        property="createdAt"/>
-        <result column="user_name"         property="userName"/>
-        <result column="user_avatar"       property="userAvatar"/>
-        <result column="reply_count"       property="replyCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="user_name" property="userName"/>
+        <result column="user_avatar" property="userAvatar"/>
+        <result column="reply_count" property="replyCount"/>
     </resultMap>
 
-    <!-- ═══════════════════════ Blog Post CRUD ═══════════════════════ -->
-
-    <insert id="insertBlogPost" parameterType="com.masasilam.app.model.entity.BlogPost"
-            useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertBlogPost" parameterType="com.masasilam.app.model.entity.BlogPost" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO blog_posts (
         title, slug, content, excerpt, featured_image_url, status, user_id,
         is_featured, view_count, like_count, comment_count,
@@ -158,23 +131,22 @@
         SELECT * FROM blog_posts WHERE id = #{id}
     </select>
 
-    <!-- ✅ FIX: tambah bp.content agar editor bisa memuat konten saat edit -->
     <select id="getBlogPostById" resultMap="BlogPostResponseMap">
         SELECT
         bp.id, bp.title, bp.slug, bp.content, bp.excerpt,
         bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         WHERE bp.id = #{id}
         GROUP BY bp.id, u.full_name, u.profile_picture_url
     </select>
@@ -184,20 +156,20 @@
         bp.id, bp.title, bp.slug, bp.source, bp.content, bp.excerpt, bp.featured_image_url,
         bp.status, bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at, bp.user_id,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
-        u.bio                 AS author_bio,
+        u.bio AS author_bio,
         STRING_AGG(DISTINCT bc.id || ':' || bc.name || ':' || bc.slug, '|') AS categories,
         STRING_AGG(DISTINCT bt.id || ':' || bt.name || ':' || bt.slug, '|') AS tags,
-        STRING_AGG(DISTINCT b.id  || ':' || b.title || ':' || b.slug,  '|') AS linked_books
+        STRING_AGG(DISTINCT b.id || ':' || b.title || ':' || b.slug, '|') AS linked_books
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
-        LEFT JOIN blog_post_books bpb      ON bp.id = bpb.blog_post_id
-        LEFT JOIN books b                  ON bpb.book_id = b.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        LEFT JOIN blog_post_books bpb ON bp.id = bpb.blog_post_id
+        LEFT JOIN books b ON bpb.book_id = b.id
         WHERE bp.slug = #{slug}
         AND bp.status = 'PUBLISHED'
         GROUP BY bp.id, u.full_name, u.profile_picture_url, u.bio
@@ -207,23 +179,21 @@
         SELECT COUNT(*) > 0 FROM blog_posts WHERE slug = #{slug}
     </select>
 
-    <!-- ═══════════════════════ Listings ═══════════════════════ -->
-
     <select id="getBlogPostsWithFilters" resultMap="BlogPostResponseMap">
         SELECT
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         <where>
             <choose>
                 <when test="status != null and status != ''">bp.status = #{status}</when>
@@ -232,7 +202,7 @@
             <if test="category != null and category != ''">AND bc.slug = #{category}</if>
             <if test="tag != null and tag != ''">AND bt.slug = #{tag}</if>
             <if test="search != null and search != ''">
-                AND (bp.title   ILIKE '%' || #{search} || '%'
+                AND (bp.title ILIKE '%' || #{search} || '%'
                 OR bp.content ILIKE '%' || #{search} || '%'
                 OR bp.excerpt ILIKE '%' || #{search} || '%')
             </if>
@@ -257,17 +227,17 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags,
         (bp.view_count * 0.3 + bp.like_count * 0.5 + bp.comment_count * 0.2) AS trend_score
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         WHERE bp.status = 'PUBLISHED'
         AND bp.published_at >= CURRENT_DATE - (INTERVAL '1 day' * #{days})
         GROUP BY bp.id, u.full_name, u.profile_picture_url
@@ -280,18 +250,18 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc2.name, ', ') AS categories,
-        STRING_AGG(DISTINCT bt.name,  ', ') AS tags
+        STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        INNER JOIN blog_post_categories bpc  ON bp.id = bpc.blog_post_id
-        INNER JOIN blog_categories bc        ON bpc.category_id = bc.id
-        LEFT JOIN users u                    ON bp.user_id = u.id
-        LEFT JOIN blog_post_categories bpc2  ON bp.id = bpc2.blog_post_id
-        LEFT JOIN blog_categories bc2        ON bpc2.category_id = bc2.id
-        LEFT JOIN blog_post_tags bpt         ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt               ON bpt.tag_id = bt.id
+        INNER JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
+        INNER JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN users u ON bp.user_id = u.id
+        LEFT JOIN blog_post_categories bpc2 ON bp.id = bpc2.blog_post_id
+        LEFT JOIN blog_categories bc2 ON bpc2.category_id = bc2.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         WHERE bp.status = 'PUBLISHED'
         AND bc.slug = #{categorySlug}
         GROUP BY bp.id, u.full_name, u.profile_picture_url
@@ -309,18 +279,18 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
-        STRING_AGG(DISTINCT bc.name,  ', ') AS categories,
+        STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt2.name, ', ') AS tags
         FROM blog_posts bp
-        INNER JOIN blog_post_tags bpt  ON bp.id = bpt.blog_post_id
-        INNER JOIN blog_tags bt        ON bpt.tag_id = bt.id
-        LEFT JOIN users u              ON bp.user_id = u.id
+        INNER JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        INNER JOIN blog_tags bt ON bpt.tag_id = bt.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt2      ON bp.id = bpt2.blog_post_id
-        LEFT JOIN blog_tags bt2            ON bpt2.tag_id = bt2.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt2 ON bp.id = bpt2.blog_post_id
+        LEFT JOIN blog_tags bt2 ON bpt2.tag_id = bt2.id
         WHERE bp.status = 'PUBLISHED'
         AND bt.slug = #{tagSlug}
         GROUP BY bp.id, u.full_name, u.profile_picture_url
@@ -338,16 +308,16 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         <where>
             bp.user_id = #{authorId}
             <if test="status != null and status != ''">AND bp.status = #{status}</if>
@@ -367,19 +337,19 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         <where>
             bp.status = 'PUBLISHED'
-            AND (bp.title   ILIKE '%' || #{query} || '%'
+            AND (bp.title ILIKE '%' || #{query} || '%'
             OR bp.content ILIKE '%' || #{query} || '%'
             OR bp.excerpt ILIKE '%' || #{query} || '%')
             <if test="category != null and category != ''">AND bc.slug = #{category}</if>
@@ -400,16 +370,16 @@
         bp.id, bp.title, bp.slug, bp.excerpt, bp.source, bp.featured_image_url, bp.status,
         bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
         STRING_AGG(DISTINCT bc.name, ', ') AS categories,
         STRING_AGG(DISTINCT bt.name, ', ') AS tags
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
         WHERE bp.status = 'PUBLISHED'
         AND bp.id != #{blogPostId}
         AND (
@@ -438,25 +408,23 @@
         bp.id, bp.title, bp.slug, bp.content, bp.excerpt, bp.featured_image_url,
         bp.status, bp.view_count, bp.like_count, bp.comment_count,
         bp.published_at, bp.created_at, bp.updated_at, bp.user_id,
-        u.full_name           AS author_name,
+        u.full_name AS author_name,
         u.profile_picture_url AS author_avatar,
-        u.bio                 AS author_bio,
+        u.bio AS author_bio,
         STRING_AGG(DISTINCT bc.id || ':' || bc.name || ':' || bc.slug, '|') AS categories,
         STRING_AGG(DISTINCT bt.id || ':' || bt.name || ':' || bt.slug, '|') AS tags,
-        STRING_AGG(DISTINCT b.id  || ':' || b.title || ':' || b.slug,  '|') AS linked_books
+        STRING_AGG(DISTINCT b.id || ':' || b.title || ':' || b.slug, '|') AS linked_books
         FROM blog_posts bp
-        LEFT JOIN users u                  ON bp.user_id = u.id
+        LEFT JOIN users u ON bp.user_id = u.id
         LEFT JOIN blog_post_categories bpc ON bp.id = bpc.blog_post_id
-        LEFT JOIN blog_categories bc       ON bpc.category_id = bc.id
-        LEFT JOIN blog_post_tags bpt       ON bp.id = bpt.blog_post_id
-        LEFT JOIN blog_tags bt             ON bpt.tag_id = bt.id
-        LEFT JOIN blog_post_books bpb      ON bp.id = bpb.blog_post_id
-        LEFT JOIN books b                  ON bpb.book_id = b.id
+        LEFT JOIN blog_categories bc ON bpc.category_id = bc.id
+        LEFT JOIN blog_post_tags bpt ON bp.id = bpt.blog_post_id
+        LEFT JOIN blog_tags bt ON bpt.tag_id = bt.id
+        LEFT JOIN blog_post_books bpb ON bp.id = bpb.blog_post_id
+        LEFT JOIN books b ON bpb.book_id = b.id
         WHERE bp.id = #{id}
         GROUP BY bp.id, u.full_name, u.profile_picture_url, u.bio
     </select>
-
-    <!-- ═══════════════════════ Categories ═══════════════════════ -->
 
     <insert id="insertBlogPostCategory">
         INSERT INTO blog_post_categories (blog_post_id, category_id) VALUES (#{blogPostId}, #{categoryId})
@@ -465,8 +433,6 @@
     <delete id="deleteBlogPostCategories">
         DELETE FROM blog_post_categories WHERE blog_post_id = #{blogPostId}
     </delete>
-
-    <!-- ═══════════════════════ Tags ═══════════════════════ -->
 
     <insert id="insertBlogPostTag">
         INSERT INTO blog_post_tags (blog_post_id, tag_id) VALUES (#{blogPostId}, #{tagId})
@@ -492,8 +458,6 @@
         LIMIT 1
     </select>
 
-    <!-- ═══════════════════════ Books ═══════════════════════ -->
-
     <insert id="insertBlogPostBook">
         INSERT INTO blog_post_books (blog_post_id, book_id) VALUES (#{blogPostId}, #{bookId})
     </insert>
@@ -501,8 +465,6 @@
     <delete id="deleteBlogPostBooks">
         DELETE FROM blog_post_books WHERE blog_post_id = #{blogPostId}
     </delete>
-
-    <!-- ═══════════════════════ Likes ═══════════════════════ -->
 
     <insert id="insertBlogPostLike">
         INSERT INTO blog_post_likes (post_id, user_id, reaction_type, created_at)
@@ -534,10 +496,7 @@
         UPDATE blog_posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = #{blogPostId}
     </update>
 
-    <!-- ═══════════════════════ Comments ═══════════════════════ -->
-
-    <insert id="insertBlogComment" parameterType="com.masasilam.app.model.entity.BlogComment"
-            useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertBlogComment" parameterType="com.masasilam.app.model.entity.BlogComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO blog_comments (post_id, user_id, content, parent_comment_id, is_approved, created_at)
         VALUES (#{blogPostId}, #{userId}, #{content}, #{parentId}, true, #{createdAt})
     </insert>
@@ -562,7 +521,7 @@
         SELECT
         bc.id, bc.post_id, bc.user_id, bc.content,
         bc.parent_comment_id, bc.like_count, bc.created_at,
-        u.full_name           AS user_name,
+        u.full_name AS user_name,
         u.profile_picture_url AS user_avatar,
         (SELECT COUNT(*) FROM blog_comments WHERE parent_comment_id = bc.id) AS reply_count
         FROM blog_comments bc
@@ -574,7 +533,7 @@
         SELECT
         bc.id, bc.post_id, bc.user_id, bc.content,
         bc.parent_comment_id, bc.like_count, bc.created_at,
-        u.full_name           AS user_name,
+        u.full_name AS user_name,
         u.profile_picture_url AS user_avatar,
         (SELECT COUNT(*) FROM blog_comments WHERE parent_comment_id = bc.id) AS reply_count
         FROM blog_comments bc
@@ -593,13 +552,9 @@
         UPDATE blog_posts SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = #{blogPostId}
     </update>
 
-    <!-- ═══════════════════════ View Count ═══════════════════════ -->
-
     <update id="incrementViewCount">
         UPDATE blog_posts SET view_count = view_count + 1 WHERE id = #{blogPostId}
     </update>
-
-    <!-- ═══════════════════════ Statistics ═══════════════════════ -->
 
     <select id="getTotalBlogPostsByUser" resultType="long">
         SELECT COUNT(*) FROM blog_posts WHERE user_id = #{userId}
@@ -627,10 +582,10 @@
 
     <select id="getMonthlyStatsByUser" resultType="com.masasilam.app.model.dto.response.MonthlyStatsResponse">
         SELECT
-        TO_CHAR(created_at, 'YYYY-MM')  AS month,
-        COUNT(*)                        AS posts,
-        COALESCE(SUM(view_count), 0)    AS views,
-        COALESCE(SUM(like_count), 0)    AS likes,
+        TO_CHAR(created_at, 'YYYY-MM') AS month,
+        COUNT(*) AS posts,
+        COALESCE(SUM(view_count), 0) AS views,
+        COALESCE(SUM(like_count), 0) AS likes,
         COALESCE(SUM(comment_count), 0) AS comments
         FROM blog_posts
         WHERE user_id = #{userId}
@@ -638,5 +593,4 @@
         GROUP BY TO_CHAR(created_at, 'YYYY-MM')
         ORDER BY month DESC
     </select>
-
 </mapper>

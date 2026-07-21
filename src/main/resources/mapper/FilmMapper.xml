@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.FilmMapper">
-
-    <!-- ============================================================
-         ResultMaps
-         ============================================================ -->
-
+<mapper namespace="com.masasilam.app.mapper.film.FilmMapper">
     <resultMap id="FilmResultMap" type="com.masasilam.app.model.film.Film">
         <id property="id" column="id"/>
         <result property="wikidataQid" column="wikidata_qid"/>
@@ -52,10 +46,6 @@
         <result property="description" column="description"/>
         <result property="logoUrl" column="logo_url"/>
     </resultMap>
-
-    <!-- ============================================================
-         Film CRUD
-         ============================================================ -->
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO film (
@@ -130,10 +120,6 @@
         SELECT * FROM film WHERE id = #{id}
     </select>
 
-    <!-- ============================================================
-         Genre
-         ============================================================ -->
-
     <insert id="insertGenre">
         INSERT INTO film_genre (film_id, genre)
         VALUES (#{filmId}, #{genre})
@@ -147,10 +133,6 @@
     <delete id="deleteGenresByFilmId">
         DELETE FROM film_genre WHERE film_id = #{filmId}
     </delete>
-
-    <!-- ============================================================
-         Person
-         ============================================================ -->
 
     <insert id="insertPerson" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO person (wikidata_qid, name, slug, photo_url, description)
@@ -196,10 +178,6 @@
     <delete id="deletePersonsByFilmId">
         DELETE FROM film_person WHERE film_id = #{filmId}
     </delete>
-
-    <!-- ============================================================
-         Company
-         ============================================================ -->
 
     <insert id="insertCompany" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO company (wikidata_qid, name, slug, logo_url, description)
@@ -258,10 +236,6 @@
         DELETE FROM film_distributor WHERE film_id = #{filmId}
     </delete>
 
-    <!-- ============================================================
-         Location
-         ============================================================ -->
-
     <insert id="insertLocation">
         INSERT INTO film_location (film_id, type, location)
         VALUES (#{filmId}, #{type}, #{name})
@@ -279,10 +253,6 @@
         DELETE FROM film_location WHERE film_id = #{filmId}
     </delete>
 
-    <!-- ============================================================
-         Alias
-         ============================================================ -->
-
     <insert id="insertAlias">
         INSERT INTO film_alias (film_id, alias, language)
         VALUES (#{filmId}, #{alias}, #{language})
@@ -299,10 +269,6 @@
         DELETE FROM film_alias WHERE film_id = #{filmId}
     </delete>
 
-    <!-- ============================================================
-         Financial / Review / Rating (delete only)
-         ============================================================ -->
-
     <delete id="deleteBoxOfficeByFilmId">
         DELETE FROM film_box_office WHERE film_id = #{filmId}
     </delete>
@@ -314,5 +280,4 @@
     <delete id="deleteContentRatingsByFilmId">
         DELETE FROM film_content_rating WHERE film_id = #{filmId}
     </delete>
-
 </mapper>

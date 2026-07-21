@@ -1,8 +1,8 @@
 package com.masasilam.app.service.film.impl;
 
 import com.masasilam.app.exception.custom.DataNotFoundException;
-import com.masasilam.app.mapper.FilmMapper;
-import com.masasilam.app.mapper.FilmVideoSourceMapper;
+import com.masasilam.app.mapper.film.FilmMapper;
+import com.masasilam.app.mapper.film.FilmVideoSourceMapper;
 import com.masasilam.app.model.dto.request.AddFilmRequest;
 import com.masasilam.app.model.dto.request.AddFilmRequest.CompanyInput;
 import com.masasilam.app.model.dto.request.AddFilmRequest.PersonInput;

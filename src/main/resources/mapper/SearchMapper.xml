@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.masasilam.app.mapper.SearchMapper">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 
-    <!-- Full-text search dengan detail lengkap dan full slug path -->
+<mapper namespace="com.masasilam.app.mapper.chapter.SearchMapper">
+    <select id="getUserBookSearchHistory" resultType="com.masasilam.app.model.entity.SearchHistory">
+        SELECT *
+        FROM search_history
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
     <select id="searchInBook" resultType="map">
         WITH RECURSIVE chapter_path AS (
-        -- Base case: chapters tanpa parent
         SELECT
         id,
         slug,
@@ -15,10 +21,7 @@
         chapter_level
         FROM book_chapters
         WHERE parent_chapter_id IS NULL
-
         UNION ALL
-
-        -- Recursive case: build full path
         SELECT
         c.id,
         c.slug,
@@ -44,7 +47,8 @@
         parent.slug as parent_slug,
         ts_headline('indonesian', c.content,
         plainto_tsquery('indonesian', #{query}),
-        'MaxWords=50, MinWords=25, MaxFragments=3, StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;') as highlighted_content,
+        'MaxWords=50, MinWords=25, MaxFragments=3, StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;') as
+        highlighted_content,
         ts_rank(c.search_vector, plainto_tsquery('indonesian', #{query})) as relevance_score,
         (SELECT COUNT(*)
         FROM regexp_matches(LOWER(c.content), LOWER(#{query}), 'g')) as match_count
@@ -57,7 +61,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- Count total search results -->
     <select id="countSearchResults" resultType="int">
         SELECT COUNT(*)
         FROM book_chapters c
@@ -65,10 +68,8 @@
         AND c.search_vector @@ plainto_tsquery('indonesian', #{query})
     </select>
 
-    <!-- Fallback LIKE search jika full-text search gagal -->
     <select id="searchInBookSimple" resultType="map">
         WITH RECURSIVE chapter_path AS (
-        -- Base case: chapters tanpa parent
         SELECT
         id,
         slug,
@@ -77,10 +78,7 @@
         chapter_level
         FROM book_chapters
         WHERE parent_chapter_id IS NULL
-
         UNION ALL
-
-        -- Recursive case: build full path
         SELECT
         c.id,
         c.slug,
@@ -104,7 +102,8 @@
         c.chapter_level,
         c.content,
         parent.slug as parent_slug,
-        SUBSTRING(c.content FROM GREATEST(1, POSITION(LOWER(#{query}) IN LOWER(c.content)) - 50) FOR 200) as highlighted_content,
+        SUBSTRING(c.content FROM GREATEST(1, POSITION(LOWER(#{query}) IN LOWER(c.content)) - 50) FOR 200) as
+        highlighted_content,
         0.5 as relevance_score,
         (SELECT COUNT(*)
         FROM regexp_matches(LOWER(c.content), LOWER(#{query}), 'g')) as match_count
@@ -125,7 +124,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- Count simple search results -->
     <select id="countSearchResultsSimple" resultType="int">
         SELECT COUNT(*)
         FROM book_chapters c
@@ -136,7 +134,6 @@
         )
     </select>
 
-    <!-- Insert search history -->
     <insert id="insertSearchHistory" parameterType="com.masasilam.app.model.entity.SearchHistory"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO search_history (
@@ -162,12 +159,10 @@
         )
     </insert>
 
-    <!-- Update search history when user clicks a result -->
     <update id="updateSearchHistoryClick">
         UPDATE search_history
         SET clicked_result_id = #{clickedResultId},
         clicked_at = #{clickedAt}
         WHERE id = #{id}
     </update>
-
 </mapper>

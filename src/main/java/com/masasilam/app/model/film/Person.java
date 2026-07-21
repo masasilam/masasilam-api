@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class Person {
-    private Long   id;
+    private Long id;
     private String wikidataQid;
     private String name;
     private String slug;

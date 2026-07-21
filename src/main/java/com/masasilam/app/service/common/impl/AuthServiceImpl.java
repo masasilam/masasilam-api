@@ -1,7 +1,7 @@
 package com.masasilam.app.service.common.impl;
 
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.*;

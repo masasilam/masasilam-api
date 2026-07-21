@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.annotation.AnnotationExportMapper">
+    <insert id="insertExport" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO annotation_exports (
+        user_id, book_id, export_type, include_bookmarks, include_highlights, include_notes,
+        chapter_from, chapter_to, date_from, date_to, status, created_at, expires_at
+        ) VALUES (
+        #{userId}, #{bookId}, #{exportType}, #{includeBookmarks}, #{includeHighlights}, #{includeNotes},
+        #{chapterFrom}, #{chapterTo}, #{dateFrom}, #{dateTo}, #{status}, #{createdAt}, #{expiresAt}
+        )
+    </insert>
+
+    <update id="updateExport">
+        UPDATE annotation_exports
+        SET status = #{status},
+        file_url = #{fileUrl},
+        file_size = #{fileSize},
+        file_name = #{fileName},
+        total_bookmarks = #{totalBookmarks},
+        total_highlights = #{totalHighlights},
+        total_notes = #{totalNotes},
+        error_message = #{errorMessage},
+        started_at = #{startedAt},
+        completed_at = #{completedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultType="com.masasilam.app.model.entity.AnnotationExport">
+        SELECT *
+        FROM annotation_exports
+        WHERE id = #{id}
+    </select>
+
+    <select id="findUserExports" resultType="com.masasilam.app.model.entity.AnnotationExport">
+        SELECT *
+        FROM annotation_exports
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>
