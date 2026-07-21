@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.newspaper.ArticleReviewFeedbackMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article_review_feedback (user_id, review_id, is_helpful, created_at, updated_at)
+        VALUES (#{userId}, #{reviewId}, #{isHelpful}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update">
+        UPDATE article_review_feedback
+        SET is_helpful = #{isHelpful},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM article_review_feedback
+        WHERE id = #{id}
+    </delete>
+
+    <select id="findByUserAndReview" resultType="com.masasilam.app.model.entity.newspaper.ArticleReviewFeedback">
+        SELECT *
+        FROM article_review_feedback
+        WHERE user_id = #{userId}
+        AND review_id = #{reviewId}
+    </select>
+</mapper>

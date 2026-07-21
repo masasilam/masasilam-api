@@ -1,74 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.FilmRatingMapper">
-
-    <!-- ================================================================ -->
-    <!-- ResultMaps                                                        -->
-    <!-- ================================================================ -->
-
+<mapper namespace="com.masasilam.app.mapper.film.FilmRatingMapper">
     <resultMap id="FilmRatingResultMap" type="com.masasilam.app.model.film.FilmRating">
-        <id     property="id"         column="id"/>
-        <result property="filmId"     column="film_id"/>
-        <result property="userId"     column="user_id"/>
-        <result property="rating"     column="rating"/>
-        <result property="createdAt"  column="created_at"/>
-        <result property="updatedAt"  column="updated_at"/>
+        <id property="id" column="id"/>
+        <result property="filmId" column="film_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="rating" column="rating"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="FilmRatingStatsResultMap"
-               type="com.masasilam.app.model.dto.response.FilmRatingStatsResponse">
-        <result property="filmId"        column="film_id"/>
+    <resultMap id="FilmRatingStatsResultMap" type="com.masasilam.app.model.dto.response.FilmRatingStatsResponse">
+        <result property="filmId" column="film_id"/>
         <result property="averageRating" column="average_rating"/>
-        <result property="totalRatings"  column="total_ratings"/>
-        <result property="count50"       column="count_50"/>
-        <result property="count45"       column="count_45"/>
-        <result property="count40"       column="count_40"/>
-        <result property="count35"       column="count_35"/>
-        <result property="count30"       column="count_30"/>
-        <result property="count25"       column="count_25"/>
-        <result property="count20"       column="count_20"/>
-        <result property="count15"       column="count_15"/>
-        <result property="count10"       column="count_10"/>
-        <result property="count05"       column="count_05"/>
+        <result property="totalRatings" column="total_ratings"/>
+        <result property="count50" column="count_50"/>
+        <result property="count45" column="count_45"/>
+        <result property="count40" column="count_40"/>
+        <result property="count35" column="count_35"/>
+        <result property="count30" column="count_30"/>
+        <result property="count25" column="count_25"/>
+        <result property="count20" column="count_20"/>
+        <result property="count15" column="count_15"/>
+        <result property="count10" column="count_10"/>
+        <result property="count05" column="count_05"/>
     </resultMap>
-
-    <!-- ================================================================ -->
-    <!-- Queries                                                           -->
-    <!-- ================================================================ -->
 
     <select id="findByUserAndFilm" resultMap="FilmRatingResultMap">
         SELECT *
-        FROM   film_rating
-        WHERE  user_id = #{userId}
-        AND  film_id = #{filmId}
-        LIMIT  1
+        FROM film_rating
+        WHERE user_id = #{userId}
+        AND film_id = #{filmId}
+        LIMIT 1
     </select>
 
     <select id="getFilmRatingStats" resultMap="FilmRatingStatsResultMap">
         SELECT
         film_id,
-        ROUND(AVG(rating), 2)                                               AS average_rating,
-        COUNT(*)                                                             AS total_ratings,
-        SUM(CASE WHEN rating = 5.0 THEN 1 ELSE 0 END)                       AS count_50,
-        SUM(CASE WHEN rating = 4.5 THEN 1 ELSE 0 END)                       AS count_45,
-        SUM(CASE WHEN rating = 4.0 THEN 1 ELSE 0 END)                       AS count_40,
-        SUM(CASE WHEN rating = 3.5 THEN 1 ELSE 0 END)                       AS count_35,
-        SUM(CASE WHEN rating = 3.0 THEN 1 ELSE 0 END)                       AS count_30,
-        SUM(CASE WHEN rating = 2.5 THEN 1 ELSE 0 END)                       AS count_25,
-        SUM(CASE WHEN rating = 2.0 THEN 1 ELSE 0 END)                       AS count_20,
-        SUM(CASE WHEN rating = 1.5 THEN 1 ELSE 0 END)                       AS count_15,
-        SUM(CASE WHEN rating = 1.0 THEN 1 ELSE 0 END)                       AS count_10,
-        SUM(CASE WHEN rating = 0.5 THEN 1 ELSE 0 END)                       AS count_05
-        FROM  film_rating
+        ROUND(AVG(rating), 2) AS average_rating,
+        COUNT(*) AS total_ratings,
+        SUM(CASE WHEN rating = 5.0 THEN 1 ELSE 0 END) AS count_50,
+        SUM(CASE WHEN rating = 4.5 THEN 1 ELSE 0 END) AS count_45,
+        SUM(CASE WHEN rating = 4.0 THEN 1 ELSE 0 END) AS count_40,
+        SUM(CASE WHEN rating = 3.5 THEN 1 ELSE 0 END) AS count_35,
+        SUM(CASE WHEN rating = 3.0 THEN 1 ELSE 0 END) AS count_30,
+        SUM(CASE WHEN rating = 2.5 THEN 1 ELSE 0 END) AS count_25,
+        SUM(CASE WHEN rating = 2.0 THEN 1 ELSE 0 END) AS count_20,
+        SUM(CASE WHEN rating = 1.5 THEN 1 ELSE 0 END) AS count_15,
+        SUM(CASE WHEN rating = 1.0 THEN 1 ELSE 0 END) AS count_10,
+        SUM(CASE WHEN rating = 0.5 THEN 1 ELSE 0 END) AS count_05
+        FROM film_rating
         WHERE film_id = #{filmId}
         GROUP BY film_id
     </select>
-
-    <!-- ================================================================ -->
-    <!-- Mutations                                                         -->
-    <!-- ================================================================ -->
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO film_rating (film_id, user_id, rating, created_at, updated_at)
@@ -77,13 +62,12 @@
 
     <update id="update">
         UPDATE film_rating
-        SET    rating     = #{rating},
+        SET rating = #{rating},
         updated_at = NOW()
-        WHERE  id = #{id}
+        WHERE id = #{id}
     </update>
 
     <delete id="delete">
         DELETE FROM film_rating WHERE id = #{id}
     </delete>
-
 </mapper>

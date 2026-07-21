@@ -1,7 +1,9 @@
 package com.masasilam.app.service.newspaper.impl;
 
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.*;
+import com.masasilam.app.mapper.newspaper.ArticleRatingMapper;
+import com.masasilam.app.mapper.newspaper.NewspaperMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.newspaper.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.User;
@@ -184,13 +186,13 @@ public class NewspaperServiceImpl implements NewspaperService {
             detail.setRelatedArticles(getRelatedArticles(article.getId(), article.getCategory(), 5));
             detail.setSameDateArticles(getSameDateArticles(article.getId(), article.getPublishDate(), 5));
 
-            log.info("Retrieved article detail: {} (views: {})", detail.getTitle(), detail.getViewCount());
+            log.info("Retrieved newspaper detail: {} (views: {})", detail.getTitle(), detail.getViewCount());
             return new DataResponse<>(SUCCESS, "Article detail retrieved successfully",
                     HttpStatus.OK.value(), detail);
         } catch (DataNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error getting article detail: {}/{}/{}", categorySlug, date, articleSlug, e);
+            log.error("Error getting newspaper detail: {}/{}/{}", categorySlug, date, articleSlug, e);
             throw new InternalServerErrorException();
         }
     }
@@ -202,13 +204,13 @@ public class NewspaperServiceImpl implements NewspaperService {
             if (detail == null) throw new DataNotFoundException();
             Long currentUserId = getCurrentUserId();
             enrichArticleDetailResponse(detail, currentUserId);
-            log.info("Retrieved article by ID: {} ({})", id, detail.getTitle());
+            log.info("Retrieved newspaper by ID: {} ({})", id, detail.getTitle());
             return new DataResponse<>(SUCCESS, "Article retrieved successfully",
                     HttpStatus.OK.value(), detail);
         } catch (DataNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error getting article by ID: {}", id, e);
+            log.error("Error getting newspaper by ID: {}", id, e);
             throw new InternalServerErrorException();
         }
     }
@@ -320,7 +322,7 @@ public class NewspaperServiceImpl implements NewspaperService {
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error creating article", e);
+            log.error("Error creating newspaper", e);
             throw new InternalServerErrorException();
         }
     }
@@ -371,7 +373,7 @@ public class NewspaperServiceImpl implements NewspaperService {
                     if (newspaperMapper.existsBySlugExcluding(newSlug, id)) {
                         throw new IllegalArgumentException("Slug sudah digunakan: " + newSlug);
                     }
-                    log.info("Slug updated for article {}: {} -> {}", id, existing.getSlug(), newSlug);
+                    log.info("Slug updated for newspaper {}: {} -> {}", id, existing.getSlug(), newSlug);
                     existing.setSlug(newSlug);
                 }
             }
@@ -385,7 +387,7 @@ public class NewspaperServiceImpl implements NewspaperService {
         } catch (DataNotFoundException | IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error updating article ID: {}", id, e);
+            log.error("Error updating newspaper ID: {}", id, e);
             throw new InternalServerErrorException();
         }
     }
@@ -403,7 +405,7 @@ public class NewspaperServiceImpl implements NewspaperService {
         } catch (DataNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error deleting article ID: {}", id, e);
+            log.error("Error deleting newspaper ID: {}", id, e);
             throw new InternalServerErrorException();
         }
     }
@@ -426,10 +428,10 @@ public class NewspaperServiceImpl implements NewspaperService {
                         .build();
                 newspaperMapper.insertArticleView(view);
                 newspaperMapper.incrementViewCount(article.getId());
-                log.debug("New view recorded for article: {}", article.getTitle());
+                log.debug("New view recorded for newspaper: {}", article.getTitle());
             }
         } catch (Exception e) {
-            log.warn("View tracking failed for article {}: {}", article.getId(), e.getMessage());
+            log.warn("View tracking failed for newspaper {}: {}", article.getId(), e.getMessage());
         }
     }
 

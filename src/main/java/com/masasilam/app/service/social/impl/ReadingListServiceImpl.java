@@ -1,11 +1,11 @@
 package com.masasilam.app.service.social.impl;
 
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.BookMapper;
-import com.masasilam.app.mapper.FilmMapper;
-import com.masasilam.app.mapper.NewspaperMapper;
-import com.masasilam.app.mapper.ZineMapper;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.book.BookMapper;
+import com.masasilam.app.mapper.film.FilmMapper;
+import com.masasilam.app.mapper.newspaper.NewspaperMapper;
+import com.masasilam.app.mapper.zine.ZineMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.mapper.social.*;
 import com.masasilam.app.model.dto.request.social.*;
 import com.masasilam.app.model.dto.response.*;

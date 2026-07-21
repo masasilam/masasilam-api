@@ -1,7 +1,7 @@
 package com.masasilam.app.service.social.impl;
 
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.mapper.social.ReadingChallengeMapper;
 import com.masasilam.app.model.dto.request.social.CreateChallengeRequest;
 import com.masasilam.app.model.dto.response.*;

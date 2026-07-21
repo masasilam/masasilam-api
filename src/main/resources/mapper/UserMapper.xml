@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.masasilam.app.mapper.UserMapper">
 
+<mapper namespace="com.masasilam.app.mapper.user.UserMapper">
     <select id="findUserByUsername" resultType="com.masasilam.app.model.entity.User">
         SELECT *
         FROM users
@@ -15,7 +15,8 @@
         WHERE ur.user_id = #{userId}
     </select>
 
-    <insert id="insertUserActivity" parameterType="com.masasilam.app.model.entity.UserActivity" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertUserActivity" parameterType="com.masasilam.app.model.entity.UserActivity" useGeneratedKeys="true"
+            keyProperty="id">
         INSERT INTO user_activities
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="userId != null">user_id,</if>
@@ -48,7 +49,8 @@
         SELECT * FROM users WHERE email = #{email}
     </select>
 
-    <insert id="insertUser" parameterType="com.masasilam.app.model.entity.User" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertUser" parameterType="com.masasilam.app.model.entity.User" useGeneratedKeys="true"
+            keyProperty="id">
         INSERT INTO users (
         username, email, password_hash, full_name, profile_picture_url, bio,
         total_books_read, reading_streak_days, is_active, email_verified, status,
@@ -175,28 +177,4 @@
         WHERE u2.is_active = TRUE
         AND zrs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval
     </select>
-
-<!--    <select id="findActiveUserIds" resultType="long">-->
-<!--        SELECT DISTINCT u.id-->
-<!--        FROM users u-->
-<!--        WHERE u.is_active = TRUE-->
-<!--        AND (-->
-<!--        EXISTS(-->
-<!--        SELECT 1 FROM reading_sessions rs-->
-<!--        WHERE rs.user_id = u.id-->
-<!--        AND rs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval-->
-<!--        )-->
-<!--        OR EXISTS(-->
-<!--        SELECT 1 FROM zine_reading_sessions zrs-->
-<!--        WHERE zrs.user_id = u.id-->
-<!--        AND zrs.started_at >= NOW() - (#{daysThreshold} || ' days')::interval-->
-<!--        )-->
-<!--        )-->
-<!--        ORDER BY u.id-->
-<!--    </select>-->
-
-<!--    <select id="findUserById" resultType="com.naskah.appmodel.entity.User">-->
-<!--        SELECT * FROM users WHERE id = #{userId} AND is_active = TRUE-->
-<!--    </select>-->
-
 </mapper>

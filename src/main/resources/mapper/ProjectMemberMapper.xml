@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.ProjectMemberMapper">
 
+<mapper namespace="com.masasilam.app.mapper.collaboration.ProjectMemberMapper">
     <select id="getProjectMemberByProjectIdAndUserId" resultType="com.masasilam.app.model.entity.ProjectMember">
         SELECT * FROM project_members
         WHERE project_id = #{projectId}
@@ -15,8 +15,7 @@
         AND is_active = true
     </select>
 
-    <insert id="insertProjectMember" parameterType="com.masasilam.app.model.entity.ProjectMember" useGeneratedKeys="true"
-            keyProperty="id">
+    <insert id="insertProjectMember" parameterType="com.masasilam.app.model.entity.ProjectMember" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO project_members (
         project_id,
         user_id,
@@ -40,7 +39,6 @@
         AND is_active = true
     </select>
 
-    <!-- Get project member role breakdown -->
     <select id="getProjectMemberRoleBreakdown" resultType="com.masasilam.app.model.dto.response.MemberRoleSummary">
         SELECT
         role,
@@ -60,7 +58,6 @@
         ORDER BY count DESC
     </select>
 
-    <!-- Get user project memberships -->
     <select id="getUserProjectMemberships" resultType="com.masasilam.app.model.dto.response.ProjectMembershipResponse">
         SELECT
         pm.project_id as projectId,
@@ -81,18 +78,15 @@
         ORDER BY pm.joined_at DESC
     </select>
 
-    <!-- Get active member IDs by project ID -->
     <select id="getActiveMemberIdsByProjectId" resultType="java.lang.Long">
         SELECT user_id FROM project_members
         WHERE project_id = #{projectId}
         AND is_active = true
     </select>
 
-    <!-- Get user joined project count -->
     <select id="getUserJoinedProjectCount" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM project_members
         WHERE user_id = #{userId}
         AND is_active = true
     </select>
-
 </mapper>

@@ -1,6 +1,6 @@
 package com.masasilam.app.repository.impl;
 
-import com.masasilam.app.mapper.ZineChapterMapper;
+import com.masasilam.app.mapper.zine.ZineChapterMapper;
 import com.masasilam.app.model.entity.BookChapter;
 import com.masasilam.app.repository.ChapterRepository;
 import lombok.RequiredArgsConstructor;

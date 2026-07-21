@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.kios.KiosProductMapper">
+    <insert id="insertProduct" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO kios_products (
+        name, slug, sku, description, product_type, category,
+        price, discount_price, discount_percentage, stock_quantity, min_stock_level,
+        weight, dimensions, image_urls, thumbnail_url, book_id,
+        is_active, is_featured, view_count, sold_count, created_at, updated_at
+        ) VALUES (
+        #{name}, #{slug}, #{sku}, #{description}, #{productType}, #{category},
+        #{price}, #{discountPrice}, #{discountPercentage}, #{stockQuantity}, #{minStockLevel},
+        #{weight}, #{dimensions}, #{imageUrls}, #{thumbnailUrl}, #{bookId},
+        #{isActive}, #{isFeatured}, #{viewCount}, #{soldCount}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="updateProduct">
+        UPDATE kios_products
+        SET name = #{name},
+        slug = #{slug},
+        sku = #{sku},
+        description = #{description},
+        category = #{category},
+        price = #{price},
+        discount_price = #{discountPrice},
+        discount_percentage = #{discountPercentage},
+        stock_quantity = #{stockQuantity},
+        min_stock_level = #{minStockLevel},
+        weight = #{weight},
+        dimensions = #{dimensions},
+        image_urls = #{imageUrls},
+        thumbnail_url = #{thumbnailUrl},
+        is_active = #{isActive},
+        is_featured = #{isFeatured},
+        sold_count = #{soldCount},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findProductById" resultType="com.masasilam.app.model.entity.KiosProduct">
+        SELECT *
+        FROM kios_products
+        WHERE id = #{id}
+    </select>
+
+    <select id="getProductDetailById" resultType="com.masasilam.app.model.dto.response.KiosProductResponse">
+        SELECT *
+        FROM kios_products
+        WHERE id = #{id}
+    </select>
+
+    <select id="getProductDetailBySlug" resultType="com.masasilam.app.model.dto.response.KiosProductResponse">
+        SELECT *
+        FROM kios_products
+        WHERE slug = #{slug}
+    </select>
+
+    <select id="getProductsWithFilters" resultType="com.masasilam.app.model.dto.response.KiosProductResponse">
+        SELECT *
+        FROM kios_products
+        WHERE 1=1
+        <if test="search != null and search != ''">
+            AND (name ILIKE CONCAT('%', #{search}, '%')
+            OR sku ILIKE CONCAT('%', #{search}, '%')
+            OR description ILIKE CONCAT('%', #{search}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND category = #{category}
+        </if>
+        <if test="productType != null and productType != ''">
+            AND product_type = #{productType}
+        </if>
+        <if test="inStock != null and inStock == true">
+            AND stock_quantity > 0
+        </if>
+        <if test="inStock != null and inStock == false">
+            AND stock_quantity <<![CDATA[= 0
+        ]]></if>
+        ORDER BY ${sortColumn} ${sortType}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countProductsWithFilters" resultType="int">
+        SELECT COUNT(*)
+        FROM kios_products
+        WHERE 1=1
+        <if test="search != null and search != ''">
+            AND (name ILIKE CONCAT('%', #{search}, '%')
+            OR sku ILIKE CONCAT('%', #{search}, '%')
+            OR description ILIKE CONCAT('%', #{search}, '%'))
+        </if>
+        <if test="category != null and category != ''">
+            AND category = #{category}
+        </if>
+        <if test="productType != null and productType != ''">
+            AND product_type = #{productType}
+        </if>
+        <if test="inStock != null and inStock == true">
+            AND stock_quantity > 0
+        </if>
+        <if test="inStock != null and inStock == false">
+            AND stock_quantity <<![CDATA[= 0
+        ]]></if>
+    </select>
+
+    <select id="countByNameAndSku" resultType="int">
+        SELECT COUNT(*)
+        FROM kios_products
+        WHERE name = #{name}
+        AND sku = #{sku}
+    </select>
+
+    <update id="incrementViewCount">
+        UPDATE kios_products
+        SET view_count = view_count + 1
+        WHERE id = #{id}
+    </update>
+
+    <select id="countAllProducts" resultType="long">
+        SELECT COUNT(*)
+        FROM kios_products
+        WHERE is_active = true
+    </select>
+
+    <select id="countLowStockProducts" resultType="long">
+        SELECT COUNT(*)
+        FROM kios_products
+        WHERE stock_quantity <<![CDATA[= min_stock_level
+        AND is_active = true
+    ]]></select>
+</mapper>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.ChapterProgressMapper">
 
+<mapper namespace="com.masasilam.app.mapper.chapter.ChapterProgressMapper">
     <select id="findProgress" resultType="com.masasilam.app.model.entity.ChapterProgress">
         SELECT
         id, user_id, book_id, chapter_number, position,
@@ -75,5 +75,4 @@
         WHERE user_id = #{userId} AND book_id = #{bookId}
         ORDER BY chapter_number
     </select>
-
 </mapper>

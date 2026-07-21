@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.BookRatingMapper">
-
+<mapper namespace="com.masasilam.app.mapper.book.BookRatingMapper">
     <resultMap id="BookRatingResultMap" type="com.masasilam.app.model.entity.BookRating">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -16,11 +15,16 @@
         <result property="bookId" column="book_id"/>
         <result property="averageRating" column="average_rating"/>
         <result property="totalRatings" column="total_ratings"/>
-        <result property="rating5Count" column="rating_5_count"/>
-        <result property="rating4Count" column="rating_4_count"/>
-        <result property="rating3Count" column="rating_3_count"/>
-        <result property="rating2Count" column="rating_2_count"/>
-        <result property="rating1Count" column="rating_1_count"/>
+        <result property="rating50Count" column="rating_5_0_count"/>
+        <result property="rating45Count" column="rating_4_5_count"/>
+        <result property="rating40Count" column="rating_4_0_count"/>
+        <result property="rating35Count" column="rating_3_5_count"/>
+        <result property="rating30Count" column="rating_3_0_count"/>
+        <result property="rating25Count" column="rating_2_5_count"/>
+        <result property="rating20Count" column="rating_2_0_count"/>
+        <result property="rating15Count" column="rating_1_5_count"/>
+        <result property="rating10Count" column="rating_1_0_count"/>
+        <result property="rating05Count" column="rating_0_5_count"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.masasilam.app.model.entity.BookRating" useGeneratedKeys="true" keyProperty="id">
@@ -70,5 +74,4 @@
         WHERE book_id = #{bookId}
         AND rating IS NOT NULL
     </select>
-
 </mapper>

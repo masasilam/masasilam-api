@@ -1,6 +1,6 @@
 package com.masasilam.app.config;
 
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.service.social.ReadingTwinService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

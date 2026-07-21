@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.reading.ReadingActivityMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reading_activity_log (user_id, book_id, chapter_id, activity_type, activity_time, duration_minutes,
+        reading_speed_wpm, created_at)
+        VALUES (#{userId}, #{bookId}, #{chapterId}, #{activityType}, #{activityTime}, #{durationMinutes},
+        #{readingSpeedWpm}, NOW())
+    </insert>
+
+    <select id="getUserChapterActivitySummary" resultType="map">
+        SELECT chapter_number,
+        COUNT(*) AS times_read,
+        SUM(duration_seconds) AS total_duration,
+        AVG(scroll_depth_percentage) AS avg_scroll_depth,
+        MAX(started_at) AS last_read_at
+        FROM reading_activity_log
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        GROUP BY chapter_number
+        ORDER BY chapter_number
+    </select>
+
+    <select id="getUserBookStatistics" resultType="map">
+        SELECT COUNT(DISTINCT chapter_number) AS chapters_read,
+        SUM(duration_seconds) AS total_time,
+        AVG(reading_speed_wpm) AS avg_speed
+        FROM reading_activity_log
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+    </select>
+
+    <select id="calculateAverageWpm" resultType="int">
+        SELECT AVG(reading_speed_wpm)::INTEGER
+        FROM reading_activity_log
+        WHERE user_id = #{userId}
+        AND book_id = #{bookId}
+        AND reading_speed_wpm IS NOT NULL
+        AND reading_speed_wpm > 0
+    </select>
+</mapper>

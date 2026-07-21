@@ -1,20 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.EpubAnnotationMapper">
-
+<mapper namespace="com.masasilam.app.mapper.annotation.EpubAnnotationMapper">
     <resultMap id="EpubAnnotationRM" type="com.masasilam.app.model.entity.EpubAnnotation">
-        <id     property="id"           column="id"/>
-        <result property="userId"       column="user_id"/>
-        <result property="bookId"       column="book_id"/>
-        <result property="zineId"       column="zine_id"/>
-        <result property="cfi"          column="cfi"/>
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="bookId" column="book_id"/>
+        <result property="zineId" column="zine_id"/>
+        <result property="cfi" column="cfi"/>
         <result property="selectedText" column="selected_text"/>
-        <result property="color"        column="color"/>
-        <result property="note"         column="note"/>
-        <result property="createdAt"    column="created_at"/>
-        <result property="updatedAt"    column="updated_at"/>
+        <result property="color" column="color"/>
+        <result property="note" column="note"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <select id="findById" resultMap="EpubAnnotationRM">
@@ -92,5 +90,4 @@
         WHERE user_id = #{userId}
         ORDER BY created_at DESC
     </select>
-
 </mapper>

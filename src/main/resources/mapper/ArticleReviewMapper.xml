@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.newspaper.ArticleReviewMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article_reviews (user_id, article_id, title, content, helpful_count, not_helpful_count, reply_count, created_at, updated_at)
+        VALUES (#{userId}, #{articleId}, #{title}, #{content}, #{helpfulCount}, #{notHelpfulCount}, #{replyCount}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update">
+        UPDATE article_reviews
+        SET title = #{title},
+        content = #{content},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE article_reviews
+        SET is_deleted = TRUE
+        WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultType="com.masasilam.app.model.entity.newspaper.ArticleReview">
+        SELECT *
+        FROM article_reviews
+        WHERE id = #{id}
+        AND is_deleted = FALSE
+    </select>
+
+    <select id="findByUserAndArticle" resultType="com.masasilam.app.model.entity.newspaper.ArticleReview">
+        SELECT *
+        FROM article_reviews
+        WHERE user_id = #{userId}
+        AND article_id = #{articleId}
+        AND is_deleted = FALSE
+    </select>
+
+    <select id="findByArticleWithPagination" resultType="com.masasilam.app.model.entity.newspaper.ArticleReview">
+        SELECT *
+        FROM article_reviews
+        WHERE article_id = #{articleId}
+        AND is_deleted = FALSE
+        <choose>
+            <when test="sortBy == 'recent'">
+                ORDER BY created_at DESC
+            </when>
+            <when test="sortBy == 'oldest'">
+                ORDER BY created_at ASC
+            </when>
+            <when test="sortBy == 'helpful'">
+                ORDER BY helpful_count DESC, created_at DESC
+            </when>
+            <otherwise>
+                ORDER BY helpful_count DESC, created_at DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByArticle" resultType="int">
+        SELECT COUNT(*)
+        FROM article_reviews
+        WHERE article_id = #{articleId}
+        AND is_deleted = FALSE
+    </select>
+</mapper>

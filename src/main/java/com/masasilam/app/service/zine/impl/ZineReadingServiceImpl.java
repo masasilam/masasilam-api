@@ -2,10 +2,10 @@ package com.masasilam.app.service.zine.impl;
 
 import com.masasilam.app.exception.custom.DataNotFoundException;
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.UserMapper;
-import com.masasilam.app.mapper.ZineMapper;
-import com.masasilam.app.mapper.ZineReadingProgressMapper;
-import com.masasilam.app.mapper.ZineReadingSessionMapper;
+import com.masasilam.app.mapper.user.UserMapper;
+import com.masasilam.app.mapper.zine.ZineMapper;
+import com.masasilam.app.mapper.zine.ZineReadingProgressMapper;
+import com.masasilam.app.mapper.zine.ZineReadingSessionMapper;
 import com.masasilam.app.model.dto.request.ZineReadingProgressRequest;
 import com.masasilam.app.model.dto.request.ZineReadingSessionRequest;
 import com.masasilam.app.model.dto.response.DataResponse;

@@ -3,7 +3,7 @@ package com.masasilam.app.service.common.impl;
 import com.masasilam.app.exception.custom.BadRequestException;
 import com.masasilam.app.exception.custom.DataNotFoundException;
 import com.masasilam.app.exception.custom.UnauthorizedException;
-import com.masasilam.app.mapper.UserMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.ChangePasswordRequest;
 import com.masasilam.app.model.dto.request.UpdateUserRequest;
 import com.masasilam.app.model.dto.response.DataResponse;

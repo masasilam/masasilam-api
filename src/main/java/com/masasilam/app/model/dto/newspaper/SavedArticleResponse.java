@@ -16,6 +16,6 @@ public class SavedArticleResponse {
     private Long articleId;
     private String collectionName;
     private String notes;
-    private NewspaperArticleResponse article; // Full article data
+    private NewspaperArticleResponse article; // Full newspaper data
     private LocalDateTime savedAt;
 }

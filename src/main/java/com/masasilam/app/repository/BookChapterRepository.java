@@ -1,8 +1,7 @@
 package com.masasilam.app.repository;
 
-import com.masasilam.app.mapper.BookChapterMapper;
+import com.masasilam.app.mapper.book.BookChapterMapper;
 import com.masasilam.app.model.entity.BookChapter;
-import com.masasilam.app.repository.ChapterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

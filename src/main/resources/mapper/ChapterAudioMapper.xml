@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.ChapterAudioMapper">
 
+<mapper namespace="com.masasilam.app.mapper.chapter.ChapterAudioMapper">
     <select id="findChapterAudio" resultType="com.masasilam.app.model.entity.ChapterAudio">
         SELECT
         id, book_id, chapter_number, audio_url, duration,
@@ -10,5 +10,4 @@
         WHERE book_id = #{bookId}
         AND chapter_number = #{chapterNumber}
     </select>
-
 </mapper>

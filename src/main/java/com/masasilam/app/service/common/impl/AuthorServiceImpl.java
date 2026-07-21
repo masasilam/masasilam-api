@@ -1,6 +1,6 @@
 package com.masasilam.app.service.common.impl;
 
-import com.masasilam.app.mapper.AuthorMapper;
+import com.masasilam.app.mapper.author.AuthorMapper;
 import com.masasilam.app.model.entity.Author;
 import com.masasilam.app.service.common.AuthorService;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.masasilam.app.service.opds.impl;
 
-import com.masasilam.app.mapper.BookMapper;
-import com.masasilam.app.mapper.GenreMapper;
+import com.masasilam.app.mapper.book.BookMapper;
+import com.masasilam.app.mapper.book.GenreMapper;
 import com.masasilam.app.model.dto.BookSearchCriteria;
 import com.masasilam.app.model.dto.opds.*;
 import com.masasilam.app.model.dto.response.BookResponse;

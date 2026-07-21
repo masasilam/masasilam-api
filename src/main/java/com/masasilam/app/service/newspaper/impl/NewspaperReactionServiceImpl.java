@@ -1,7 +1,8 @@
 package com.masasilam.app.service.newspaper.impl;
 
 import com.masasilam.app.exception.custom.*;
-import com.masasilam.app.mapper.*;
+import com.masasilam.app.mapper.newspaper.*;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.newspaper.*;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
@@ -75,7 +76,7 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
             return new DataResponse<>(SUCCESS, message, statusCode, response);
 
         } catch (Exception e) {
-            log.error("Error processing article rating for: {}", articleSlug, e);
+            log.error("Error processing newspaper rating for: {}", articleSlug, e);
             throw e;
         }
     }
@@ -185,7 +186,7 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
             ArticleReview existingReview = articleReviewMapper.findByUserAndArticle(user.getId(), article.getId());
 
             if (existingReview != null) {
-                throw new IllegalArgumentException("You already have a review for this article. Use update endpoint.");
+                throw new IllegalArgumentException("You already have a review for this newspaper. Use update endpoint.");
             }
 
             ArticleReview review = new ArticleReview();
@@ -443,7 +444,7 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
             return new DataResponse<>(SUCCESS, "Article saved successfully", HttpStatus.CREATED.value(), response);
 
         } catch (Exception e) {
-            log.error("Error saving article: {}", articleSlug, e);
+            log.error("Error saving newspaper: {}", articleSlug, e);
             throw e;
         }
     }
@@ -462,10 +463,10 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
             SavedArticleResponse response = mapToSavedArticleResponse(saved);
 
-            return new DataResponse<>(SUCCESS, "Saved article retrieved successfully", HttpStatus.OK.value(), response);
+            return new DataResponse<>(SUCCESS, "Saved newspaper retrieved successfully", HttpStatus.OK.value(), response);
 
         } catch (Exception e) {
-            log.error("Error checking saved article: {}", articleSlug, e);
+            log.error("Error checking saved newspaper: {}", articleSlug, e);
             throw e;
         }
     }
@@ -490,7 +491,7 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
             return new DataResponse<>(SUCCESS, "Article unsaved successfully", HttpStatus.OK.value(), null);
 
         } catch (Exception e) {
-            log.error("Error unsaving article: {}", articleSlug, e);
+            log.error("Error unsaving newspaper: {}", articleSlug, e);
             throw e;
         }
     }

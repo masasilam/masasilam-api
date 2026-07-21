@@ -1,25 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.BookSeriesMapper">
-
-    <!-- ══════════════════════════════════════════════════════════
-         RESULT MAP
-    ══════════════════════════════════════════════════════════ -->
-
+<mapper namespace="com.masasilam.app.mapper.book.BookSeriesMapper">
     <resultMap id="BookSeriesResultMap" type="com.masasilam.app.model.entity.BookSeries">
-        <id     property="id"           column="id"/>
-        <result property="name"         column="name"/>
-        <result property="description"  column="description"/>
-        <result property="slug"         column="slug"/>
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="slug" column="slug"/>
         <result property="coverImageUrl" column="cover_image_url"/>
-        <result property="createdAt"    column="created_at"/>
+        <result property="createdAt" column="created_at"/>
     </resultMap>
-
-    <!-- ══════════════════════════════════════════════════════════
-         SELECT
-    ══════════════════════════════════════════════════════════ -->
 
     <select id="findBySlug" resultMap="BookSeriesResultMap">
         SELECT id, name, description, slug, cover_image_url, created_at
@@ -33,24 +23,15 @@
         WHERE id = #{id}
     </select>
 
-    <!-- ══════════════════════════════════════════════════════════
-         INSERT
-    ══════════════════════════════════════════════════════════ -->
-
     <insert id="insertSeries" parameterType="com.masasilam.app.model.entity.BookSeries"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO book_series (name, description, slug, cover_image_url, created_at)
         VALUES (#{name}, #{description}, #{slug}, #{coverImageUrl}, #{createdAt})
     </insert>
 
-    <!-- ══════════════════════════════════════════════════════════
-         UPDATE
-    ══════════════════════════════════════════════════════════ -->
-
     <update id="updateSeries" parameterType="com.masasilam.app.model.entity.BookSeries">
         UPDATE book_series
         SET description = #{description}
         WHERE id = #{id}
     </update>
-
 </mapper>

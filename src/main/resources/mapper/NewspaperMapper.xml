@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.masasilam.app.mapper.NewspaperMapper">
-
+<mapper namespace="com.masasilam.app.mapper.newspaper.NewspaperMapper">
     <select id="getAllCategories" resultType="com.masasilam.app.model.dto.newspaper.NewspaperCategoryResponse">
         SELECT category as slug, COUNT(*) as articleCount
         FROM newspaper_articles WHERE is_active = true
@@ -39,26 +37,22 @@
         FROM newspaper_articles WHERE is_active = true
     </select>
 
-    <!-- ============================================ -->
-    <!-- ARTICLE QUERIES -->
-    <!-- ============================================ -->
-
     <select id="getArticlesByCategory" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date  as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.page_number   as pageNumber,
+        na.page_number as pageNumber,
         na.importance,
-        na.view_count    as viewCount,
-        na.save_count    as saveCount,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
         na.comment_count as commentCount,
         na.average_rating as averageRating,
-        na.total_ratings  as totalRatings,
-        na.image_url     as imageUrl,
-        na.word_count    as wordCount,
-        ns.name          as sourceName,
-        ns.location      as sourceLocation
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE na.category = #{categorySlug} AND na.is_active = true
@@ -91,19 +85,19 @@
     <select id="getArticlesByDate" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date  as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.page_number   as pageNumber,
+        na.page_number as pageNumber,
         na.importance,
-        na.view_count    as viewCount,
-        na.save_count    as saveCount,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
         na.comment_count as commentCount,
         na.average_rating as averageRating,
-        na.total_ratings  as totalRatings,
-        na.image_url     as imageUrl,
-        na.word_count    as wordCount,
-        ns.name          as sourceName,
-        ns.location      as sourceLocation
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE na.publish_date = #{date} AND na.is_active = true
@@ -123,10 +117,6 @@
         <if test="category != null">AND category = #{category}</if>
     </select>
 
-    <!-- ============================================ -->
-    <!-- ARTICLE DETAIL -->
-    <!-- ============================================ -->
-
     <select id="findArticleByCategoryDateAndSlug"
             resultType="com.masasilam.app.model.entity.newspaper.NewspaperArticle">
         SELECT * FROM newspaper_articles
@@ -136,100 +126,88 @@
         AND is_active = true
     </select>
 
-    <!--
-        ✅ FIX UTAMA: na.html_content di-alias sebagai "bodyOriginal"
-           agar MyBatis bisa map ke field bodyOriginal di NewspaperArticleDetailResponse
-           (sebelumnya alias "htmlContent" → field tidak ada di DTO → null)
-    -->
-    <select id="getArticleDetailBySlug"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
+    <select id="getArticleDetailBySlug" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
         SELECT
         na.id,
         na.slug,
         na.title,
         na.subtitle,
         na.content,
-        na.html_content    as bodyOriginal,
-        na.word_count      as wordCount,
+        na.html_content as bodyOriginal,
+        na.word_count as wordCount,
         na.category,
-        na.publish_date    as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.page_number     as pageNumber,
+        na.page_number as pageNumber,
         na.importance,
-        na.view_count      as viewCount,
-        na.save_count      as saveCount,
-        na.comment_count   as commentCount,
-        na.average_rating  as averageRating,
-        na.total_ratings   as ratingCount,
-        na.image_url       as imageUrl,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as ratingCount,
+        na.image_url as imageUrl,
         na.parent_article_id as parentArticleId,
-        na.article_level   as articleLevel,
-        na.created_at      as createdAt,
-        na.updated_at      as updatedAt,
-        ns.id              as sourceId,
-        ns.name            as sourceName,
-        ns.location        as sourceLocation,
-        ns.description     as sourceDescription
+        na.article_level as articleLevel,
+        na.created_at as createdAt,
+        na.updated_at as updatedAt,
+        ns.id as sourceId,
+        ns.name as sourceName,
+        ns.location as sourceLocation,
+        ns.description as sourceDescription
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE na.slug = #{slug} AND na.is_active = true
     </select>
 
-    <!-- ✅ FIX: sama — html_content → bodyOriginal -->
-    <select id="getArticleDetailById"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
+    <select id="getArticleDetailById" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleDetailResponse">
         SELECT
         na.id,
         na.slug,
         na.title,
         na.subtitle,
         na.content,
-        na.html_content    as bodyOriginal,
-        na.word_count      as wordCount,
+        na.html_content as bodyOriginal,
+        na.word_count as wordCount,
         na.category,
-        na.publish_date    as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.page_number     as pageNumber,
+        na.page_number as pageNumber,
         na.importance,
-        na.view_count      as viewCount,
-        na.save_count      as saveCount,
-        na.comment_count   as commentCount,
-        na.average_rating  as averageRating,
-        na.total_ratings   as ratingCount,
-        na.image_url       as imageUrl,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
+        na.average_rating as averageRating,
+        na.total_ratings as ratingCount,
+        na.image_url as imageUrl,
         na.parent_article_id as parentArticleId,
-        na.article_level   as articleLevel,
-        na.created_at      as createdAt,
-        na.updated_at      as updatedAt,
-        ns.id              as sourceId,
-        ns.name            as sourceName,
-        ns.location        as sourceLocation,
-        ns.description     as sourceDescription
+        na.article_level as articleLevel,
+        na.created_at as createdAt,
+        na.updated_at as updatedAt,
+        ns.id as sourceId,
+        ns.name as sourceName,
+        ns.location as sourceLocation,
+        ns.description as sourceDescription
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE na.id = #{id} AND na.is_active = true
     </select>
 
-    <!-- ============================================ -->
-    <!-- SEARCH -->
-    <!-- ============================================ -->
-
     <select id="searchArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date   as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.page_number    as pageNumber,
+        na.page_number as pageNumber,
         na.importance,
-        na.view_count     as viewCount,
-        na.save_count     as saveCount,
-        na.comment_count  as commentCount,
+        na.view_count as viewCount,
+        na.save_count as saveCount,
+        na.comment_count as commentCount,
         na.average_rating as averageRating,
-        na.total_ratings  as totalRatings,
-        na.image_url      as imageUrl,
-        na.word_count     as wordCount,
-        ns.name           as sourceName,
-        ns.location       as sourceLocation,
+        na.total_ratings as totalRatings,
+        na.image_url as imageUrl,
+        na.word_count as wordCount,
+        ns.name as sourceName,
+        ns.location as sourceLocation,
         ts_rank(na.search_vector, plainto_tsquery('indonesian', #{criteria.searchQuery})) as rank
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
@@ -256,19 +234,15 @@
         <if test="criteria.importance != null">AND na.importance = #{criteria.importance}</if>
     </select>
 
-    <!-- ============================================ -->
-    <!-- ON THIS DAY -->
-    <!-- ============================================ -->
-
     <select id="getArticlesOnThisDay" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date   as publishDate,
+        na.publish_date as publishDate,
         na.author, na.importance,
-        na.view_count     as viewCount,
+        na.view_count as viewCount,
         na.average_rating as averageRating,
-        na.image_url      as imageUrl,
-        ns.name           as sourceName
+        na.image_url as imageUrl,
+        ns.name as sourceName
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE EXTRACT(MONTH FROM na.publish_date) = #{month}
@@ -285,16 +259,11 @@
         AND is_active = true
     </select>
 
-    <!-- ============================================ -->
-    <!-- ANALYTICS -->
-    <!-- ============================================ -->
-
-    <select id="getAnalyticsOverview"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperAnalyticsResponse">
+    <select id="getAnalyticsOverview" resultType="com.masasilam.app.model.dto.newspaper.NewspaperAnalyticsResponse">
         SELECT
-        COUNT(*)           as totalArticles,
-        SUM(view_count)    as totalViews,
-        SUM(save_count)    as totalSaves,
+        COUNT(*) as totalArticles,
+        SUM(view_count) as totalViews,
+        SUM(save_count) as totalSaves,
         SUM(comment_count) as totalComments,
         AVG(average_rating) as averageRating
         FROM newspaper_articles
@@ -302,15 +271,14 @@
         AND publish_date BETWEEN #{dateFrom} AND #{dateTo}
     </select>
 
-    <select id="getTrendingArticles"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getTrendingArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date   as publishDate,
-        na.view_count     as viewCount,
+        na.publish_date as publishDate,
+        na.view_count as viewCount,
         na.average_rating as averageRating,
-        na.image_url      as imageUrl,
-        ns.name           as sourceName
+        na.image_url as imageUrl,
+        ns.name as sourceName
         FROM newspaper_articles na
         LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
         WHERE na.is_active = true
@@ -319,42 +287,32 @@
         LIMIT #{limit}
     </select>
 
-    <!-- ============================================ -->
-    <!-- RELATED ARTICLES -->
-    <!-- ============================================ -->
-
-    <select id="getRelatedArticles"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getRelatedArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date   as publishDate,
+        na.publish_date as publishDate,
         na.author,
-        na.view_count     as viewCount,
+        na.view_count as viewCount,
         na.average_rating as averageRating,
-        na.image_url      as imageUrl
+        na.image_url as imageUrl
         FROM newspaper_articles na
         WHERE na.category = #{category} AND na.id != #{articleId} AND na.is_active = true
         ORDER BY na.average_rating DESC, na.view_count DESC
         LIMIT #{limit}
     </select>
 
-    <select id="getSameDateArticles"
-            resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
+    <select id="getSameDateArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
         SELECT
         na.id, na.slug, na.title, na.subtitle, na.category,
-        na.publish_date   as publishDate,
-        na.view_count     as viewCount,
+        na.publish_date as publishDate,
+        na.view_count as viewCount,
         na.average_rating as averageRating,
-        na.image_url      as imageUrl
+        na.image_url as imageUrl
         FROM newspaper_articles na
         WHERE na.publish_date = #{date} AND na.id != #{articleId} AND na.is_active = true
         ORDER BY na.importance DESC
         LIMIT #{limit}
     </select>
-
-    <!-- ============================================ -->
-    <!-- USER INTERACTIONS -->
-    <!-- ============================================ -->
 
     <select id="isArticleSavedByUser" resultType="boolean">
         SELECT EXISTS(
@@ -369,10 +327,6 @@
         WHERE user_id = #{userId} AND article_id = #{articleId}
         )
     </select>
-
-    <!-- ============================================ -->
-    <!-- VIEW TRACKING -->
-    <!-- ============================================ -->
 
     <select id="hasViewByHash" resultType="boolean">
         SELECT EXISTS(
@@ -391,10 +345,6 @@
         UPDATE newspaper_articles SET view_count = view_count + 1 WHERE id = #{articleId}
     </update>
 
-    <!-- ============================================ -->
-    <!-- CRUD OPERATIONS -->
-    <!-- ============================================ -->
-
     <insert id="insertArticle" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO newspaper_articles (
         source_id, slug, category, publish_date,
@@ -411,20 +361,20 @@
 
     <update id="updateArticle">
         UPDATE newspaper_articles SET
-        title        = #{title},
-        subtitle     = #{subtitle},
-        slug         = #{slug},
-        content      = #{content},
+        title = #{title},
+        subtitle = #{subtitle},
+        slug = #{slug},
+        content = #{content},
         html_content = #{htmlContent},
-        word_count   = #{wordCount},
-        source_id    = #{sourceId},
-        author       = #{author},
-        page_number  = #{pageNumber},
-        importance   = #{importance},
-        image_url    = #{imageUrl},
-        category     = #{category},
+        word_count = #{wordCount},
+        source_id = #{sourceId},
+        author = #{author},
+        page_number = #{pageNumber},
+        importance = #{importance},
+        image_url = #{imageUrl},
+        category = #{category},
         publish_date = #{publishDate},
-        updated_at   = CURRENT_TIMESTAMP
+        updated_at = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
 
@@ -438,7 +388,6 @@
         SELECT EXISTS(SELECT 1 FROM newspaper_articles WHERE slug = #{slug})
     </select>
 
-    <!-- ✅ FIX: cek slug conflict saat update, exclude artikel yang sedang diedit -->
     <select id="existsBySlugExcluding" resultType="boolean">
         SELECT EXISTS(
         SELECT 1 FROM newspaper_articles
@@ -460,10 +409,6 @@
         UPDATE newspaper_articles SET share_count = share_count + 1 WHERE id = #{articleId}
     </update>
 
-    <!-- ============================================ -->
-    <!-- SOURCE MANAGEMENT -->
-    <!-- ============================================ -->
-
     <select id="findSourceIdByName" resultType="java.lang.Long">
         SELECT id FROM newspaper_sources
         WHERE LOWER(name) = LOWER(#{name}) AND is_active = true
@@ -473,5 +418,4 @@
     <insert id="insertSource" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO newspaper_sources (name, slug, is_active) VALUES (#{name}, #{slug}, true)
     </insert>
-
 </mapper>

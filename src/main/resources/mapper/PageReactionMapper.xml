@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.PageReactionMapper">
 
+<mapper namespace="com.masasilam.app.mapper.collaboration.PageReactionMapper">
     <resultMap id="PageReactionMap" type="com.masasilam.app.model.entity.PageReaction">
         <id property="id" column="id"/>
         <result property="pageId" column="page_id"/>
@@ -49,5 +49,4 @@
         INNER JOIN project_pages pp ON pr.page_id = pp.id
         WHERE pp.assigned_user_id = #{userId}
     </select>
-
 </mapper>

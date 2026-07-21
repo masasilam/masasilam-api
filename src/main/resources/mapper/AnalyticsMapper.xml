@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.masasilam.app.mapper.AnalyticsMapper">
 
-    <!-- Get book overview metrics -->
+<mapper namespace="com.masasilam.app.mapper.analytics.AnalyticsMapper">
     <select id="getBookOverviewMetrics" resultType="java.util.HashMap">
         SELECT
         COUNT(DISTINCT ral.user_id) as total_readers,
@@ -24,7 +23,6 @@
         AND (#{endDate} IS NULL OR ral.started_at &lt;= #{endDate})
     </select>
 
-    <!-- Get readers by device -->
     <select id="getReadersByDevice" resultType="java.util.HashMap">
         SELECT
         device_type,
@@ -36,7 +34,6 @@
         GROUP BY device_type
     </select>
 
-    <!-- Get reading hour distribution -->
     <select id="getReadingHourDistribution" resultType="java.util.HashMap">
         SELECT
         EXTRACT(HOUR FROM started_at)::INTEGER as hour,
@@ -49,7 +46,6 @@
         ORDER BY hour
     </select>
 
-    <!-- Get reading patterns -->
     <select id="getReadingPatterns" resultType="java.util.HashMap">
         SELECT
         AVG(rs.total_duration_seconds) / 60.0 as avg_session_duration,
@@ -62,7 +58,6 @@
         AND (#{endDate} IS NULL OR rs.started_at &lt;= #{endDate})
     </select>
 
-    <!-- Get engagement rates -->
     <select id="getEngagementRates" resultType="java.util.HashMap">
         SELECT
         (COUNT(DISTINCT CASE WHEN b.id IS NOT NULL OR h.id IS NOT NULL OR n.id IS NOT NULL
@@ -82,7 +77,6 @@
         AND (#{endDate} IS NULL OR ral.started_at &lt;= #{endDate})
     </select>
 
-    <!-- Get annotation counts -->
     <select id="getAnnotationCounts" resultType="java.util.HashMap">
         SELECT
         (COUNT(DISTINCT b.id) + COUNT(DISTINCT h.id) + COUNT(DISTINCT n.id)) as total_annotations,
@@ -96,7 +90,6 @@
         WHERE bk.id = #{bookId}
     </select>
 
-    <!-- Get top engaged chapters -->
     <select id="getTopEngagedChapters" resultType="java.util.HashMap">
         SELECT
         bc.chapter_number,
@@ -116,7 +109,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- Get most highlighted passages -->
     <select id="getMostHighlightedPassages" resultType="java.util.HashMap">
         SELECT
         h.id,
@@ -138,7 +130,6 @@
         LIMIT #{limit}
     </select>
 
-    <!-- Get drop off points -->
     <select id="getDropOffPoints" resultType="java.util.HashMap">
         SELECT
         bc.chapter_number,
@@ -163,7 +154,6 @@
         ORDER BY drop_off_rate DESC
     </select>
 
-    <!-- Get most skipped chapters -->
     <select id="getMostSkippedChapters" resultType="java.util.HashMap">
         SELECT
         bc.chapter_number,
@@ -181,7 +171,6 @@
         LIMIT 10
     </select>
 
-    <!-- Get chapter statistics -->
     <select id="getChapterStats" resultType="java.util.HashMap">
         SELECT
         COUNT(DISTINCT ral.user_id) as total_readers,
@@ -218,7 +207,6 @@
         AND ral.chapter_number = #{chapterNumber}
     </select>
 
-    <!-- Get top highlights for chapter -->
     <select id="getTopHighlightsForChapter" resultType="java.util.HashMap">
         SELECT
         h.highlighted_text as text,
@@ -232,7 +220,6 @@
         LIMIT 5
     </select>
 
-    <!-- Update highlight heatmap -->
     <update id="updateHighlightHeatmap">
         INSERT INTO reading_heatmap (book_id, chapter_number, highlight_count, date)
         VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
@@ -242,7 +229,6 @@
         updated_at = CURRENT_TIMESTAMP
     </update>
 
-    <!-- Update note heatmap -->
     <update id="updateNoteHeatmap">
         INSERT INTO reading_heatmap (book_id, chapter_number, note_count, date)
         VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
@@ -252,7 +238,6 @@
         updated_at = CURRENT_TIMESTAMP
     </update>
 
-    <!-- Update reading heatmap -->
     <update id="updateReadingHeatmap">
         INSERT INTO reading_heatmap (book_id, chapter_number, read_count, date)
         VALUES (#{bookId}, #{chapterNumber}, #{count}, CURRENT_DATE)
@@ -261,5 +246,4 @@
         read_count = reading_heatmap.read_count + #{count},
         updated_at = CURRENT_TIMESTAMP
     </update>
-
 </mapper>
