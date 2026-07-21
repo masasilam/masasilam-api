@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.social.SocialActivityMapper">
-
     <resultMap id="ActivityRM" type="com.masasilam.app.model.entity.social.SocialActivity">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -60,8 +58,8 @@
         sa.user_id,
         u.username,
         COALESCE(sp.display_name, u.full_name) AS display_name,
-        u.profile_picture_url                  AS user_photo,
-        COALESCE(sp.is_verified, FALSE)        AS is_verified,
+        u.profile_picture_url AS user_photo,
+        COALESCE(sp.is_verified, FALSE) AS is_verified,
         sa.activity_type,
         sa.entity_type,
         sa.entity_id,
@@ -89,7 +87,7 @@
     <update id="updateActivity">
         UPDATE social_activities SET
         visibility = #{visibility},
-        is_active  = #{isActive}
+        is_active = #{isActive}
         WHERE id = #{id}
     </update>
 
@@ -97,7 +95,6 @@
         UPDATE social_activities SET is_active = FALSE WHERE id = #{id}
     </update>
 
-    <!-- ── FOLLOWING FEED ───────────────────────────────────────── -->
     <select id="getFollowingFeed" resultMap="FeedItemRM">
         <include refid="feedSelect"/>,
         CASE WHEN #{userId, jdbcType=BIGINT} IS NOT NULL THEN
@@ -105,7 +102,7 @@
         WHERE al.activity_id = sa.id AND al.user_id = #{userId, jdbcType=BIGINT})
         ELSE FALSE END AS is_liked_by_me
         FROM social_activities sa
-        JOIN users u  ON u.id = sa.user_id
+        JOIN users u ON u.id = sa.user_id
         LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
         WHERE sa.user_id IN (
         SELECT following_id FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT}
@@ -121,20 +118,18 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ── PUBLIC FEED ──────────────────────────────────────────── -->
     <select id="getPublicFeed" resultMap="FeedItemRM">
         <include refid="feedSelect"/>,
         FALSE AS is_liked_by_me
         FROM social_activities sa
-        JOIN users u  ON u.id = sa.user_id
+        JOIN users u ON u.id = sa.user_id
         LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
-        WHERE sa.is_active  = TRUE
+        WHERE sa.is_active = TRUE
         AND sa.visibility = 'public'
         ORDER BY sa.created_at DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ── USER PROFILE ACTIVITIES ──────────────────────────────── -->
     <select id="getUserActivities" resultMap="FeedItemRM">
         <include refid="feedSelect"/>,
         CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
@@ -142,9 +137,9 @@
         WHERE al.activity_id = sa.id AND al.user_id = #{currentUserId, jdbcType=BIGINT})
         ELSE FALSE END AS is_liked_by_me
         FROM social_activities sa
-        JOIN users u  ON u.id = sa.user_id
+        JOIN users u ON u.id = sa.user_id
         LEFT JOIN user_social_profiles sp ON sp.user_id = sa.user_id
-        WHERE sa.user_id  = #{profileUserId}
+        WHERE sa.user_id = #{profileUserId}
         AND sa.is_active = TRUE
         AND (
         sa.visibility = 'public'
@@ -161,11 +156,10 @@
     <select id="countFollowingFeed" resultType="int">
         SELECT COUNT(*) FROM social_activities sa
         WHERE sa.user_id IN (SELECT following_id FROM user_follows WHERE follower_id = #{userId, jdbcType=BIGINT})
-        AND sa.is_active  = TRUE
+        AND sa.is_active = TRUE
         AND sa.visibility = 'public'
     </select>
 
-    <!-- ── LIKES ────────────────────────────────────────────────── -->
     <insert id="insertLike" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO activity_likes (activity_id, user_id, created_at)
         VALUES (#{activityId}, #{userId}, NOW())
@@ -189,7 +183,6 @@
         UPDATE social_activities SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
     </update>
 
-    <!-- ── COMMENTS ─────────────────────────────────────────────── -->
     <insert id="insertComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO activity_comments
         (activity_id, user_id, parent_id, content, is_deleted, created_at, updated_at)
@@ -225,8 +218,8 @@
         FROM activity_comments ac
         JOIN users u ON u.id = ac.user_id
         WHERE ac.activity_id = #{activityId}
-        AND ac.parent_id   IS NULL
-        AND ac.is_deleted  = FALSE
+        AND ac.parent_id IS NULL
+        AND ac.is_deleted = FALSE
         ORDER BY ac.created_at ASC
     </select>
 
@@ -239,7 +232,6 @@
         SET comment_count = GREATEST(0, comment_count - 1) WHERE id = #{id}
     </update>
 
-    <!-- ── STATS ─────────────────────────────────────────────────── -->
     <select id="countUserActivities" resultType="int">
         SELECT COUNT(*) FROM social_activities WHERE user_id = #{userId} AND is_active = TRUE
     </select>
@@ -253,5 +245,4 @@
         SELECT COALESCE(SUM(comment_count), 0) FROM social_activities
         WHERE user_id = #{userId} AND is_active = TRUE
     </select>
-
 </mapper>

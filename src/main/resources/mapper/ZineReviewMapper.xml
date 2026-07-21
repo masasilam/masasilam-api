@@ -1,25 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.zine.ZineReviewMapper">
-
     <resultMap id="ZineReviewResultMap" type="com.masasilam.app.model.entity.ZineReview">
-        <id     property="id"              column="id"/>
-        <result property="userId"          column="user_id"/>
-        <result property="zineId"          column="zine_id"/>
-        <result property="title"           column="title"/>
-        <result property="content"         column="content"/>
-        <result property="helpfulCount"    column="helpful_count"/>
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="zineId" column="zine_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="helpfulCount" column="helpful_count"/>
         <result property="notHelpfulCount" column="not_helpful_count"/>
-        <result property="replyCount"      column="reply_count"/>
-        <result property="isDeleted"       column="is_deleted"/>
-        <result property="createdAt"       column="created_at"/>
-        <result property="updatedAt"       column="updated_at"/>
-        <result property="deletedAt"       column="deleted_at"/>
+        <result property="replyCount" column="reply_count"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="deletedAt" column="deleted_at"/>
     </resultMap>
-
-    <!-- ── INSERT ──────────────────────────────────────────────────────────── -->
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO zine_reviews (
@@ -33,18 +29,14 @@
         )
     </insert>
 
-    <!-- ── UPDATE ──────────────────────────────────────────────────────────── -->
-
     <update id="update">
         UPDATE zine_reviews
-        SET title      = #{title},
-        content    = #{content},
+        SET title = #{title},
+        content = #{content},
         updated_at = #{updatedAt}
         WHERE id = #{id}
         AND is_deleted = false
     </update>
-
-    <!-- ── SOFT DELETE ─────────────────────────────────────────────────────── -->
 
     <update id="softDelete">
         UPDATE zine_reviews
@@ -53,33 +45,22 @@
         WHERE id = #{id}
     </update>
 
-    <!-- ── FIND BY ID ──────────────────────────────────────────────────────── -->
-
     <select id="findById" resultMap="ZineReviewResultMap">
         SELECT * FROM zine_reviews
         WHERE id = #{id}
         AND is_deleted = false
     </select>
 
-    <!-- ── FIND BY USER AND ZINE ───────────────────────────────────────────── -->
-
     <select id="findByUserAndZine" resultMap="ZineReviewResultMap">
         SELECT * FROM zine_reviews
-        WHERE user_id  = #{userId}
-        AND zine_id  = #{zineId}
+        WHERE user_id = #{userId}
+        AND zine_id = #{zineId}
         AND is_deleted = false
     </select>
 
-    <!-- ── FIND BY ZINE WITH PAGINATION ───────────────────────────────────── -->
-    <!--
-        sortBy options:
-          "helpful"  → order by helpful_count DESC
-          "recent"   → order by created_at DESC
-          "oldest"   → order by created_at ASC
-    -->
     <select id="findByZineWithPagination" resultMap="ZineReviewResultMap">
         SELECT * FROM zine_reviews
-        WHERE zine_id  = #{zineId}
+        WHERE zine_id = #{zineId}
         AND is_deleted = false
         <choose>
             <when test="sortBy == 'helpful'">
@@ -95,30 +76,23 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ── COUNT BY ZINE ───────────────────────────────────────────────────── -->
-
     <select id="countByZine" resultType="int">
         SELECT COUNT(*) FROM zine_reviews
-        WHERE zine_id  = #{zineId}
+        WHERE zine_id = #{zineId}
         AND is_deleted = false
     </select>
-
-    <!-- ── COUNT BY USER (untuk dashboard) ────────────────────────────────── -->
 
     <select id="countByUser" resultType="int">
         SELECT COUNT(*) FROM zine_reviews
-        WHERE user_id  = #{userId}
+        WHERE user_id = #{userId}
         AND is_deleted = false
     </select>
 
-    <!-- ── FIND BY USER WITH PAGINATION (untuk dashboard) ─────────────────── -->
-
     <select id="findByUser" resultMap="ZineReviewResultMap">
         SELECT * FROM zine_reviews
-        WHERE user_id  = #{userId}
+        WHERE user_id = #{userId}
         AND is_deleted = false
         ORDER BY created_at DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
-
 </mapper>

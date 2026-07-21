@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<!-- ============================================================
-     SocialProfileMapper.xml
-     ============================================================ -->
 <mapper namespace="com.masasilam.app.mapper.social.SocialProfileMapper">
-
     <resultMap id="SocialProfileRM" type="com.masasilam.app.model.entity.social.UserSocialProfile">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -93,7 +88,7 @@
 
     <select id="getPublicProfile" resultMap="PublicProfileRM">
         SELECT
-        u.id                        AS user_id,
+        u.id AS user_id,
         u.username,
         COALESCE(sp.display_name, u.full_name) AS display_name,
         u.profile_picture_url,
@@ -129,7 +124,7 @@
 
     <select id="findFollowers" resultMap="FollowerItemRM">
         SELECT
-        u.id            AS user_id,
+        u.id AS user_id,
         u.username,
         COALESCE(sp.display_name, u.full_name) AS display_name,
         u.profile_picture_url,
@@ -139,7 +134,7 @@
         EXISTS(SELECT 1 FROM user_follows f2
         WHERE f2.follower_id = #{currentUserId, jdbcType=BIGINT} AND f2.following_id = u.id)
         ELSE FALSE END AS is_following,
-        uf.created_at   AS followed_at
+        uf.created_at AS followed_at
         FROM user_follows uf
         JOIN users u ON u.id = uf.follower_id
         LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
@@ -151,7 +146,7 @@
 
     <select id="findFollowing" resultMap="FollowerItemRM">
         SELECT
-        u.id            AS user_id,
+        u.id AS user_id,
         u.username,
         COALESCE(sp.display_name, u.full_name) AS display_name,
         u.profile_picture_url,
@@ -161,7 +156,7 @@
         EXISTS(SELECT 1 FROM user_follows f2
         WHERE f2.follower_id = #{currentUserId, jdbcType=BIGINT} AND f2.following_id = u.id)
         ELSE FALSE END AS is_following,
-        uf.created_at   AS followed_at
+        uf.created_at AS followed_at
         FROM user_follows uf
         JOIN users u ON u.id = uf.following_id
         LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
@@ -178,5 +173,4 @@
     <select id="countFollowing" resultType="int">
         SELECT COUNT(*) FROM user_follows WHERE follower_id = #{userId}
     </select>
-
 </mapper>
