@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.social.ReadingGroupMapper">
-
     <resultMap id="GroupEntityRM" type="com.masasilam.app.model.entity.social.ReadingGroup">
         <id property="id" column="id"/>
         <result property="ownerId" column="owner_id"/>
@@ -109,8 +107,8 @@
         SELECT
         rg.id,
         rg.owner_id,
-        uo.username                         AS owner_username,
-        uo.profile_picture_url              AS owner_photo,
+        uo.username AS owner_username,
+        uo.profile_picture_url AS owner_photo,
         rg.name,
         rg.slug,
         rg.description,
@@ -119,7 +117,7 @@
         rg.focus_type,
         rg.member_count,
         rg.max_members,
-        array_to_string(rg.tags, ',')       AS tags,
+        array_to_string(rg.tags, ',') AS tags,
         rg.rules,
         rg.current_read_entity_type,
         rg.current_read_entity_id,
@@ -130,7 +128,6 @@
         rg.updated_at
     </sql>
 
-    <!-- ── GROUP CRUD ────────────────────────────────────────────── -->
     <insert id="insertGroup" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_groups
         (owner_id, name, slug, description, cover_image_url,
@@ -144,19 +141,19 @@
 
     <update id="updateGroup">
         UPDATE reading_groups SET
-        name            = #{name},
-        description     = #{description},
+        name = #{name},
+        description = #{description},
         cover_image_url = #{coverImageUrl},
-        group_type      = #{groupType},
-        max_members     = #{maxMembers},
-        tags            = #{tags}::text[],
-        rules           = #{rules},
+        group_type = #{groupType},
+        max_members = #{maxMembers},
+        tags = #{tags}::text[],
+        rules = #{rules},
         current_read_entity_type = #{currentReadEntityType},
-        current_read_entity_id   = #{currentReadEntityId},
-        current_read_title       = #{currentReadTitle},
-        current_read_start       = #{currentReadStart},
-        current_read_end         = #{currentReadEnd},
-        updated_at      = NOW()
+        current_read_entity_id = #{currentReadEntityId},
+        current_read_title = #{currentReadTitle},
+        current_read_start = #{currentReadStart},
+        current_read_end = #{currentReadEnd},
+        updated_at = NOW()
         WHERE id = #{id}
     </update>
 
@@ -172,7 +169,6 @@
         SELECT * FROM reading_groups WHERE slug = #{slug} AND is_active = TRUE
     </select>
 
-    <!-- ── GROUP DETAIL ──────────────────────────────────────────── -->
     <select id="getGroupDetail" resultMap="GroupResponseRM">
         <include refid="groupSelectBase"/>,
         CASE WHEN #{currentUserId} IS NOT NULL THEN
@@ -181,7 +177,7 @@
         ELSE FALSE END AS is_member,
         (SELECT role FROM reading_group_members m2
         WHERE m2.group_id = rg.id AND m2.user_id = #{currentUserId} AND m2.is_active = TRUE
-        LIMIT 1)      AS my_role,
+        LIMIT 1) AS my_role,
         CASE WHEN #{currentUserId} IS NOT NULL THEN
         EXISTS(SELECT 1 FROM group_join_requests r
         WHERE r.group_id = rg.id AND r.user_id = #{currentUserId} AND r.status = 'pending')
@@ -191,7 +187,6 @@
         WHERE rg.id = #{groupId} AND rg.is_active = TRUE
     </select>
 
-    <!-- ── PUBLIC GROUPS ─────────────────────────────────────────── -->
     <select id="findPublicGroups" resultMap="GroupResponseRM">
         <include refid="groupSelectBase"/>,
         CASE WHEN #{currentUserId, jdbcType=BIGINT} IS NOT NULL THEN
@@ -214,7 +209,6 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <!-- ── USER GROUPS ───────────────────────────────────────────── -->
     <select id="findUserGroups" resultMap="GroupResponseRM">
         <include refid="groupSelectBase"/>,
         TRUE AS is_member,
@@ -244,7 +238,6 @@
         WHERE user_id = #{userId} AND is_active = TRUE
     </select>
 
-    <!-- ── MEMBERS ────────────────────────────────────────────────── -->
     <insert id="insertMember" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO reading_group_members (group_id, user_id, role, joined_at, is_active)
         VALUES (#{groupId}, #{userId}, #{role}, NOW(), TRUE)
@@ -292,7 +285,6 @@
         WHERE group_id = #{groupId} AND user_id = #{userId} AND is_active = TRUE
     </select>
 
-    <!-- ── SCHEDULES ─────────────────────────────────────────────── -->
     <insert id="insertSchedule" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO group_reading_schedules
         (group_id, entity_type, entity_id, entity_title, entity_slug,
@@ -306,12 +298,12 @@
 
     <update id="updateSchedule">
         UPDATE group_reading_schedules SET
-        chapter_start      = #{chapterStart},
-        chapter_end        = #{chapterEnd},
-        chapter_label      = #{chapterLabel},
-        start_date         = #{startDate},
-        end_date           = #{endDate},
-        discussion_prompt  = #{discussionPrompt}
+        chapter_start = #{chapterStart},
+        chapter_end = #{chapterEnd},
+        chapter_label = #{chapterLabel},
+        start_date = #{startDate},
+        end_date = #{endDate},
+        discussion_prompt = #{discussionPrompt}
         WHERE id = #{id}
     </update>
 
@@ -337,14 +329,13 @@
         (SELECT COUNT(*) FROM group_discussions d WHERE d.schedule_id = s.id AND d.is_deleted = FALSE)
         AS discussion_count
         FROM group_reading_schedules s
-        WHERE s.group_id    = #{groupId}
+        WHERE s.group_id = #{groupId}
         AND s.is_completed = FALSE
-        AND s.end_date    >= CURRENT_DATE
+        AND s.end_date >= CURRENT_DATE
         ORDER BY s.start_date ASC
         LIMIT 1
     </select>
 
-    <!-- ── DISCUSSIONS ───────────────────────────────────────────── -->
     <insert id="insertDiscussion" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO group_discussions
         (group_id, schedule_id, user_id, parent_id, title, content,
@@ -373,8 +364,8 @@
         SELECT
         d.id, d.group_id, d.schedule_id, d.user_id,
         u.username,
-        u.profile_picture_url          AS user_photo,
-        m.role                         AS user_role,
+        u.profile_picture_url AS user_photo,
+        m.role AS user_role,
         d.parent_id, d.title, d.content,
         d.entity_type, d.entity_id, d.cfi_reference,
         d.like_count, d.reply_count, d.is_pinned,
@@ -387,8 +378,8 @@
         FROM group_discussions d
         JOIN users u ON u.id = d.user_id
         LEFT JOIN reading_group_members m ON m.group_id = d.group_id AND m.user_id = d.user_id
-        WHERE d.group_id   = #{groupId}
-        AND d.parent_id  IS NULL
+        WHERE d.group_id = #{groupId}
+        AND d.parent_id IS NULL
         AND d.is_deleted = FALSE
         <if test="scheduleId != null">AND d.schedule_id = #{scheduleId}</if>
         ORDER BY d.is_pinned DESC, d.created_at DESC
@@ -412,7 +403,7 @@
         FROM group_discussions d
         JOIN users u ON u.id = d.user_id
         LEFT JOIN reading_group_members m ON m.group_id = d.group_id AND m.user_id = d.user_id
-        WHERE d.parent_id  = #{parentId}
+        WHERE d.parent_id = #{parentId}
         AND d.is_deleted = FALSE
         ORDER BY d.created_at ASC
     </select>
@@ -426,29 +417,33 @@
     <update id="incrementDiscussionLikeCount">
         UPDATE group_discussions SET like_count = like_count + 1 WHERE id = #{id}
     </update>
+
     <update id="decrementDiscussionLikeCount">
         UPDATE group_discussions SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
     </update>
+
     <update id="incrementReplyCount">
         UPDATE group_discussions SET reply_count = reply_count + 1 WHERE id = #{id}
     </update>
+
     <update id="decrementReplyCount">
         UPDATE group_discussions SET reply_count = GREATEST(0, reply_count - 1) WHERE id = #{id}
     </update>
 
-    <!-- ── DISCUSSION LIKES ───────────────────────────────────────── -->
     <insert id="insertDiscussionLike">
         INSERT INTO group_discussion_likes (discussion_id, user_id, created_at)
         VALUES (#{discussionId}, #{userId}, NOW()) ON CONFLICT DO NOTHING
     </insert>
+
     <delete id="deleteDiscussionLike">
         DELETE FROM group_discussion_likes WHERE discussion_id = #{discussionId} AND user_id = #{userId}
     </delete>
+
     <select id="isDiscussionLiked" resultType="boolean">
-        SELECT EXISTS(SELECT 1 FROM group_discussion_likes WHERE discussion_id = #{discussionId} AND user_id = #{userId})
+        SELECT EXISTS(SELECT 1 FROM group_discussion_likes WHERE discussion_id = #{discussionId} AND user_id =
+        #{userId})
     </select>
 
-    <!-- ── JOIN REQUESTS ──────────────────────────────────────────── -->
     <insert id="insertJoinRequest" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO group_join_requests (group_id, user_id, message, status, created_at)
         VALUES (#{groupId}, #{userId}, #{message}, 'pending', NOW())
@@ -464,8 +459,7 @@
         SELECT * FROM group_join_requests WHERE group_id = #{groupId} AND user_id = #{userId}
     </select>
 
-    <select id="findPendingRequests"
-            resultType="com.masasilam.app.model.dto.response.social.GroupJoinRequestResponse">
+    <select id="findPendingRequests" resultType="com.masasilam.app.model.dto.response.social.GroupJoinRequestResponse">
         SELECT r.id, r.group_id, r.user_id, u.username,
         u.profile_picture_url AS user_photo,
         r.message, r.status, r.created_at
@@ -475,7 +469,6 @@
         ORDER BY r.created_at ASC
     </select>
 
-    <!-- ── POLLS ──────────────────────────────────────────────────── -->
     <insert id="insertPoll" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO group_polls (group_id, created_by, question, options, ends_at, is_closed, created_at)
         VALUES (#{groupId}, #{createdBy}, #{question}, #{options}::jsonb, #{endsAt}, FALSE, NOW())
@@ -493,8 +486,7 @@
         SELECT * FROM group_polls WHERE id = #{id}
     </select>
 
-    <select id="findPollsByGroup"
-            resultType="com.masasilam.app.model.dto.response.social.GroupPollResponse">
+    <select id="findPollsByGroup" resultType="com.masasilam.app.model.dto.response.social.GroupPollResponse">
         SELECT
         p.id, p.group_id, p.created_by,
         u.username AS creator_username,
@@ -522,7 +514,6 @@
         DELETE FROM group_poll_votes WHERE poll_id = #{pollId} AND user_id = #{userId}
     </delete>
 
-    <!-- ── PROGRESS LEADERBOARD ───────────────────────────────────── -->
     <select id="getMemberProgressLeaderboard" resultMap="MemberRM">
         SELECT
         u.id AS user_id, u.username,
@@ -536,11 +527,10 @@
         LEFT JOIN user_social_profiles sp ON sp.user_id = u.id
         LEFT JOIN reading_progress rp ON rp.user_id = u.id
         AND rp.entity_type = #{entityType}
-        AND rp.entity_id   = #{entityId}
-        WHERE m.group_id  = #{groupId}
+        AND rp.entity_id = #{entityId}
+        WHERE m.group_id = #{groupId}
         AND m.is_active = TRUE
         ORDER BY COALESCE(rp.percentage_completed, 0) DESC
         LIMIT 20
     </select>
-
 </mapper>
