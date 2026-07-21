@@ -1,6 +1,7 @@
 package com.masasilam.app.model.entity.social;
 
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,9 +15,9 @@ public class ReadingChallenge {
     private String description;
     private String coverImageUrl;
     private String challengeType;
-    private List<String> entityTypes;    // Ubah dari String ke List<String>
+    private List<String> entityTypes;
     private Integer targetCount;
-    private List<String> requiredGenres; // Ubah dari String ke List<String>
+    private List<String> requiredGenres;
     private Long requiredListId;
     private LocalDate startDate;
     private LocalDate endDate;

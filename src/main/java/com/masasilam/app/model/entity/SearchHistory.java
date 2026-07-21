@@ -9,18 +9,11 @@ public class SearchHistory {
     private Long id;
     private Long userId;
     private Long bookId;
-
-    // Search details
     private String query;
     private Integer resultsCount;
-
-    // Context
-    private String searchType; // in_book, global, author, etc.
-    private String filters; // JSON string
-
-    // Interaction
+    private String searchType;
+    private String filters;
     private Long clickedResultId;
     private LocalDateTime clickedAt;
-
     private LocalDateTime createdAt;
 }

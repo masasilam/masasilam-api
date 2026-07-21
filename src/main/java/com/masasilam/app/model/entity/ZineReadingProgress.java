@@ -16,7 +16,7 @@ public class ZineReadingProgress {
     private Long id;
     private Long userId;
     private Long zineId;
-    private String currentPosition; // epubcfi
+    private String currentPosition;
     private Integer currentPage;
     private Integer totalPages;
     private BigDecimal percentageCompleted;

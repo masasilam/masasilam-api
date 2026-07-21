@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -11,6 +12,6 @@ public class VoiceNoteResponse {
     private String position;
     private String audioUrl;
     private Double duration;
-    private String transcription; // Auto-generated text
+    private String transcription;
     private LocalDateTime createdAt;
 }

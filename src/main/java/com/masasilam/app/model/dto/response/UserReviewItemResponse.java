@@ -11,15 +11,12 @@ public class UserReviewItemResponse {
     private String bookTitle;
     private String bookSlug;
     private String bookCover;
-
     private String reviewTitle;
     private String reviewContent;
     private Double rating;
-
     private Integer helpfulCount;
     private Integer notHelpfulCount;
     private Integer replyCount;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

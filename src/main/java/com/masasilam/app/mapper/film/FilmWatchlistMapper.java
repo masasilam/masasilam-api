@@ -1,7 +1,7 @@
 package com.masasilam.app.mapper.film;
 
 import com.masasilam.app.model.dto.response.FilmWatchlistResponse;
-import com.masasilam.app.model.film.FilmWatchlist;
+import com.masasilam.app.model.entity.film.FilmWatchlist;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

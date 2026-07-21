@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-// ============ KIOS DASHBOARD STATS ============
 @Data
 @Builder
 @NoArgsConstructor
@@ -62,7 +61,7 @@ public class KiosDashboardStats {
         private String productSlug;
         private Integer currentStock;
         private Integer minStockLevel;
-        private String status; // LOW_STOCK, OUT_OF_STOCK
+        private String status;
     }
 
     @Data
@@ -72,6 +71,6 @@ public class KiosDashboardStats {
     public static class RevenueChart {
         private List<String> labels;
         private List<BigDecimal> data;
-        private String period; // daily, weekly, monthly
+        private String period;
     }
 }

@@ -1,6 +1,6 @@
 package com.masasilam.app.mapper.film;
 
-import com.masasilam.app.model.film.FilmVideoSource;
+import com.masasilam.app.model.entity.film.FilmVideoSource;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

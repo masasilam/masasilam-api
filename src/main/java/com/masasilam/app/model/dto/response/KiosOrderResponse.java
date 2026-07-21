@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// ============ KIOS ORDER RESPONSE ============
 @Data
 @Builder
 @NoArgsConstructor

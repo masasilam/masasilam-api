@@ -19,7 +19,7 @@ public class ReadingList {
     private Integer viewCount;
     private Integer forkCount;
     private Long forkedFromId;
-    private String tags;   // stored as array text
+    private String tags;
     private Boolean isActive;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;

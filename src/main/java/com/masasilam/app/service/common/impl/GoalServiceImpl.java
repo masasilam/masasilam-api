@@ -198,13 +198,13 @@ public class GoalServiceImpl implements GoalService {
         r.setTarget(goal.getTargetValue());
         r.setCurrent(goal.getCurrentValue() != null ? goal.getCurrentValue() : 0);
         r.setUnit(goal.getUnit());
-        r.setStart_date(goal.getStartDate());
-        r.setEnd_date(goal.getEndDate());
-        r.setCompleted_at(goal.getCompletedAt());
+        r.setStartDate(goal.getStartDate());
+        r.setEndDate(goal.getEndDate());
+        r.setCompletedAt(goal.getCompletedAt());
         r.setStatus(goal.getStatus());
 
         int daysRemaining = (int) ChronoUnit.DAYS.between(LocalDate.now(), goal.getEndDate());
-        r.setDays_remaining(Math.max(0, daysRemaining));
+        r.setDaysRemaining(Math.max(0, daysRemaining));
 
         return r;
     }

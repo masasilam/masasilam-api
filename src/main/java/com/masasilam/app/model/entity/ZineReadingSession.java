@@ -15,7 +15,7 @@ public class ZineReadingSession {
     private Long id;
     private Long userId;
     private Long zineId;
-    private String sessionType; // selalu "EPUB" untuk zine
+    private String sessionType;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private Integer totalDurationSeconds;

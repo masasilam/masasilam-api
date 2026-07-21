@@ -19,6 +19,6 @@ public class ZineView {
     private String ipAddress;
     private String userAgent;
     private String viewerHash;
-    private String actionType; // "view" | "download"
+    private String actionType;
     private LocalDateTime createdAt;
 }

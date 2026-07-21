@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// ============ PRODUCT REVIEW RESPONSE ============
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,7 +25,7 @@ public class ProductReviewResponse {
     private String comment;
     private Boolean isVerifiedPurchase;
     private Integer helpfulCount;
-    private Boolean isHelpful; // For current user
+    private Boolean isHelpful;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

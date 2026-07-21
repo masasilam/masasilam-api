@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ArticleReviewRequest {
     private String title;
-
     @NotBlank(message = "Review content is required")
     @Size(min = 10, max = 5000, message = "Review must be between 10 and 5000 characters")
     private String content;

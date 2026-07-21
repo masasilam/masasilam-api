@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookChapterController {
     private final BookChapterService chapterService;
-    private final CorrectionService correctionService;  // ← tambah inject
+    private final CorrectionService correctionService;
 
     @GetMapping("/**")
     public ResponseEntity<DataResponse<ChapterReadingResponse>> readChapterByPath(@PathVariable String slug, HttpServletRequest request) {

@@ -1,9 +1,9 @@
 package com.masasilam.app.model.entity;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
-// EpubAnnotation.java
 @Data
 public class EpubAnnotation {
     private Long id;

@@ -12,6 +12,6 @@ public class FollowerItemResponse {
     private String profilePictureUrl;
     private String tagline;
     private Boolean isVerified;
-    private Boolean isFollowing; // does current user follow them
+    private Boolean isFollowing;
     private OffsetDateTime followedAt;
 }

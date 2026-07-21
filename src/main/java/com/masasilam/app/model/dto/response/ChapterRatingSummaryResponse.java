@@ -9,5 +9,5 @@ public class ChapterRatingSummaryResponse {
     private Double averageRating;
     private Integer totalRatings;
     private RatingDistribution distribution;
-    private Integer myRating; // Current user's rating
+    private Integer myRating;
 }

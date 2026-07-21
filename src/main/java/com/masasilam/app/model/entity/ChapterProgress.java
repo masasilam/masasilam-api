@@ -1,6 +1,7 @@
 package com.masasilam.app.model.entity;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -9,8 +10,8 @@ public class ChapterProgress {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
-    private Integer position; // Current reading position in the chapter
-    private Integer readingTimeSeconds; // Total reading time in seconds
+    private Integer position;
+    private Integer readingTimeSeconds;
     private Boolean isCompleted;
     private LocalDateTime lastReadAt;
     private LocalDateTime createdAt;

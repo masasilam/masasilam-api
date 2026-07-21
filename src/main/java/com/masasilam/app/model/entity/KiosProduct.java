@@ -1,10 +1,10 @@
 package com.masasilam.app.model.entity;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// ============ KIOS PRODUCT ============
 @Data
 public class KiosProduct {
     private Long id;
@@ -12,18 +12,18 @@ public class KiosProduct {
     private String slug;
     private String sku;
     private String description;
-    private String productType; // PHYSICAL_BOOK, ACCESSORY, MERCHANDISE
+    private String productType;
     private String category;
     private BigDecimal price;
     private BigDecimal discountPrice;
     private BigDecimal discountPercentage;
     private Integer stockQuantity;
     private Integer minStockLevel;
-    private BigDecimal weight; // in grams
-    private String dimensions; // LxWxH in cm
-    private String imageUrls; // comma-separated URLs
+    private BigDecimal weight;
+    private String dimensions;
+    private String imageUrls;
     private String thumbnailUrl;
-    private Long bookId; // Reference to book if product is physical book
+    private Long bookId;
     private Boolean isActive;
     private Boolean isFeatured;
     private Integer viewCount;

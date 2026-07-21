@@ -13,8 +13,6 @@ public class LoginResponse {
     private String email;
     private String[] roles;
     private Long expiresIn;
-
-    // ✅ TAMBAHKAN FIELD INI
     private String fullName;
     private String profilePictureUrl;
     private String bio;

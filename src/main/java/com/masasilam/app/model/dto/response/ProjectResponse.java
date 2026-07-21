@@ -13,14 +13,11 @@ import java.util.Map;
 
 @Data
 public class ProjectResponse {
-    // Basic info
     private Long id;
     private String title;
     private String description;
     private String author;
     private String originalSource;
-
-    // Project metadata
     private DifficultyLevel difficulty;
     private ProjectStatus status;
     private ProjectPriority priority;
@@ -28,38 +25,23 @@ public class ProjectResponse {
     private String genre;
     private String originalPublicationYear;
     private Boolean isPublicDomain;
-
-    // Progress tracking
     private Integer totalPages;
     private Integer pagesCompleted;
     private BigDecimal overallProgress;
     private Map<String, Integer> progressDetails;
-
-    // Timeline
     private LocalDate startDate;
     private LocalDateTime expectedCompletionDate;
     private LocalDate actualCompletionDate;
-
-    // Media & URLs
     private String coverImageUrl;
     private String bookSlug;
-
-    // Community metrics
     private Integer contributorCount;
     private Integer followerCount;
     private Integer commentCount;
-
-    // Quality metrics
     private BigDecimal qualityScore;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
     private String userReaction;
-
     private List<ReactionSummary> reactionBreakdown;
-
     private Boolean isFollowing;
-
     private List<ProjectCommentResponse> recentComments;
 }

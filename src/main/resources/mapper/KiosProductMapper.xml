@@ -76,8 +76,8 @@
             AND stock_quantity > 0
         </if>
         <if test="inStock != null and inStock == false">
-            AND stock_quantity <<![CDATA[= 0
-        ]]></if>
+            <![CDATA[ AND stock_quantity <= 0 ]]>
+        </if>
         ORDER BY ${sortColumn} ${sortType}
         LIMIT #{limit} OFFSET #{offset}
     </select>
@@ -101,8 +101,8 @@
             AND stock_quantity > 0
         </if>
         <if test="inStock != null and inStock == false">
-            AND stock_quantity <<![CDATA[= 0
-        ]]></if>
+            <![CDATA[ AND stock_quantity <= 0 ]]>
+        </if>
     </select>
 
     <select id="countByNameAndSku" resultType="int">
@@ -127,7 +127,7 @@
     <select id="countLowStockProducts" resultType="long">
         SELECT COUNT(*)
         FROM kios_products
-        WHERE stock_quantity <<![CDATA[= min_stock_level
+        <![CDATA[ WHERE stock_quantity <= min_stock_level ]]>
         AND is_active = true
-    ]]></select>
+    </select>
 </mapper>

@@ -1,6 +1,7 @@
 package com.masasilam.app.model.entity.social;
 
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
@@ -12,8 +13,8 @@ public class ReadingGroup {
     private String slug;
     private String description;
     private String coverImageUrl;
-    private String groupType;   // public, private, invite_only
-    private String focusType;   // BOOK, ZINE, FILM, NEWSPAPER, mixed
+    private String groupType;
+    private String focusType;
     private Integer memberCount;
     private Integer maxMembers;
     private String currentReadEntityType;

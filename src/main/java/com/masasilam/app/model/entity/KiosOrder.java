@@ -10,13 +10,13 @@ public class KiosOrder {
     private Long id;
     private String orderNumber;
     private Long userId;
-    private String status; // PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    private String status;
     private BigDecimal subtotal;
     private BigDecimal shippingCost;
     private BigDecimal tax;
     private BigDecimal totalAmount;
     private String paymentMethod;
-    private String paymentStatus; // UNPAID, PAID, REFUNDED
+    private String paymentStatus;
     private LocalDateTime paidAt;
     private String shippingAddress;
     private String shippingMethod;

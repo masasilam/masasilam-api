@@ -11,7 +11,5 @@ public class ChapterRatingRequest {
     @Min(value = 1, message = "Rating must be at least 1")
     @Max(value = 5, message = "Rating must be at most 5")
     private Integer rating;
-
-    // Optional: user can add note when rating (but stored in reviews)
     private String note;
 }

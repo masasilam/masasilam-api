@@ -43,8 +43,7 @@ public class Zine {
     private String difficultyLevel;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-    // Tambahkan field berikut
-    private String  firstPublisher;       // TAMBAH
-    private String  firstPublishedDate;   // TAMBAH — "1955-02"
-    private String  collectionName;       // TAMBAH — "Zaman Baru"
+    private String firstPublisher;
+    private String firstPublishedDate;
+    private String collectionName;
 }

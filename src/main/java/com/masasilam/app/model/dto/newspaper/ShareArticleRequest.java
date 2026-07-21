@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ShareArticleRequest {
     @NotBlank(message = "Platform is required")
-    private String platform; // facebook, twitter, whatsapp, copy_link
+    private String platform;
 }

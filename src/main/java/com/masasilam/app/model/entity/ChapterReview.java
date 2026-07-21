@@ -11,9 +11,9 @@ public class ChapterReview {
     private Long bookId;
     private Integer chapterNumber;
     private String content;
-    private Long parentId; // For replies
+    private Long parentId;
     private Integer likeCount;
-    private Boolean isSpoiler; // Mark as spoiler
+    private Boolean isSpoiler;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

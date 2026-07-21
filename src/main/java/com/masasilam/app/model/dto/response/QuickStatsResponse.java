@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class QuickStatsResponse {
     private Integer totalBooks;
-    private String readingTime;             // "24h 30m" formatted
+    private String readingTime;
     private Integer completedBooks;
     private Double averageRating;
     private Integer currentStreak;

@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 public class GenreBreakdownItem {
-    private String  genreName;
+    private String genreName;
     private Integer booksRead;
     private Integer minutesSpent;
-    private Double  percentage;
-    private Double  averageRating;
+    private Double percentage;
+    private Double averageRating;
 }

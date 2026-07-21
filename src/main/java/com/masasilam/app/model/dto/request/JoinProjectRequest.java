@@ -8,9 +8,7 @@ import java.util.List;
 
 @Data
 public class JoinProjectRequest {
-
     @NotNull(message = "Role is required")
     private ProjectRole role;
-
     private List<Integer> pageNumbers;
 }

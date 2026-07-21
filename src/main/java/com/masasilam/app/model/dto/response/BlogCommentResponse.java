@@ -14,20 +14,12 @@ public class BlogCommentResponse {
     private String content;
     private Long parentId;
     private Long likeCount;
-
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
-
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
-
-    // User information
     private String userName;
     private String userAvatar;
-
-    // Reply count for nested comments
     private Long replyCount;
-
-    // Nested replies (if needed)
     private List<BlogCommentResponse> replies;
 }

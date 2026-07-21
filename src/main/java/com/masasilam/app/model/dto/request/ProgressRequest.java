@@ -12,16 +12,12 @@ public class ProgressRequest {
     @NotNull
     @Min(1)
     private Integer currentPage;
-
     @NotNull
     private String currentPosition;
-
     @Min(0)
     @Max(100)
     private BigDecimal percentageCompleted;
-
     @Min(0)
     private Integer readingTimeMinutes;
-
-    private String status; // READING, COMPLETED, PAUSED
+    private String status;
 }

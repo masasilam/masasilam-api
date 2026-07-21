@@ -8,7 +8,7 @@ import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.User;
-import com.masasilam.app.model.film.*;
+import com.masasilam.app.model.entity.film.*;
 import com.masasilam.app.service.film.FilmReactionService;
 import com.masasilam.app.service.film.video.VideoProviderService;
 import com.masasilam.app.util.interceptor.HeaderHolder;

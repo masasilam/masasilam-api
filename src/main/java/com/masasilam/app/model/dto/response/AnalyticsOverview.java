@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class AnalyticsOverview {
     private Long totalReaders;
-    private Long activeReaders; // Last 30 days
-    private Long newReaders; // This period
+    private Long activeReaders;
+    private Long newReaders;
     private Double averageCompletionRate;
     private Integer averageReadingTimeMinutes;
     private Double averageRating;

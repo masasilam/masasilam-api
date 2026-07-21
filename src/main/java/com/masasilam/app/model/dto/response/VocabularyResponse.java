@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response;
 
 import lombok.Data;
+
 import java.util.List;
 
 @Data
@@ -17,7 +18,7 @@ public class VocabularyResponse {
         private String partOfSpeech;
         private List<String> examples;
         private String difficulty;
-        private Integer frequency; // How often it appears in the book
-        private Integer page; // First occurrence
+        private Integer frequency;
+        private Integer page;
     }
 }

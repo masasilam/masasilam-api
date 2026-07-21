@@ -6,5 +6,5 @@ import lombok.Data;
 public class PeakReadingTimeItem {
     private Integer hour;
     private Integer minutesRead;
-    private Double  percentage;
+    private Double percentage;
 }

@@ -8,7 +8,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class AuthorRequest {
     @NotBlank
     private String name;
-
     private String birthDate;
     private String deathDate;
     private String birthPlace;
