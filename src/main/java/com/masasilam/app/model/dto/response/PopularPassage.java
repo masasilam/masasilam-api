@@ -14,5 +14,5 @@ public class PopularPassage {
     private Integer endPosition;
     private Integer highlightCount;
     private Double popularityScore;
-    private List<String> commonColors; // Most used highlight colors
+    private List<String> commonColors;
 }

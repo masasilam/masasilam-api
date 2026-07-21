@@ -4,12 +4,12 @@ import lombok.Data;
 
 @Data
 public class ReadingPatternSummary {
-    private String  preferredReadingTime;
-    private String  preferredDay;
+    private String preferredReadingTime;
+    private String preferredDay;
     private Integer averageSessionMinutes;
     private Integer averageReadingSpeedWpm;
-    private Double  estimatedReadingSpeedWpm;
+    private Double estimatedReadingSpeedWpm;
     private Integer currentStreak;
     private Integer longestStreak;
-    private String  readingPace;
+    private String readingPace;
 }

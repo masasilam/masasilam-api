@@ -1,8 +1,8 @@
 package com.masasilam.app.mapper.film;
 
-import com.masasilam.app.model.film.Company;
-import com.masasilam.app.model.film.Person;
-import com.masasilam.app.model.film.Film;
+import com.masasilam.app.model.entity.film.Company;
+import com.masasilam.app.model.entity.film.Person;
+import com.masasilam.app.model.entity.film.Film;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

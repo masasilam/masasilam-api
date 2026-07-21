@@ -12,7 +12,5 @@ public class BlogStatsResponse {
     private Long totalComments;
     private Long publishedPosts;
     private Long draftPosts;
-
-    // Monthly statistics
     private List<MonthlyStatsResponse> monthlyStats;
 }

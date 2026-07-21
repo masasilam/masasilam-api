@@ -2,13 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.reading.ReadingActivityMapper">
-    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO reading_activity_log (user_id, book_id, chapter_id, activity_type, activity_time, duration_minutes,
-        reading_speed_wpm, created_at)
-        VALUES (#{userId}, #{bookId}, #{chapterId}, #{activityType}, #{activityTime}, #{durationMinutes},
-        #{readingSpeedWpm}, NOW())
-    </insert>
-
     <select id="getUserChapterActivitySummary" resultType="map">
         SELECT chapter_number,
         COUNT(*) AS times_read,

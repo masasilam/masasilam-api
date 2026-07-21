@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response.social;
 
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,13 +28,10 @@ public class ReadingChallengeResponse {
     private Integer completionCount;
     private Boolean isOfficial;
     private Boolean isActive;
-
-    // Current user context
     private Boolean isJoined;
-    private String myStatus;       // in_progress, completed, abandoned
+    private String myStatus;
     private Integer myProgress;
     private Double myProgressPercent;
     private List<ChallengeProgressItemResponse> myItems;
-
     private OffsetDateTime createdAt;
 }

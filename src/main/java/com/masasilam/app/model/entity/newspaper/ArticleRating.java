@@ -15,7 +15,7 @@ public class ArticleRating {
     private Long id;
     private Long userId;
     private Long articleId;
-    private Double rating; // 1-5
+    private Double rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

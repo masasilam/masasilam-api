@@ -8,6 +8,6 @@ public class ReadingStatistics {
     private Integer totalReadingTimeMinutes;
     private Integer averageReadingSpeedWpm;
     private Double completionRate;
-    private Integer currentStreak; // days
+    private Integer currentStreak;
     private Integer longestStreak;
 }

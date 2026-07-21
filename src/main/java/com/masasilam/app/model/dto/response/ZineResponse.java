@@ -47,7 +47,7 @@ public class ZineResponse {
     private List<GenreResponse> genres;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-    private String  firstPublisher;
-    private String  firstPublishedDate;
-    private String  collectionName;
+    private String firstPublisher;
+    private String firstPublishedDate;
+    private String collectionName;
 }

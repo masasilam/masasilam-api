@@ -1,10 +1,10 @@
 package com.masasilam.app.model.entity;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// ReadingProgress.java
 @Data
 public class ReadingProgress {
     private Long id;

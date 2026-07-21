@@ -1,9 +1,9 @@
 package com.masasilam.app.model.entity;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
-// ReadingSession.java
 @Data
 public class ReadingSession {
     private Long id;

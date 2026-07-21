@@ -11,24 +11,12 @@ public class BookAnalyticsResponse {
     private String bookTitle;
     private LocalDateTime analyzedAt;
     private String dateRange;
-
-    // Overview Stats
     private AnalyticsOverview overview;
-
-    // Reader Behavior
     private ReaderBehaviorAnalytics readerBehavior;
-
-    // Content Engagement
     private ContentEngagementAnalytics contentEngagement;
-
-    // Popular Content
     private List<PopularPassage> mostHighlightedPassages;
     private List<PopularNote> mostCommonNotes;
-
-    // Problem Areas
     private List<ChapterDropOffPoint> dropOffPoints;
     private List<ChapterSkipAnalysis> mostSkippedChapters;
-
-    // Trends
     private TrendAnalysis trends;
 }

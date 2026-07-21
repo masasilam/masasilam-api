@@ -15,6 +15,6 @@ public class ArticleShare {
     private Long id;
     private Long articleId;
     private Long userId;
-    private String platform; // facebook, twitter, whatsapp, copy_link
+    private String platform;
     private LocalDateTime createdAt;
 }

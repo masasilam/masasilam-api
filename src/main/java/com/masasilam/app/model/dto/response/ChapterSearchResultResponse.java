@@ -12,8 +12,6 @@ public class ChapterSearchResultResponse {
     private String chapterSlug;
     private Integer chapterLevel;
     private String parentSlug;
-
-    // Match details
     private List<SearchMatch> matches;
     private Integer matchCount;
     private Float relevanceScore;

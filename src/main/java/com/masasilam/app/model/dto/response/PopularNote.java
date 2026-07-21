@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class PopularNote {
-    private String theme; // Common theme/topic
+    private String theme;
     private Integer noteCount;
-    private List<String> sampleNotes; // 2-3 example notes
+    private List<String> sampleNotes;
 }

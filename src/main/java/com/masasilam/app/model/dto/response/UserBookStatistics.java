@@ -10,5 +10,5 @@ public class UserBookStatistics {
     private Integer totalRatings;
     private Integer totalSearches;
     private Integer totalReadingSessions;
-    private Double engagementScore; // 0-100
+    private Double engagementScore;
 }

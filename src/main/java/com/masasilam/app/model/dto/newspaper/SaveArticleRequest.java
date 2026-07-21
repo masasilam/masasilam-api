@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SaveArticleRequest {
-    private String collectionName; // Optional: default, favorites, read-later
-    private String notes; // Personal notes
+    private String collectionName;
+    private String notes;
 }

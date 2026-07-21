@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response.social;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +16,7 @@ public class GroupPollResponse {
     private LocalDateTime endsAt;
     private Boolean isClosed;
     private Integer totalVotes;
-    private Integer myVoteOptionId;  // null if not voted
+    private Integer myVoteOptionId;
     private LocalDateTime createdAt;
 
     @Data

@@ -39,18 +39,7 @@ public class Book {
     private String filePath;
     private String coverImagePath;
     private String category;
-    /**
-     * Kapan file .epub terakhir di-generate dari DB chapters.
-     * Diupdate oleh EpubRebuildServiceImpl setelah rebuild selesai.
-     * Null berarti epub belum pernah di-rebuild (masih file asli upload).
-     */
     private LocalDateTime epubGeneratedAt;
-
-    /**
-     * URL epub asli yang di-upload pertama kali (backup/arsip).
-     * Tidak pernah diubah setelah diset saat createBook().
-     * Bisa dipakai admin untuk membandingkan versi asli vs versi koreksi.
-     */
     private String fileUrlArchive;
     private String firstPublished;
     private String firstPublisher;

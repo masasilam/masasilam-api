@@ -7,6 +7,5 @@ import lombok.Data;
 public class ProjectCommentRequest {
     @NotBlank(message = "Comment content is required")
     private String content;
-
     private Long parentCommentId;
 }

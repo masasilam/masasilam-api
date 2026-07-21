@@ -1,4 +1,4 @@
-package com.masasilam.app.model.film;
+package com.masasilam.app.model.entity.film;
 
 import lombok.Data;
 

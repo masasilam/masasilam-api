@@ -2,8 +2,8 @@ package com.masasilam.app.service.film;
 
 import com.masasilam.app.model.dto.request.AddFilmRequest;
 import com.masasilam.app.model.dto.request.UpdateFilmRequest;
-import com.masasilam.app.model.film.Film;
-import com.masasilam.app.model.film.FilmDetail;
+import com.masasilam.app.model.entity.film.Film;
+import com.masasilam.app.model.entity.film.FilmDetail;
 
 import java.util.List;
 

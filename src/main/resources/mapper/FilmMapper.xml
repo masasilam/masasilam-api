@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.film.FilmMapper">
-    <resultMap id="FilmResultMap" type="com.masasilam.app.model.film.Film">
+    <resultMap id="FilmResultMap" type="com.masasilam.app.model.entity.film.Film">
         <id property="id" column="id"/>
         <result property="wikidataQid" column="wikidata_qid"/>
         <result property="slug" column="slug"/>
@@ -29,7 +29,7 @@
         <result property="budgetDisplay" column="budget_display"/>
     </resultMap>
 
-    <resultMap id="PersonResultMap" type="com.masasilam.app.model.film.Person">
+    <resultMap id="PersonResultMap" type="com.masasilam.app.model.entity.film.Person">
         <id property="id" column="id"/>
         <result property="wikidataQid" column="wikidata_qid"/>
         <result property="name" column="name"/>
@@ -38,7 +38,7 @@
         <result property="photoUrl" column="photo_url"/>
     </resultMap>
 
-    <resultMap id="CompanyResultMap" type="com.masasilam.app.model.film.Company">
+    <resultMap id="CompanyResultMap" type="com.masasilam.app.model.entity.film.Company">
         <id property="id" column="id"/>
         <result property="wikidataQid" column="wikidata_qid"/>
         <result property="name" column="name"/>

@@ -1,6 +1,7 @@
 package com.masasilam.app.model.entity.social;
 
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 

@@ -1,6 +1,6 @@
 package com.masasilam.app.service.film.video;
 
-import com.masasilam.app.model.film.FilmVideoSource;
+import com.masasilam.app.model.entity.film.FilmVideoSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

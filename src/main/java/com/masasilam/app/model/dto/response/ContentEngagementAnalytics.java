@@ -10,11 +10,7 @@ public class ContentEngagementAnalytics {
     private Integer totalBookmarks;
     private Integer totalHighlights;
     private Integer totalNotes;
-
-    // Top engaged chapters
     private List<ChapterEngagement> topEngagedChapters;
-
-    // Annotation trends
     private Double averageAnnotationsPerChapter;
     private Double averageAnnotationsPerReader;
 }

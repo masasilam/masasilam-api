@@ -9,21 +9,14 @@ public class UserReadingPattern {
     private Long id;
     private Long userId;
     private Long bookId;
-
-    // Time patterns
-    private Integer preferredReadingHour; // 0-23
-    private Integer preferredDayOfWeek; // 1-7
+    private Integer preferredReadingHour;
+    private Integer preferredDayOfWeek;
     private Integer averageSessionDurationMinutes;
-
-    // Behavior patterns
-    private Double skipRate; // % of chapters skipped
-    private Double rereadRate; // % of chapters reread
+    private Double skipRate;
+    private Double rereadRate;
     private Double completionSpeedChaptersPerDay;
-
-    // Engagement patterns
-    private Double annotationFrequency; // Annotations per chapter
+    private Double annotationFrequency;
     private Integer averageReadingSpeedWpm;
-
     private LocalDateTime lastCalculatedAt;
     private LocalDateTime createdAt;
 }

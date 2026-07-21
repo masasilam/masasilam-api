@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 class ChapterComparison {
-    private String metric; // e.g., "completion_rate"
+    private String metric;
     private Double currentValue;
     private Double comparisonValue;
     private Double percentageDifference;
-    private String trend; // "better", "worse", "similar"
+    private String trend;
 }

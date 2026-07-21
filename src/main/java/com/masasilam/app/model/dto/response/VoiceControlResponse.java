@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -11,8 +12,6 @@ public class VoiceControlResponse {
     private Boolean success;
     private String error;
     private LocalDateTime processedAt;
-
-    // Navigation results
     private Integer targetPage;
     private String searchQuery;
     private String bookmarkTitle;

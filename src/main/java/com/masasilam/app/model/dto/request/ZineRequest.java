@@ -6,7 +6,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class ZineRequest {
-
     @NotNull(message = "File zine tidak boleh kosong")
     private MultipartFile zineFile;
 }

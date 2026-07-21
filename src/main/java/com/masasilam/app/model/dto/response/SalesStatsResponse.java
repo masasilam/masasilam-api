@@ -10,14 +10,13 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.List;
 
-// ============ SALES STATS RESPONSE ============
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SalesStatsResponse {
-    private String period; // daily, weekly, monthly, yearly
+    private String period;
     private String startDate;
     private String endDate;
     private BigDecimal totalRevenue;

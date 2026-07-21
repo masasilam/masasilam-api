@@ -9,31 +9,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class EntityResponseMapper {
-
-    public ChapterAudioResponse toChapterAudioResponse(ChapterAudio audio) {
-        if (audio == null) return null;
-
-        ChapterAudioResponse response = new ChapterAudioResponse();
-        response.setId(audio.getId());
-        response.setBookId(audio.getBookId());
-        response.setChapterNumber(audio.getChapterNumber());
-        response.setAudioUrl(audio.getAudioUrl());
-        response.setDuration(audio.getDuration());
-        response.setFileSize(audio.getFileSize());
-        response.setFormat(audio.getFormat());
-        return response;
-    }
-
-    public ChapterSummaryResponse toChapterSummaryResponse(BookChapter chapter) {
-        if (chapter == null) return null;
-
-        ChapterSummaryResponse response = new ChapterSummaryResponse();
-        response.setChapterNumber(chapter.getChapterNumber());
-        response.setTitle(chapter.getTitle());
-        response.setWordCount(chapter.getWordCount());
-        return response;
-    }
-
     public BookmarkResponse toBookmarkResponse(Bookmark bookmark) {
         if (bookmark == null) return null;
 
@@ -45,7 +20,6 @@ public class EntityResponseMapper {
         response.setChapterSlug(bookmark.getChapterSlug());
         response.setPosition(bookmark.getPosition());
         response.setCreatedAt(bookmark.getCreatedAt());
-        // HAPUS: title, description, color
         return response;
     }
 
@@ -64,7 +38,6 @@ public class EntityResponseMapper {
         response.setColor(highlight.getColor());
         response.setCreatedAt(highlight.getCreatedAt());
         response.setUpdatedAt(highlight.getUpdatedAt());
-        // HAPUS: color, note
         return response;
     }
 
@@ -83,7 +56,6 @@ public class EntityResponseMapper {
         response.setSelectedText(note.getSelectedText());
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
-        // HAPUS: title, color, isPrivate
         return response;
     }
 

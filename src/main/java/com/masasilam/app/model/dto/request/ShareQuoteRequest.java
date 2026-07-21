@@ -7,10 +7,9 @@ import lombok.Data;
 public class ShareQuoteRequest {
     @NotBlank
     private String text;
-
     private String authorName;
     private Integer page;
-    private String template = "DEFAULT"; // Template style
+    private String template = "DEFAULT";
     private String backgroundColor = "#FFFFFF";
     private String textColor = "#000000";
 }

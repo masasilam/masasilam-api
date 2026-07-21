@@ -12,7 +12,7 @@ public class GroupDiscussionResponse {
     private Long userId;
     private String username;
     private String userPhoto;
-    private String userRole;  // owner, moderator, member
+    private String userRole;
     private Long parentId;
     private String title;
     private String content;

@@ -8,24 +8,17 @@ import java.time.LocalDateTime;
 public class UserReadingPatternResponse {
     private Long bookId;
     private String bookTitle;
-
-    // Time patterns
     private Integer preferredReadingHour;
-    private String preferredReadingTime; // "Morning", "Afternoon", "Evening", "Night"
+    private String preferredReadingTime;
     private Integer preferredDayOfWeek;
-    private String preferredDay; // "Monday", "Tuesday", etc.
+    private String preferredDay;
     private Integer averageSessionDurationMinutes;
-
-    // Behavior patterns
     private Double skipRate;
     private Double rereadRate;
     private Double completionSpeedChaptersPerDay;
-    private String readingPace; // "Slow", "Moderate", "Fast"
-
-    // Engagement patterns
+    private String readingPace;
     private Double annotationFrequency;
-    private String annotationStyle; // "Heavy", "Moderate", "Light"
+    private String annotationStyle;
     private Integer averageReadingSpeedWpm;
-
     private LocalDateTime lastCalculatedAt;
 }

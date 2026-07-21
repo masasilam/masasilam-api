@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// ============ STOCK HISTORY RESPONSE ============
 @Data
 @Builder
 @NoArgsConstructor

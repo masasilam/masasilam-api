@@ -16,26 +16,16 @@ import java.util.List;
 public class NewspaperAnalyticsResponse {
     private LocalDate dateFrom;
     private LocalDate dateTo;
-
-    // Overview
     private Long totalViews;
     private Long totalReads;
     private Integer totalShares;
     private Integer totalSaves;
     private Integer totalComments;
-
-    // Popular articles
     private List<NewspaperArticleResponse> topViewedArticles;
     private List<NewspaperArticleResponse> topRatedArticles;
     private List<NewspaperArticleResponse> topSharedArticles;
-
-    // Category performance
     private List<CategoryPerformance> categoryPerformance;
-
-    // Source performance
     private List<SourcePerformance> sourcePerformance;
-
-    // Trending topics
     private List<String> trendingTags;
 
     @Data

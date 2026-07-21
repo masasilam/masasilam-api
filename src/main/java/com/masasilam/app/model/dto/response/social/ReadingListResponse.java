@@ -24,15 +24,10 @@ public class ReadingListResponse {
     private Long forkedFromId;
     private String forkedFromTitle;
     private List<String> tags;
-
-    // Current user context
     private Boolean isLikedByMe;
     private Boolean isFollowedByMe;
     private Boolean isOwner;
-
-    // Preview items
     private List<ReadingListItemResponse> items;
-
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 }

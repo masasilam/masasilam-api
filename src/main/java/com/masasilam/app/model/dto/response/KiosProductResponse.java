@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// ============ KIOS PRODUCT RESPONSE ============
 @Data
 @Builder
 @NoArgsConstructor
@@ -27,7 +26,7 @@ public class KiosProductResponse {
     private BigDecimal price;
     private BigDecimal discountPrice;
     private BigDecimal discountPercentage;
-    private BigDecimal finalPrice; // Price after discount
+    private BigDecimal finalPrice;
     private Integer stockQuantity;
     private Integer minStockLevel;
     private BigDecimal weight;

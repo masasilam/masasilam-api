@@ -13,27 +13,18 @@ public class UpdateBlogPostRequest {
     @NotBlank(message = "Title is required")
     @Size(min = 3, max = 255, message = "Title must be between 3 and 255 characters")
     private String title;
-
     @NotBlank(message = "Content is required")
     @Size(min = 10, message = "Content must be at least 10 characters")
     private String content;
-
     @Size(max = 500, message = "Source must not exceed 500 characters")
     private String source;
-
     @Size(max = 500, message = "Excerpt must not exceed 500 characters")
     private String excerpt;
-
     @NotBlank(message = "Status is required")
     @Pattern(regexp = "DRAFT|PUBLISHED|SCHEDULED|ARCHIVED", message = "Invalid status")
     private String status;
-
     private LocalDateTime scheduledAt;
-
     private List<Long> categoryIds;
-
     private List<String> tags;
-
     private List<Long> bookIds;
-
 }

@@ -5,11 +5,7 @@ package com.masasilam.app.model.dto.request;
 
 import lombok.Data;
 
-/**
- * Request body saat admin menolak koreksi.
- * note bersifat opsional — admin bisa isi alasan penolakan.
- */
 @Data
 public class RejectCorrectionRequest {
-    private String note; // opsional
+    private String note;
 }

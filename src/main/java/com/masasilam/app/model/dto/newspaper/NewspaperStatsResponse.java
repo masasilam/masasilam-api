@@ -19,8 +19,6 @@ public class NewspaperStatsResponse {
     private Integer articlesToday;
     private Integer articlesThisWeek;
     private Integer articlesThisMonth;
-
-    // Category breakdown
     private List<CategoryStats> categoryStats;
 
     @Data

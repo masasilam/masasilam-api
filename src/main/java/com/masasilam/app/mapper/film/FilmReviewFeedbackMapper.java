@@ -1,6 +1,6 @@
 package com.masasilam.app.mapper.film;
 
-import com.masasilam.app.model.film.FilmReviewFeedback;
+import com.masasilam.app.model.entity.film.FilmReviewFeedback;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

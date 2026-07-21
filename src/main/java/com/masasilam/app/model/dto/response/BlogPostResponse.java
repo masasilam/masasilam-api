@@ -18,23 +18,16 @@ public class BlogPostResponse {
     private Long viewCount;
     private Long likeCount;
     private Long commentCount;
-
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishedAt;
-
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
-
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
-
     private String authorName;
     private String authorAvatar;
-
     private String categories;
     private String tags;
-
     private Boolean isLiked = false;
-
     private Integer readingTime;
 }

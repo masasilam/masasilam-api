@@ -23,14 +23,9 @@ public class ArticleReviewResponse {
     private Integer helpfulCount;
     private Integer notHelpfulCount;
     private Integer replyCount;
-
-    // User interaction
     private Boolean isOwner;
-    private Boolean currentUserFeedback; // null, true (helpful), false (not helpful)
-
-    // Replies
+    private Boolean currentUserFeedback;
     private List<ArticleReviewReplyResponse> replies;
-
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

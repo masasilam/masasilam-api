@@ -8,7 +8,7 @@ public class ChallengeParticipant {
     private Long id;
     private Long challengeId;
     private Long userId;
-    private String status;  // in_progress, completed, abandoned
+    private String status;
     private Integer progressCount;
     private LocalDateTime completedAt;
     private LocalDateTime joinedAt;

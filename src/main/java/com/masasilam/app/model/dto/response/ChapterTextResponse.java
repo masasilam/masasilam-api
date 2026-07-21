@@ -8,5 +8,5 @@ public class ChapterTextResponse {
     private String chapterTitle;
     private String plainText;
     private Integer wordCount;
-    private Integer estimatedDuration; // in seconds
+    private Integer estimatedDuration;
 }

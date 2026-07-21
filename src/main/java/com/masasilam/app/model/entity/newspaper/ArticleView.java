@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
 public class ArticleView {
     private Long id;
     private Long articleId;
-    private Long userId; // NULL for guests
+    private Long userId;
     private String ipAddress;
     private String userAgent;
     private String viewerHash;
-    private String actionType; // view, read, share
+    private String actionType;
     private LocalDateTime createdAt;
 }

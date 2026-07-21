@@ -7,9 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// ============================================
-// 1. NEWSPAPER SOURCE
-// ============================================
 @Data
 @Builder
 @NoArgsConstructor

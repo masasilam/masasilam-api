@@ -10,7 +10,7 @@ public class ChapterRating {
     private Long userId;
     private Long bookId;
     private Integer chapterNumber;
-    private Integer rating; // 1-5
+    private Integer rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

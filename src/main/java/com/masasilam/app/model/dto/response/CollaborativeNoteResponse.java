@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,8 +25,8 @@ public class CollaborativeNoteResponse {
     @Data
     public static class EditHistory {
         private String editorName;
-        private String action; // CREATE, UPDATE, DELETE
+        private String action;
         private LocalDateTime timestamp;
-        private String changes; // Brief description of changes
+        private String changes;
     }
 }

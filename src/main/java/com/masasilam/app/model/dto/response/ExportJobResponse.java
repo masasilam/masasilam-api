@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class ExportJobResponse {
     private Long exportId;
     private String format;
-    private String status;                  // "pending", "processing", "completed", "failed"
+    private String status;
     private String downloadUrl;
     private Long fileSizeBytes;
     private LocalDateTime requestedAt;

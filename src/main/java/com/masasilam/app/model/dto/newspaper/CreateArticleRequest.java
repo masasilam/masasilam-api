@@ -15,32 +15,21 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateArticleRequest {
-
-    // sourceId: pakai jika sumber sudah terdaftar
     private Long sourceId;
-
-    // sourceName: pakai jika sumber belum terdaftar, akan dibuat otomatis
     @Size(max = 255)
     private String sourceName;
-
     @NotBlank
     private String slug;
-
     @NotBlank
     private String category;
-
     @NotNull
     private LocalDate publishDate;
-
     @NotBlank
     private String title;
-
     @Size(max = 500)
-    private String subtitle;           // ← BARU: sub judul, opsional
-
+    private String subtitle;
     @NotBlank
     private String htmlContent;
-
     private String author;
     private Integer pageNumber;
     private String importance;

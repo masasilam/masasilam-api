@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response.social;
 
 import lombok.Data;
+
 import java.time.OffsetDateTime;
 import java.util.Map;
 
