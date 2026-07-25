@@ -44,4 +44,3 @@ public class Book {
     private String firstPublished;
     private String firstPublisher;
 }
-

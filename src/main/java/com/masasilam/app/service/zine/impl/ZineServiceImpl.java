@@ -87,8 +87,7 @@ public class ZineServiceImpl implements ZineService {
             }
 
             log.info("Extracting metadata from EPUB zine file");
-            CompleteEpubMetadata epubMeta = EpubMetadataExtractor.extractCompleteMetadata(
-                    request.getZineFile().getInputStream());
+            CompleteEpubMetadata epubMeta = EpubMetadataExtractor.extractCompleteMetadata(request.getZineFile().getInputStream());
 
             String finalTitle = epubMeta.getTitle();
             if (finalTitle == null || finalTitle.isEmpty()) {
@@ -101,9 +100,7 @@ public class ZineServiceImpl implements ZineService {
                 throw new IllegalArgumentException("Tahun publikasi tidak ditemukan di metadata EPUB.");
             }
 
-            String titleWithSubtitle = epubMeta.getSubtitle() != null && !epubMeta.getSubtitle().isEmpty()
-                    ? finalTitle + " " + epubMeta.getSubtitle()
-                    : finalTitle;
+            String titleWithSubtitle = epubMeta.getSubtitle() != null && !epubMeta.getSubtitle().isEmpty() ? finalTitle + " " + epubMeta.getSubtitle() : finalTitle;
             String baseSlug = fileUtil.sanitizeFilename(titleWithSubtitle);
             Zine existingZine = checkExistingZineWithSameAuthor(baseSlug, epubMeta);
 
@@ -150,16 +147,10 @@ public class ZineServiceImpl implements ZineService {
             zine.setDownloadCount(0);
             zine.setIsActive(true);
             zine.setIsFeatured(false);
-            zine.setPublishedAt(epubMeta.getPublishedAt() != null
-                    ? epubMeta.getPublishedAt().atStartOfDay().atOffset(ZoneOffset.UTC)
-                    : null);
+            zine.setPublishedAt(epubMeta.getPublishedAt() != null ? epubMeta.getPublishedAt().atStartOfDay().atOffset(ZoneOffset.UTC) : null);
             zine.setCategory(epubMeta.getCategory());
-            zine.setCreatedAt(epubMeta.getUpdatedAt() != null
-                    ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC)
-                    : OffsetDateTime.now(ZoneOffset.UTC));
-            zine.setUpdatedAt(epubMeta.getUpdatedAt() != null
-                    ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC)
-                    : OffsetDateTime.now(ZoneOffset.UTC));
+            zine.setCreatedAt(epubMeta.getUpdatedAt() != null ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC) : OffsetDateTime.now(ZoneOffset.UTC));
+            zine.setUpdatedAt(epubMeta.getUpdatedAt() != null ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC) : OffsetDateTime.now(ZoneOffset.UTC));
 
             zineMapper.insertZine(zine);
             log.info("Zine created with ID: {} and slug: {}", zine.getId(), zine.getSlug());
@@ -217,9 +208,7 @@ public class ZineServiceImpl implements ZineService {
         existingZine.setFileFormat(metadata.getFileFormat());
         existingZine.setFileSize(metadata.getFileSize());
         existingZine.setCopyrightStatusId(Long.valueOf(copyrightStatus.getId()));
-        existingZine.setPublishedAt(epubMeta.getPublishedAt() != null
-                ? epubMeta.getPublishedAt().atStartOfDay().atOffset(ZoneOffset.UTC)
-                : null);
+        existingZine.setPublishedAt(epubMeta.getPublishedAt() != null ? epubMeta.getPublishedAt().atStartOfDay().atOffset(ZoneOffset.UTC) : null);
         existingZine.setCategory(epubMeta.getCategory());
         existingZine.setCollectionName(epubMeta.getCollectionName());
         existingZine.setVolume(calculateVolume(epubMeta.getCollectionName(), epubMeta.getPublicationYear()));
@@ -229,9 +218,7 @@ public class ZineServiceImpl implements ZineService {
         }
         existingZine.setFirstPublisher(epubMeta.getFirstPublisher());
         existingZine.setFirstPublishedDate(epubMeta.getFirstPublished());
-        existingZine.setUpdatedAt(epubMeta.getUpdatedAt() != null
-                ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC)
-                : OffsetDateTime.now(ZoneOffset.UTC));
+        existingZine.setUpdatedAt(epubMeta.getUpdatedAt() != null ? epubMeta.getUpdatedAt().atOffset(ZoneOffset.UTC) : OffsetDateTime.now(ZoneOffset.UTC));
 
         Book adapter = toBookAdapter(existingZine);
         EpubProcessResult result = epubService.processEpubFileForUpdate(newFile, adapter, zineChapterRepository);
@@ -264,9 +251,7 @@ public class ZineServiceImpl implements ZineService {
             Long zineId = zineMapper.getZineIdBySlug(slug);
             if (zineId == null) throw new DataNotFoundException();
 
-            boolean hasViewed = userId != null
-                    ? zineMapper.hasActionByUserAndZine(zineId, userId, "view")
-                    : zineMapper.hasActionByHash(viewerHash, "view");
+            boolean hasViewed = userId != null ? zineMapper.hasActionByUserAndZine(zineId, userId, "view") : zineMapper.hasActionByHash(viewerHash, "view");
 
             if (!hasViewed) {
                 try {
@@ -375,9 +360,7 @@ public class ZineServiceImpl implements ZineService {
             Long userId = getCurrentUserId();
             String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
-            boolean hasDownloaded = userId != null
-                    ? zineMapper.hasActionByUserAndZine(zine.getId(), userId, "download")
-                    : zineMapper.hasActionByHash(viewerHash, "download");
+            boolean hasDownloaded = userId != null ? zineMapper.hasActionByUserAndZine(zine.getId(), userId, "download") : zineMapper.hasActionByHash(viewerHash, "download");
 
             if (!hasDownloaded) {
                 try {
@@ -435,9 +418,7 @@ public class ZineServiceImpl implements ZineService {
 
     @Override
     public DataResponse<List<GenreResponse>> getAllGenres(boolean includeZineCount) {
-        List<Genre> genres = includeZineCount
-                ? genreMapper.findAllWithBookCount()
-                : genreMapper.findAll();
+        List<Genre> genres = includeZineCount ? genreMapper.findAllWithBookCount() : genreMapper.findAll();
 
         List<GenreResponse> responses = genres.stream().map(this::mapToGenreResponse).toList();
         return new DataResponse<>(SUCCESS, "Genres retrieved successfully", HttpStatus.OK.value(), responses);
@@ -456,8 +437,7 @@ public class ZineServiceImpl implements ZineService {
         List<AuthorResponse> responses = authors.stream().map(this::mapToAuthorResponse).toList();
         int total = authorMapper.countAll(search);
 
-        return new DatatableResponse<>(SUCCESS, "Authors retrieved successfully",
-                HttpStatus.OK.value(), new PageDataResponse<>(page, limit, total, responses));
+        return new DatatableResponse<>(SUCCESS, "Authors retrieved successfully", HttpStatus.OK.value(), new PageDataResponse<>(page, limit, total, responses));
     }
 
     @Override
@@ -467,8 +447,7 @@ public class ZineServiceImpl implements ZineService {
         List<ContributorResponse> responses = contributors.stream().map(this::mapToContributorResponse).toList();
         int total = contributorMapper.countAll(role, search);
 
-        return new DatatableResponse<>(SUCCESS, "Contributors retrieved successfully",
-                HttpStatus.OK.value(), new PageDataResponse<>(page, limit, total, responses));
+        return new DatatableResponse<>(SUCCESS, "Contributors retrieved successfully", HttpStatus.OK.value(), new PageDataResponse<>(page, limit, total, responses));
     }
 
     private int calculateVolume(String collectionName, Integer publicationYear) {
@@ -483,8 +462,7 @@ public class ZineServiceImpl implements ZineService {
             }
             int volume = (publicationYear - earliestYear) + 1;
             if (volume < 1) volume = 1;
-            log.info("Collection '{}': earliest={}, current={}, volume={}",
-                    collectionName, earliestYear, publicationYear, volume);
+            log.info("Collection '{}': earliest={}, current={}, volume={}", collectionName, earliestYear, publicationYear, volume);
             return volume;
         } catch (Exception e) {
             log.warn("Failed to calculate volume for '{}': {}", collectionName, e.getMessage());

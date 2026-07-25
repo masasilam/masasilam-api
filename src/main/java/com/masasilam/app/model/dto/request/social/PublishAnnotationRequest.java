@@ -6,19 +6,13 @@ import lombok.Data;
 
 @Data
 public class PublishAnnotationRequest {
-    // Option A: publish from existing epub annotation
     private Long sourceAnnotationId;
-
-    // Option B: create directly
     @NotBlank
     private String entityType;
-
     @NotNull
     private Long entityId;
-
-    private String entitySlug;   // ✅ Add this
-    private String entityTitle;  // ✅ Add this
-
+    private String entitySlug;
+    private String entityTitle;
     private String cfi;
     private String selectedText;
     private String color;
@@ -26,5 +20,5 @@ public class PublishAnnotationRequest {
     private String contextBefore;
     private String contextAfter;
     private String chapterLabel;
-    private String visibility; // public, followers, private
+    private String visibility;
 }

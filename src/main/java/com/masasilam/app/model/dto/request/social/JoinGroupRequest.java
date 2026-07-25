@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class JoinGroupRequest {
-    private String message;  // for private groups
+    private String message;
 }

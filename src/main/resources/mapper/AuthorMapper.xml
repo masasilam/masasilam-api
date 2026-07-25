@@ -26,7 +26,7 @@
         FROM authors
         <where>
             <if test="search != null and search != ''">
-                name LIKE CONCAT('%', #{search}, '%')
+                name ILIKE CONCAT('%', #{search}, '%')
             </if>
         </where>
         ORDER BY ${sortColumn} ASC
@@ -38,7 +38,7 @@
         FROM authors
         <where>
             <if test="search != null and search != ''">
-                name LIKE CONCAT('%', #{search}, '%')
+                name ILIKE CONCAT('%', #{search}, '%')
             </if>
         </where>
     </select>

@@ -518,41 +518,42 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public DatatableResponse<BookResponse> getPaginatedBooks(int page, int limit, String sortField, String sortOrder, BookSearchCriteria criteria) {
+    public DatatableResponse<ContentResponse> getPaginatedContent(
+            int page, int limit, String sortField, String sortOrder, ContentSearchCriteria criteria) {
         try {
             Map<String, String> allowedSortFields = new HashMap<>();
-            allowedSortFields.put("updateAt", "b.updated_at");
-            allowedSortFields.put("title", "b.title");
-            allowedSortFields.put("publishedAt", "b.published_at");
-            allowedSortFields.put("estimatedReadTime", "b.estimated_read_time");
-            allowedSortFields.put("totalWord", "b.total_word");
+            allowedSortFields.put("updateAt", "updated_at");
+            allowedSortFields.put("title", "title");
+            allowedSortFields.put("publishedAt", "published_at");
+            allowedSortFields.put("estimatedReadTime", "estimated_read_time");
+            allowedSortFields.put("totalWord", "total_word");
             allowedSortFields.put("averageRating", "average_rating");
-            allowedSortFields.put("viewCount", "b.view_count");
-            allowedSortFields.put("readCount", "b.read_count");
-            allowedSortFields.put("downloadCount", "b.download_count");
-            allowedSortFields.put("fileSize", "b.file_size");
-            allowedSortFields.put("totalPages", "b.total_pages");
+            allowedSortFields.put("viewCount", "view_count");
+            allowedSortFields.put("readCount", "read_count");
+            allowedSortFields.put("downloadCount", "download_count");
+            allowedSortFields.put("fileSize", "file_size");
+            allowedSortFields.put("totalPages", "total_pages");
 
-            String sortColumn = allowedSortFields.getOrDefault(sortField, "b.updated_at");
+            String sortColumn = allowedSortFields.getOrDefault(sortField, "updated_at");
             String sortType = "DESC".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
 
             int offset = (page - 1) * limit;
 
-            log.info("Fetching books with criteria: {}", criteria);
+            log.info("Fetching content with criteria: {}", criteria);
             log.info("Sort by: {} {}, Page: {}, Limit: {}", sortColumn, sortType, page, limit);
 
-            List<BookResponse> pageResult = bookMapper.getBookListWithAdvancedFilters(criteria, offset, limit, sortColumn, sortType);
+            List<ContentResponse> pageResult = bookMapper.getContentListWithAdvancedFilters(criteria, offset, limit, sortColumn, sortType);
 
-            int totalCount = bookMapper.countBooksWithAdvancedFilters(criteria);
+            int totalCount = bookMapper.countContentWithAdvancedFilters(criteria);
 
-            log.info("Found {} books, returning page {} with {} items", totalCount, page, pageResult.size());
+            log.info("Found {} items, returning page {} with {} items", totalCount, page, pageResult.size());
 
-            PageDataResponse<BookResponse> data = new PageDataResponse<>(page, limit, totalCount, pageResult);
+            PageDataResponse<ContentResponse> data = new PageDataResponse<>(page, limit, totalCount, pageResult);
 
             return new DatatableResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), data);
 
         } catch (Exception e) {
-            log.error("Error fetching paginated books with advanced filters", e);
+            log.error("Error fetching paginated content with advanced filters", e);
             throw e;
         }
     }

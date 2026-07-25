@@ -1,6 +1,6 @@
 package com.masasilam.app.controller.book;
 
-import com.masasilam.app.model.dto.BookSearchCriteria;
+import com.masasilam.app.model.dto.ContentSearchCriteria;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.Book;
@@ -43,29 +43,33 @@ public class BookController {
     }
 
     @GetMapping
-    public ResponseEntity<DatatableResponse<BookResponse>> getBooksPaginated(@RequestParam(defaultValue = "1") @Min(1) int page,
-                                                                             @RequestParam(defaultValue = "12") @Min(1) int limit,
-                                                                             @RequestParam(defaultValue = "updateAt") String sortField,
-                                                                             @RequestParam(defaultValue = "DESC") String sortOrder,
-                                                                             @RequestParam(required = false) String searchTitle,
-                                                                             @RequestParam(required = false) String searchInBook,
-                                                                             @RequestParam(required = false) String authorName,
-                                                                             @RequestParam(required = false) String contributor,
-                                                                             @RequestParam(required = false) String genre,
-                                                                             @RequestParam(required = false) Integer minChapters,
-                                                                             @RequestParam(required = false) Integer maxChapters,
-                                                                             @RequestParam(required = false) Long minFileSize,
-                                                                             @RequestParam(required = false) Long maxFileSize,
-                                                                             @RequestParam(required = false) Integer publicationYearFrom,
-                                                                             @RequestParam(required = false) Integer publicationYearTo,
-                                                                             @RequestParam(required = false) String difficultyLevel,
-                                                                             @RequestParam(required = false) String fileFormat,
-                                                                             @RequestParam(required = false) Boolean isFeatured,
-                                                                             @RequestParam(required = false) Integer languageId,
-                                                                             @RequestParam(required = false) Double minRating,
-                                                                             @RequestParam(required = false) Integer minViewCount,
-                                                                             @RequestParam(required = false) Integer minReadCount) {
-        BookSearchCriteria criteria = BookSearchCriteria.builder()
+    public ResponseEntity<DatatableResponse<ContentResponse>> getContentPaginated(
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "12") @Min(1) int limit,
+            @RequestParam(defaultValue = "updateAt") String sortField,
+            @RequestParam(defaultValue = "DESC") String sortOrder,
+            @RequestParam(required = false, defaultValue = "BOOK") String contentType,
+            @RequestParam(required = false) String searchTitle,
+            @RequestParam(required = false) String searchInBook,
+            @RequestParam(required = false) String authorName,
+            @RequestParam(required = false) String contributor,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) Integer minChapters,
+            @RequestParam(required = false) Integer maxChapters,
+            @RequestParam(required = false) Long minFileSize,
+            @RequestParam(required = false) Long maxFileSize,
+            @RequestParam(required = false) Integer publicationYearFrom,
+            @RequestParam(required = false) Integer publicationYearTo,
+            @RequestParam(required = false) String difficultyLevel,
+            @RequestParam(required = false) String fileFormat,
+            @RequestParam(required = false) Boolean isFeatured,
+            @RequestParam(required = false) Integer languageId,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Integer minViewCount,
+            @RequestParam(required = false) Integer minReadCount) {
+
+        ContentSearchCriteria criteria = ContentSearchCriteria.builder()
+                .contentType(contentType)
                 .searchTitle(searchTitle)
                 .searchInBook(searchInBook)
                 .authorName(authorName)
@@ -86,7 +90,7 @@ public class BookController {
                 .minReadCount(minReadCount)
                 .build();
 
-        DatatableResponse<BookResponse> response = bookService.getPaginatedBooks(page, limit, sortField, sortOrder, criteria);
+        DatatableResponse<ContentResponse> response = bookService.getPaginatedContent(page, limit, sortField, sortOrder, criteria);
         return ResponseEntity.ok(response);
     }
 

@@ -10,10 +10,8 @@ public class CreateReadingListRequest {
     @NotBlank
     @Size(max = 255)
     private String title;
-
     @Size(max = 2000)
     private String description;
-
-    private String visibility; // public, followers, private
+    private String visibility;
     private List<String> tags;
 }
