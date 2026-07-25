@@ -10,14 +10,11 @@ import java.util.List;
 public class CreateChallengeRequest {
     @NotBlank
     private String title;
-
     private String description;
     private String coverImageUrl;
-
     @NotNull
-    private String challengeType; // COUNT_BASED, GENRE_BASED, DATE_BASED, LIST_BASED
-
-    private List<String> entityTypes;  // BOOK, ZINE, FILM, etc.
+    private String challengeType;
+    private List<String> entityTypes;
     private Integer targetCount;
     private List<String> requiredGenres;
     private Long requiredListId;

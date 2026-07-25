@@ -22,18 +22,12 @@ public class CompleteEpubMetadata {
     private String copyrightStatus;
     private String source;
     private byte[] coverImageData;
-
-    // Series
     private String seriesName;
     private Integer seriesOrder;
     private String seriesDescription;
-
-    // Publikasi pertama
     private String firstPublished;
     private String firstPublisher;
-
-    // Periodical — TAMBAH INI
-    private String collectionName;   // "Zaman Baru" dari belongs-to-collection
-    private String collectionType;   // "periodical" atau "series"
+    private String collectionName;
+    private String collectionType;
     private Integer issueNumber;
 }
