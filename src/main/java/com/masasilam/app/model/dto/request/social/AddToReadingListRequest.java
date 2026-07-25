@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class AddToReadingListRequest {
     @NotBlank
-    private String entityType; // BOOK, ZINE, FILM, NEWSPAPER
+    private String entityType;
 
     @NotNull
     private Long entityId;

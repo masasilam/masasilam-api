@@ -2,6 +2,79 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.masasilam.app.mapper.book.BookMapper">
+
+    <sql id="zineAdvancedSearchConditions">
+        <where>
+            z.is_active = TRUE
+            <if test="criteria.searchTitle != null and criteria.searchTitle != ''">
+                AND LOWER(z.title) LIKE CONCAT('%', LOWER(#{criteria.searchTitle}), '%')
+            </if>
+            <if test="criteria.searchInBook != null and criteria.searchInBook != ''">
+                AND (LOWER(z.title) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%')
+                OR LOWER(z.description) LIKE CONCAT('%', LOWER(#{criteria.searchInBook}), '%'))
+            </if>
+            <if test="criteria.authorName != null and criteria.authorName != ''">
+                AND EXISTS (
+                SELECT 1 FROM zine_authors za JOIN authors a ON za.author_id = a.id
+                WHERE za.zine_id = z.id
+                AND (LOWER(a.slug) = LOWER(#{criteria.authorName})
+                OR LOWER(a.name) LIKE CONCAT('%', LOWER(#{criteria.authorName}), '%'))
+                )
+            </if>
+            <if test="criteria.genre != null and criteria.genre != ''">
+                AND EXISTS (
+                SELECT 1 FROM zine_genres zg JOIN genres g ON zg.genre_id = g.id
+                WHERE zg.zine_id = z.id
+                AND (LOWER(g.slug) = LOWER(#{criteria.genre})
+                OR LOWER(g.name) LIKE CONCAT('%', LOWER(#{criteria.genre}), '%'))
+                )
+            </if>
+            <if test="criteria.contributor != null and criteria.contributor != ''">
+                AND EXISTS (
+                SELECT 1 FROM zine_contributors zc JOIN contributors c ON zc.contributor_id = c.id
+                WHERE zc.zine_id = z.id
+                AND LOWER(c.name) LIKE CONCAT('%', LOWER(#{criteria.contributor}), '%')
+                )
+            </if>
+            <if test="criteria.minPages != null">
+                AND z.total_pages &gt;= #{criteria.minPages}
+            </if>
+            <if test="criteria.maxPages != null">
+                AND z.total_pages &lt;= #{criteria.maxPages}
+            </if>
+            <if test="criteria.minFileSize != null">
+                AND z.file_size &gt;= #{criteria.minFileSize}
+            </if>
+            <if test="criteria.maxFileSize != null">
+                AND z.file_size &lt;= #{criteria.maxFileSize}
+            </if>
+            <if test="criteria.publicationYearFrom != null">
+                AND z.publication_year &gt;= #{criteria.publicationYearFrom}
+            </if>
+            <if test="criteria.publicationYearTo != null">
+                AND z.publication_year &lt;= #{criteria.publicationYearTo}
+            </if>
+            <if test="criteria.difficultyLevel != null and criteria.difficultyLevel != ''">
+                AND UPPER(z.difficulty_level) = UPPER(#{criteria.difficultyLevel})
+            </if>
+            <if test="criteria.fileFormat != null and criteria.fileFormat != ''">
+                AND UPPER(z.file_format) = UPPER(#{criteria.fileFormat})
+            </if>
+            <if test="criteria.isFeatured != null">
+                AND z.is_featured = #{criteria.isFeatured}
+            </if>
+            <if test="criteria.languageId != null">
+                AND z.language_id = #{criteria.languageId}
+            </if>
+            <if test="criteria.minViewCount != null">
+                AND z.view_count &gt;= #{criteria.minViewCount}
+            </if>
+            <if test="criteria.minReadCount != null">
+                AND z.read_count &gt;= #{criteria.minReadCount}
+            </if>
+        </where>
+    </sql>
+
     <select id="countBySlug" resultType="int">
         SELECT COUNT(*) FROM books WHERE slug = #{slug}
     </select>
@@ -283,34 +356,45 @@
         </where>
     </sql>
 
-    <select id="getBookListWithAdvancedFilters" resultType="com.masasilam.app.model.dto.response.BookResponse">
-        SELECT b.id, b.title, b.slug, b.subtitle, b.edition, b.cover_image_url, b.publisher, b.publication_year,
-        b.file_url, b.file_format, b.file_size, b.total_pages, b.description, b.estimated_read_time, l.name AS language,
-        b.total_word, b.difficulty_level, b.view_count, b.read_count, b.download_count, b.series_id, b.series_order,
-        b.source, cs.name AS copyright_status, b.published_at, b.category, b.created_at, b.updated_at, b.is_active,
-        b.is_featured,
-        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM book_authors ba JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) AS author_names,
-        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name) FROM book_authors ba JOIN authors a ON ba.author_id = a.id
-        WHERE ba.book_id = b.id) AS author_slugs,
-        (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ') FROM book_contributors bc JOIN contributors c ON
-        bc.contributor_id = c.id WHERE bc.book_id = b.id) AS contributors,
-        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name) FROM book_genres bg JOIN genres g ON bg.genre_id = g.id WHERE
-        bg.book_id = b.id) AS genres,
-        COALESCE(rs.total_angry, 0) AS total_angry, COALESCE(rs.total_likes, 0) AS total_likes, COALESCE(rs.total_loves,
-        0) AS total_loves, COALESCE(rs.total_dislikes, 0) AS total_dislikes, COALESCE(rs.total_sad, 0) AS total_sad,
-        COALESCE(rs.total_comments, 0) AS total_comments, COALESCE(rs.total_reactions, 0) AS total_reactions,
-        COALESCE(br.average_rating, 0.0) AS average_rating, COALESCE(br.total_ratings, 0) AS total_ratings
+    <select id="getContentListWithAdvancedFilters" resultType="com.masasilam.app.model.dto.response.ContentResponse">
+        SELECT * FROM (
+        SELECT 'BOOK' AS content_type, b.id, b.title, b.slug, b.subtitle, b.edition,
+        b.series_id, b.series_order, bs.name AS series_name, bs.slug AS series_slug, bs.description AS series_description,
+        NULL::int AS volume, NULL::text AS issue_number, NULL AS collection_name,
+        b.cover_image_url, b.publisher, b.publication_year, b.file_url, b.file_format,
+        b.file_size, b.total_pages, b.description, b.estimated_read_time, l.name AS language,
+        b.total_word, b.difficulty_level::text AS difficulty_level, b.view_count, b.read_count, b.download_count,
+        b.first_published::text AS first_published, b.first_publisher,
+        cs.name AS copyright_status, b.published_at, b.category, b.source,
+        b.created_at, b.updated_at, b.is_active, b.is_featured,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name) FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id) AS author_slugs,
+        (SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name) FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id) AS author_photo_urls,
+        (SELECT STRING_AGG(c.name || ' (' || bc.role || ')', ', ') FROM book_contributors bc
+        JOIN contributors c ON bc.contributor_id = c.id WHERE bc.book_id = b.id) AS contributors,
+        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name) FROM book_genres bg
+        JOIN genres g ON bg.genre_id = g.id WHERE bg.book_id = b.id) AS genres,
+        COALESCE(rs.total_angry,0) AS total_angry, COALESCE(rs.total_likes,0) AS total_likes,
+        COALESCE(rs.total_loves,0) AS total_loves, COALESCE(rs.total_dislikes,0) AS total_dislikes,
+        COALESCE(rs.total_sad,0) AS total_sad, COALESCE(rs.total_comments,0) AS total_comments,
+        COALESCE(rs.total_reactions,0) AS total_reactions,
+        COALESCE(br.average_rating,0.0) AS average_rating, COALESCE(br.total_ratings,0) AS total_ratings
         FROM books b
         JOIN languages l ON b.language_id = l.id
         JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
+        LEFT JOIN book_series bs ON b.series_id = bs.id
         LEFT JOIN (
-        SELECT book_id, COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) AS total_angry, COUNT(CASE WHEN
-        UPPER(reaction_type) = 'LIKE' THEN 1 END) AS total_likes, COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1
-        END) AS total_loves, COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes, COUNT(CASE
-        WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad, COUNT(CASE WHEN UPPER(reaction_type) IN
-        ('SAD','ANGRY','LIKE','LOVE','DISLIKE') THEN 1 END) AS total_reactions, COUNT(CASE WHEN comment IS NOT NULL AND
-        parent_id IS NULL THEN 1 END) AS total_comments
+        SELECT book_id,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'ANGRY' THEN 1 END) AS total_angry,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LIKE' THEN 1 END) AS total_likes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'LOVE' THEN 1 END) AS total_loves,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'DISLIKE' THEN 1 END) AS total_dislikes,
+        COUNT(CASE WHEN UPPER(reaction_type) = 'SAD' THEN 1 END) AS total_sad,
+        COUNT(CASE WHEN UPPER(reaction_type) IN ('SAD','ANGRY','LIKE','LOVE','DISLIKE') THEN 1 END) AS total_reactions,
+        COUNT(CASE WHEN comment IS NOT NULL AND parent_id IS NULL THEN 1 END) AS total_comments
         FROM reactions GROUP BY book_id
         ) rs ON b.id = rs.book_id
         LEFT JOIN (
@@ -318,21 +402,57 @@
         FROM book_ratings WHERE rating IS NOT NULL GROUP BY book_id
         ) br ON b.id = br.book_id
         <include refid="advancedSearchConditions"/>
+        UNION ALL
+        SELECT 'ZINE' AS content_type, z.id, z.title, z.slug, z.subtitle, NULL AS edition,
+        NULL::bigint AS series_id, NULL::int AS series_order, NULL AS series_name, NULL AS series_slug, NULL AS series_description,
+        z.volume, z.issue_number, z.collection_name,
+        z.cover_image_url, z.publisher, z.publication_year, z.file_url, z.file_format,
+        z.file_size, z.total_pages, z.description, z.estimated_read_time, l.name AS language,
+        z.total_word, z.difficulty_level, z.view_count, z.read_count, z.download_count,
+        z.first_published_date::text AS first_published, z.first_publisher,
+        cs.name AS copyright_status, z.published_at::timestamp AS published_at, z.category, z.source,
+        z.created_at::timestamp AS created_at, z.updated_at::timestamp AS updated_at, z.is_active, z.is_featured,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM zine_authors za
+        JOIN authors a ON za.author_id = a.id WHERE za.zine_id = z.id) AS author_names,
+        (SELECT STRING_AGG(a.slug, ', ' ORDER BY a.name) FROM zine_authors za
+        JOIN authors a ON za.author_id = a.id WHERE za.zine_id = z.id) AS author_slugs,
+        (SELECT STRING_AGG(a.photo_url, ', ' ORDER BY a.name) FROM zine_authors za
+        JOIN authors a ON za.author_id = a.id WHERE za.zine_id = z.id) AS author_photo_urls,
+        (SELECT STRING_AGG(c.name || ' (' || zc.role || ')', ', ') FROM zine_contributors zc
+        JOIN contributors c ON zc.contributor_id = c.id WHERE zc.zine_id = z.id) AS contributors,
+        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name) FROM zine_genres zg
+        JOIN genres g ON zg.genre_id = g.id WHERE zg.zine_id = z.id) AS genres,
+        0 AS total_angry, 0 AS total_likes, 0 AS total_loves, 0 AS total_dislikes, 0 AS total_sad,
+        0 AS total_comments, 0::double precision AS total_reactions,
+        0.0::double precision AS average_rating, 0 AS total_ratings
+        FROM zines z
+        JOIN languages l ON z.language_id = l.id
+        JOIN copyright_statuses cs ON z.copyright_status_id = cs.id
+        <include refid="zineAdvancedSearchConditions"/>
+        ) combined
+        <where>
+            <if test="criteria.contentType != null and criteria.contentType != 'ALL'">
+                content_type = #{criteria.contentType}
+            </if>
+        </where>
         ORDER BY ${sortColumn} ${sortType}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="countBooksWithAdvancedFilters" resultType="int">
-        SELECT COUNT(DISTINCT b.id)
+    <select id="countContentWithAdvancedFilters" resultType="int">
+        SELECT COUNT(*) FROM (
+        SELECT b.id
         FROM books b
         JOIN languages l ON b.language_id = l.id
         JOIN copyright_statuses cs ON b.copyright_status_id = cs.id
-        LEFT JOIN (
-        SELECT book_id,
-        AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS average_rating
-        FROM reactions GROUP BY book_id
-        ) rs ON b.id = rs.book_id
         <include refid="advancedSearchConditions"/>
+        UNION ALL
+        SELECT z.id
+        FROM zines z
+        JOIN languages l ON z.language_id = l.id
+        JOIN copyright_statuses cs ON z.copyright_status_id = cs.id
+        <include refid="zineAdvancedSearchConditions"/>
+        ) combined
     </select>
 
     <select id="getBookListWithFilters" resultType="com.masasilam.app.model.dto.response.BookResponse">
@@ -701,4 +821,5 @@
         WHERE bs.slug = #{seriesSlug}
         AND b.is_active = true
     </select>
+
 </mapper>

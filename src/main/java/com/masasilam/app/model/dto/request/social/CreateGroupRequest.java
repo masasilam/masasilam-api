@@ -10,12 +10,10 @@ public class CreateGroupRequest {
     @NotBlank
     @Size(max = 255)
     private String name;
-
     @Size(max = 3000)
     private String description;
-
-    private String groupType;  // public, private, invite_only
-    private String focusType;  // BOOK, ZINE, FILM, NEWSPAPER, mixed
+    private String groupType;
+    private String focusType;
     private Integer maxMembers;
     private List<String> tags;
     private String rules;
