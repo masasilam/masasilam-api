@@ -3,6 +3,7 @@ package com.masasilam.app.model.entity.social;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 public class SocialActivity {
@@ -14,7 +15,7 @@ public class SocialActivity {
     private String entitySlug;
     private String entityTitle;
     private String entityCover;
-    private String metadata;
+    private Map<String, Object> metadata;
     private String visibility;
     private Integer likeCount;
     private Integer commentCount;
