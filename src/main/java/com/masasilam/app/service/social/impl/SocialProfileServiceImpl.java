@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -32,7 +33,6 @@ public class SocialProfileServiceImpl implements SocialProfileService {
     private final NotificationService notificationService;
     private final HeaderHolder headerHolder;
     private final ObjectMapper objectMapper;
-
     private static final String SUCCESS = "Success";
     private static final String PUBLIC = "public";
     private static final String DEFAULT = "default";
@@ -234,7 +234,7 @@ public class SocialProfileServiceImpl implements SocialProfileService {
             activity.setEntitySlug(followed.getUsername());
             activity.setEntityTitle(followed.getUsername());
             activity.setEntityCover(followed.getProfilePictureUrl());
-            activity.setMetadata("{}");
+            activity.setMetadata(Collections.emptyMap());
             activity.setVisibility(PUBLIC);
             activityMapper.insertActivity(activity);
         } catch (Exception e) {

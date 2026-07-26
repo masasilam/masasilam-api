@@ -21,7 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -38,7 +41,6 @@ public class ReadingListServiceImpl implements ReadingListService {
     private final FilmMapper filmMapper;
     private final ZineMapper zineMapper;
     private final NewspaperMapper newspaperMapper;
-
     private static final String SUCCESS = "Success";
     private static final String PUBLIC = "public";
     private static final String FOLLOWERS = "followers";
@@ -84,24 +86,14 @@ public class ReadingListServiceImpl implements ReadingListService {
         list.setSlug(finalSlug);
         list.setDescription(request.getDescription());
         list.setVisibility(request.getVisibility() != null ? request.getVisibility() : PUBLIC);
-
-        if (request.getTags() != null && !request.getTags().isEmpty()) {
-            String tagsArray = request.getTags().stream()
-                    .map(tag -> "\"" + tag.replace("\"", "\\\"") + "\"")
-                    .collect(Collectors.joining(",", "{", "}"));
-            list.setTags(tagsArray);
-        } else {
-            list.setTags(null);
-        }
+        list.setTags(toPgArrayLiteral(request.getTags()));
 
         listMapper.insertList(list);
 
-        feedService.publishActivity(me.getId(), "created_reading_list", "READING_LIST",
-                list.getId(), finalSlug, request.getTitle(), null, "{}", list.getVisibility());
+        feedService.publishActivity(me.getId(), "created_reading_list", "READING_LIST", list.getId(), finalSlug, request.getTitle(), null, java.util.Collections.emptyMap(), list.getVisibility());
 
         ReadingListResponse response = listMapper.getListDetail(list.getId(), me.getId());
-        return new DataResponse<>(SUCCESS, "Reading list created",
-                HttpStatus.CREATED.value(), response);
+        return new DataResponse<>(SUCCESS, "Reading list created", HttpStatus.CREATED.value(), response);
     }
 
     @Override
@@ -115,7 +107,7 @@ public class ReadingListServiceImpl implements ReadingListService {
         if (request.getTitle() != null) list.setTitle(request.getTitle());
         if (request.getDescription() != null) list.setDescription(request.getDescription());
         if (request.getVisibility() != null) list.setVisibility(request.getVisibility());
-        if (request.getTags() != null) list.setTags(String.join(",", request.getTags()));
+        if (request.getTags() != null) list.setTags(toPgArrayLiteral(request.getTags()));
 
         listMapper.updateList(list);
         ReadingListResponse response = listMapper.getListDetail(listId, me.getId());
@@ -202,13 +194,13 @@ public class ReadingListServiceImpl implements ReadingListService {
         item.setNote(request.getNote());
         item.setAddedBy(me.getId());
         item.setSortOrder(getNextSortOrder(listId));
+        item.setCreatedAt(OffsetDateTime.now().toLocalDateTime());
         listMapper.insertItem(item);
 
-        feedService.publishActivity(me.getId(), "added_to_list", request.getEntityType(),
-                request.getEntityId(), item.getEntitySlug(), item.getEntityTitle(),
-                item.getEntityCover(),
-                "{\"listId\":" + listId + ",\"listTitle\":\"" + list.getTitle() + "\"}",
-                list.getVisibility());
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("listId", listId);
+        metadata.put("listTitle", list.getTitle());
+        feedService.publishActivity(me.getId(), "added_to_list", request.getEntityType(), request.getEntityId(), item.getEntitySlug(), item.getEntityTitle(), item.getEntityCover(), metadata, list.getVisibility());
 
         ReadingListItemResponse response = mapToResponse(item);
         return new DataResponse<>(SUCCESS, "Item added", HttpStatus.CREATED.value(), response);
@@ -263,11 +255,7 @@ public class ReadingListServiceImpl implements ReadingListService {
 
         ReadingList list = listMapper.findById(listId);
         if (list != null && !list.getUserId().equals(me.getId())) {
-            notificationService.sendNotification(
-                    list.getUserId(), me.getId(), "list_like",
-                    "READING_LIST", listId,
-                    me.getUsername() + " menyukai daftar bacaanmu \"" + list.getTitle() + "\"",
-                    "{}");
+            notificationService.sendNotification(list.getUserId(), me.getId(), "list_like", "READING_LIST", listId, me.getUsername() + " menyukai daftar bacaanmu \"" + list.getTitle() + "\"", "{}");
         }
         return new DataResponse<>(SUCCESS, "List liked", HttpStatus.OK.value(), null);
     }
@@ -338,14 +326,14 @@ public class ReadingListServiceImpl implements ReadingListService {
             newItem.setNote(item.getNote());
             newItem.setSortOrder(item.getSortOrder());
             newItem.setAddedBy(me.getId());
+            newItem.setCreatedAt(OffsetDateTime.now().toLocalDateTime());
             listMapper.insertItem(newItem);
         });
 
         listMapper.incrementForkCount(listId);
 
         ReadingListResponse response = listMapper.getListDetail(forked.getId(), me.getId());
-        return new DataResponse<>(SUCCESS, "List forked successfully",
-                HttpStatus.CREATED.value(), response);
+        return new DataResponse<>(SUCCESS, "List forked successfully", HttpStatus.CREATED.value(), response);
     }
 
     @Override
@@ -389,6 +377,13 @@ public class ReadingListServiceImpl implements ReadingListService {
                 .trim()
                 .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-");
+    }
+
+    private String toPgArrayLiteral(List<String> tags) {
+        if (tags == null || tags.isEmpty()) return null;
+        return tags.stream()
+                .map(tag -> "\"" + tag.replace("\"", "\\\"") + "\"")
+                .collect(Collectors.joining(",", "{", "}"));
     }
 
     private EntityDetails fetchEntityDetails(String entityType, Long entityId) {
@@ -467,7 +462,7 @@ public class ReadingListServiceImpl implements ReadingListService {
         response.setEntityCover(item.getEntityCover());
         response.setNote(item.getNote());
         response.setSortOrder(item.getSortOrder());
-        response.setAddedAt(OffsetDateTime.from(item.getCreatedAt()));
+        response.setAddedAt(item.getCreatedAt().atZone(ZoneId.systemDefault()).toOffsetDateTime());
         return response;
     }
 

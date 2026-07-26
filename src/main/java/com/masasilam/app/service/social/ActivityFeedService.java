@@ -1,8 +1,10 @@
 package com.masasilam.app.service.social;
 
-import com.masasilam.app.model.dto.request.social.*;
+import com.masasilam.app.model.dto.request.social.ActivityCommentRequest;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.dto.response.social.*;
+
+import java.util.Map;
 
 public interface ActivityFeedService {
     DataResponse<FeedPageResponse> getFollowingFeed(int page, int limit);
@@ -14,5 +16,5 @@ public interface ActivityFeedService {
     DataResponse<ActivityCommentResponse> updateActivityComment(Long commentId, ActivityCommentRequest request);
     DataResponse<Void> deleteActivityComment(Long commentId);
     DataResponse<FeedPageResponse> getActivityComments(Long activityId, int page, int limit);
-    void publishActivity(Long userId, String activityType, String entityType, Long entityId, String entitySlug, String entityTitle, String entityCover, String metadataJson, String visibility);
+    void publishActivity(Long userId, String activityType, String entityType, Long entityId, String entitySlug, String entityTitle, String entityCover, Map<String, Object> metadata, String visibility);
 }
