@@ -60,7 +60,7 @@ public class BookServiceImpl implements BookService {
     private final ChapterRepository bookChapterRepository;
     private final FileUtil fileUtil;
     private static final String SUCCESS = "Success";
-    private static final String DOWNLOAD = "Download";
+    private static final String DOWNLOAD = "download";
 
     @Value("${file.upload.max-size:52428800}")
     private String maxFileSizeStr;
