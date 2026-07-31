@@ -101,9 +101,9 @@ public class ZineServiceImpl implements ZineService {
             }
 
             String titleWithSubtitle = epubMeta.getSubtitle() != null && !epubMeta.getSubtitle().isEmpty() ? finalTitle + " " + epubMeta.getSubtitle() : finalTitle;
-            String baseSlug = fileUtil.sanitizeFilename(titleWithSubtitle);
+            String issueSuffix = epubMeta.getIssueNumber() != null ? "-no-" + epubMeta.getIssueNumber() : "";
+            String baseSlug = fileUtil.sanitizeFilename(titleWithSubtitle) + issueSuffix;
             Zine existingZine = checkExistingZineWithSameAuthor(baseSlug, epubMeta);
-
             if (existingZine != null) {
                 log.info("Found existing zine '{}', updating instead.", baseSlug);
                 return updateExistingZine(existingZine, request.getZineFile(), epubMeta);
@@ -484,6 +484,12 @@ public class ZineServiceImpl implements ZineService {
     private Zine checkExistingZineWithSameAuthor(String slug, CompleteEpubMetadata epubMeta) {
         Zine existingZine = zineMapper.findBySlug(slug);
         if (existingZine == null) return null;
+
+        String newIssue = epubMeta.getIssueNumber() != null ? String.valueOf(epubMeta.getIssueNumber()) : null;
+        if (newIssue != null && existingZine.getIssueNumber() != null && !newIssue.equals(existingZine.getIssueNumber())) {
+            return null;
+        }
+
         if (epubMeta.getAuthors() == null || epubMeta.getAuthors().isEmpty()) return null;
 
         List<Author> existingAuthors = zineMapper.findAuthorsByZineId(existingZine.getId());

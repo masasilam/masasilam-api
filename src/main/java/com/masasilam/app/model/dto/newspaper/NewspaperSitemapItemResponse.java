@@ -5,14 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NewspaperCategoryResponse {
+public class NewspaperSitemapItemResponse {
+    private String sourceSlug;
     private String slug;
-    private String name;
-    private String description;
-    private String icon;
-    private Integer articleCount;
+    private LocalDateTime updatedAt;
 }
