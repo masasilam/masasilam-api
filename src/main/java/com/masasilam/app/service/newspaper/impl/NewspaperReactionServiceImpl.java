@@ -40,17 +40,14 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<ArticleRatingResponse> addOrUpdateArticleRating(String categorySlug, LocalDate date, String articleSlug, RatingRequest request) {
+    public DataResponse<ArticleRatingResponse> addOrUpdateArticleRating(String sourceSlug, LocalDate date, String articleSlug, RatingRequest request) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleRating existingRating = articleRatingMapper.findByUserAndArticle(user.getId(), article.getId());
-
             ArticleRating savedRating;
             String message;
             int statusCode;
-
             if (existingRating != null) {
                 existingRating.setRating(request.getRating());
                 existingRating.setUpdatedAt(LocalDateTime.now());
@@ -70,11 +67,8 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
                 message = "Article rating added successfully";
                 statusCode = HttpStatus.CREATED.value();
             }
-
             ArticleRatingResponse response = mapToArticleRatingResponse(savedRating, user);
-
             return new DataResponse<>(SUCCESS, message, statusCode, response);
-
         } catch (Exception e) {
             log.error("Error processing newspaper rating for: {}", articleSlug, e);
             throw e;
@@ -82,24 +76,19 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     }
 
     @Override
-    public DataResponse<ArticleRatingStatsResponse> getArticleRatingStats(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<ArticleRatingStatsResponse> getArticleRatingStats(String sourceSlug, LocalDate date, String articleSlug) {
         try {
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleRatingStatsResponse stats = articleRatingMapper.getArticleRatingStats(article.getId());
-
             if (stats == null) {
                 stats = createEmptyRatingStats(article.getId());
             }
-
             Long userId = getCurrentUserId();
             if (userId != null) {
                 ArticleRating userRating = articleRatingMapper.findByUserAndArticle(userId, article.getId());
                 stats.setMyRating(userRating != null ? userRating.getRating() : null);
             }
-
             return new DataResponse<>(SUCCESS, "Rating stats retrieved successfully", HttpStatus.OK.value(), stats);
-
         } catch (Exception e) {
             log.error("Error getting rating stats for: {}", articleSlug, e);
             throw e;
@@ -107,21 +96,16 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     }
 
     @Override
-    public DataResponse<ArticleRatingResponse> getMyArticleRating(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<ArticleRatingResponse> getMyArticleRating(String sourceSlug, LocalDate date, String articleSlug) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleRating rating = articleRatingMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (rating == null) {
                 return new DataResponse<>(SUCCESS, "No rating found", HttpStatus.OK.value(), null);
             }
-
             ArticleRatingResponse response = mapToArticleRatingResponse(rating, user);
-
             return new DataResponse<>(SUCCESS, "Rating retrieved successfully", HttpStatus.OK.value(), response);
-
         } catch (Exception e) {
             log.error("Error getting user rating for: {}", articleSlug, e);
             throw e;
@@ -130,21 +114,16 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<Void> deleteArticleRating(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<Void> deleteArticleRating(String sourceSlug, LocalDate date, String articleSlug) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleRating rating = articleRatingMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (rating == null) {
                 throw new DataNotFoundException();
             }
-
             articleRatingMapper.delete(rating.getId());
-
             return new DataResponse<>(SUCCESS, "Rating deleted successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error deleting rating for: {}", articleSlug, e);
             throw e;
@@ -152,24 +131,16 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     }
 
     @Override
-    public DatatableResponse<ArticleReviewResponse> getArticleReviews(String categorySlug, LocalDate date, String articleSlug, int page, int limit, String sortBy) {
+    public DatatableResponse<ArticleReviewResponse> getArticleReviews(String sourceSlug, LocalDate date, String articleSlug, int page, int limit, String sortBy) {
         try {
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             int offset = (page - 1) * limit;
             List<ArticleReview> reviews = articleReviewMapper.findByArticleWithPagination(article.getId(), offset, limit, sortBy);
-
             Long currentUserId = getCurrentUserId();
-            List<ArticleReviewResponse> responses = reviews.stream()
-                    .map(review -> mapToArticleReviewResponse(review, currentUserId))
-                    .toList();
-
+            List<ArticleReviewResponse> responses = reviews.stream().map(review -> mapToArticleReviewResponse(review, currentUserId)).toList();
             int totalCount = articleReviewMapper.countByArticle(article.getId());
-
             PageDataResponse<ArticleReviewResponse> pageData = new PageDataResponse<>(page, limit, totalCount, responses);
-
             return new DatatableResponse<>(SUCCESS, "Reviews retrieved successfully", HttpStatus.OK.value(), pageData);
-
         } catch (Exception e) {
             log.error("Error getting reviews for: {}", articleSlug, e);
             throw e;
@@ -178,17 +149,14 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<ArticleReviewResponse> createArticleReview(String categorySlug, LocalDate date, String articleSlug, ArticleReviewRequest request) {
+    public DataResponse<ArticleReviewResponse> createArticleReview(String sourceSlug, LocalDate date, String articleSlug, ArticleReviewRequest request) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleReview existingReview = articleReviewMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (existingReview != null) {
                 throw new IllegalArgumentException("You already have a review for this newspaper. Use update endpoint.");
             }
-
             ArticleReview review = new ArticleReview();
             review.setUserId(user.getId());
             review.setArticleId(article.getId());
@@ -199,13 +167,9 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
             review.setReplyCount(0);
             review.setCreatedAt(LocalDateTime.now());
             review.setUpdatedAt(LocalDateTime.now());
-
             articleReviewMapper.insert(review);
-
             ArticleReviewResponse response = mapToArticleReviewResponse(review, user.getId());
-
             return new DataResponse<>(SUCCESS, "Review created successfully", HttpStatus.CREATED.value(), response);
-
         } catch (Exception e) {
             log.error("Error creating review for: {}", articleSlug, e);
             throw e;
@@ -214,27 +178,20 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<ArticleReviewResponse> updateMyArticleReview(String categorySlug, LocalDate date, String articleSlug, ArticleReviewRequest request) {
+    public DataResponse<ArticleReviewResponse> updateMyArticleReview(String sourceSlug, LocalDate date, String articleSlug, ArticleReviewRequest request) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleReview review = articleReviewMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (review == null) {
                 throw new DataNotFoundException();
             }
-
             review.setTitle(request.getTitle());
             review.setContent(request.getContent());
             review.setUpdatedAt(LocalDateTime.now());
-
             articleReviewMapper.update(review);
-
             ArticleReviewResponse response = mapToArticleReviewResponse(review, user.getId());
-
             return new DataResponse<>(SUCCESS, "Review updated successfully", HttpStatus.OK.value(), response);
-
         } catch (Exception e) {
             log.error("Error updating review for: {}", articleSlug, e);
             throw e;
@@ -243,21 +200,16 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<Void> deleteMyArticleReview(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<Void> deleteMyArticleReview(String sourceSlug, LocalDate date, String articleSlug) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleReview review = articleReviewMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (review == null) {
                 throw new DataNotFoundException();
             }
-
             articleReviewMapper.softDelete(review.getId());
-
             return new DataResponse<>(SUCCESS, "Review deleted successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error deleting review for: {}", articleSlug, e);
             throw e;
@@ -266,33 +218,26 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<ArticleReviewReplyResponse> addReplyToReview(String categorySlug, LocalDate date, String articleSlug, Long reviewId, ReplyRequest request) {
+    public DataResponse<ArticleReviewReplyResponse> addReplyToReview(String sourceSlug, LocalDate date, String articleSlug, Long reviewId, ReplyRequest request) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             ArticleReview review = articleReviewMapper.findById(reviewId);
             if (review == null || !review.getArticleId().equals(article.getId())) {
                 throw new DataNotFoundException();
             }
-
             if (review.getUserId().equals(user.getId())) {
                 throw new IllegalArgumentException("Cannot reply to your own review");
             }
-
             ArticleReviewReply reply = new ArticleReviewReply();
             reply.setUserId(user.getId());
             reply.setReviewId(reviewId);
             reply.setContent(request.getContent());
             reply.setCreatedAt(LocalDateTime.now());
             reply.setUpdatedAt(LocalDateTime.now());
-
             articleReviewReplyMapper.insert(reply);
-
             ArticleReviewReplyResponse response = mapToReviewReplyResponse(reply, user.getId());
-
             return new DataResponse<>(SUCCESS, "Reply added successfully", HttpStatus.CREATED.value(), response);
-
         } catch (Exception e) {
             log.error("Error adding reply to review: {}", reviewId, e);
             throw e;
@@ -304,25 +249,18 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     public DataResponse<ArticleReviewReplyResponse> updateReply(Long replyId, ReplyRequest request) {
         try {
             User user = getAuthenticatedUser();
-
             ArticleReviewReply reply = articleReviewReplyMapper.findById(replyId);
             if (reply == null) {
                 throw new DataNotFoundException();
             }
-
             if (!reply.getUserId().equals(user.getId())) {
                 throw new UnauthorizedException();
             }
-
             reply.setContent(request.getContent());
             reply.setUpdatedAt(LocalDateTime.now());
-
             articleReviewReplyMapper.update(reply);
-
             ArticleReviewReplyResponse response = mapToReviewReplyResponse(reply, user.getId());
-
             return new DataResponse<>(SUCCESS, "Reply updated successfully", HttpStatus.OK.value(), response);
-
         } catch (Exception e) {
             log.error("Error updating reply: {}", replyId, e);
             throw e;
@@ -334,20 +272,15 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     public DataResponse<Void> deleteReply(Long replyId) {
         try {
             User user = getAuthenticatedUser();
-
             ArticleReviewReply reply = articleReviewReplyMapper.findById(replyId);
             if (reply == null) {
                 throw new DataNotFoundException();
             }
-
             if (!reply.getUserId().equals(user.getId())) {
                 throw new UnauthorizedException();
             }
-
             articleReviewReplyMapper.softDelete(replyId);
-
             return new DataResponse<>(SUCCESS, "Reply deleted successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error deleting reply: {}", replyId, e);
             throw e;
@@ -359,18 +292,14 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     public DataResponse<Void> addOrUpdateReviewFeedback(Long reviewId, FeedbackRequest request) {
         try {
             User user = getAuthenticatedUser();
-
             ArticleReview review = articleReviewMapper.findById(reviewId);
             if (review == null) {
                 throw new DataNotFoundException();
             }
-
             if (review.getUserId().equals(user.getId())) {
                 throw new IllegalArgumentException("Cannot give feedback to your own review");
             }
-
             ArticleReviewFeedback existing = articleReviewFeedbackMapper.findByUserAndReview(user.getId(), reviewId);
-
             if (existing != null) {
                 existing.setIsHelpful(request.getIsHelpful());
                 existing.setUpdatedAt(LocalDateTime.now());
@@ -384,9 +313,7 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
                 feedback.setUpdatedAt(LocalDateTime.now());
                 articleReviewFeedbackMapper.insert(feedback);
             }
-
             return new DataResponse<>(SUCCESS, "Feedback saved successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error processing feedback for review: {}", reviewId, e);
             throw e;
@@ -398,17 +325,12 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     public DataResponse<Void> deleteReviewFeedback(Long reviewId) {
         try {
             User user = getAuthenticatedUser();
-
             ArticleReviewFeedback feedback = articleReviewFeedbackMapper.findByUserAndReview(user.getId(), reviewId);
-
             if (feedback == null) {
                 throw new DataNotFoundException();
             }
-
             articleReviewFeedbackMapper.delete(feedback.getId());
-
             return new DataResponse<>(SUCCESS, "Feedback deleted successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error deleting feedback for review: {}", reviewId, e);
             throw e;
@@ -417,32 +339,24 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<SavedArticleResponse> saveArticle(String categorySlug, LocalDate date, String articleSlug, SaveArticleRequest request) {
+    public DataResponse<SavedArticleResponse> saveArticle(String sourceSlug, LocalDate date, String articleSlug, SaveArticleRequest request) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             SavedArticle existing = savedArticleMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (existing != null) {
                 throw new IllegalArgumentException("Article already saved");
             }
-
             SavedArticle saved = new SavedArticle();
             saved.setUserId(user.getId());
             saved.setArticleId(article.getId());
             saved.setCollectionName(request.getCollectionName() != null ? request.getCollectionName() : "default");
             saved.setNotes(request.getNotes());
             saved.setCreatedAt(LocalDateTime.now());
-
             savedArticleMapper.insert(saved);
-
             newspaperMapper.incrementSaveCount(article.getId());
-
             SavedArticleResponse response = mapToSavedArticleResponse(saved);
-
             return new DataResponse<>(SUCCESS, "Article saved successfully", HttpStatus.CREATED.value(), response);
-
         } catch (Exception e) {
             log.error("Error saving newspaper: {}", articleSlug, e);
             throw e;
@@ -450,21 +364,16 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
     }
 
     @Override
-    public DataResponse<SavedArticleResponse> checkArticleSaved(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<SavedArticleResponse> checkArticleSaved(String sourceSlug, LocalDate date, String articleSlug) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             SavedArticle saved = savedArticleMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (saved == null) {
                 return new DataResponse<>(SUCCESS, "Article not saved", HttpStatus.OK.value(), null);
             }
-
             SavedArticleResponse response = mapToSavedArticleResponse(saved);
-
             return new DataResponse<>(SUCCESS, "Saved newspaper retrieved successfully", HttpStatus.OK.value(), response);
-
         } catch (Exception e) {
             log.error("Error checking saved newspaper: {}", articleSlug, e);
             throw e;
@@ -473,23 +382,17 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<Void> unsaveArticle(String categorySlug, LocalDate date, String articleSlug) {
+    public DataResponse<Void> unsaveArticle(String sourceSlug, LocalDate date, String articleSlug) {
         try {
             User user = getAuthenticatedUser();
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
-
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             SavedArticle saved = savedArticleMapper.findByUserAndArticle(user.getId(), article.getId());
-
             if (saved == null) {
                 throw new DataNotFoundException();
             }
-
             savedArticleMapper.delete(saved.getId());
-
             newspaperMapper.decrementSaveCount(article.getId());
-
             return new DataResponse<>(SUCCESS, "Article unsaved successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error unsaving newspaper: {}", articleSlug, e);
             throw e;
@@ -498,23 +401,18 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     @Override
     @Transactional
-    public DataResponse<Void> trackArticleShare(String categorySlug, LocalDate date, String articleSlug, ShareArticleRequest request) {
+    public DataResponse<Void> trackArticleShare(String sourceSlug, LocalDate date, String articleSlug, ShareArticleRequest request) {
         try {
-            NewspaperArticle article = getArticleOrThrow(categorySlug, date, articleSlug);
+            NewspaperArticle article = getArticleOrThrow(sourceSlug, date, articleSlug);
             Long userId = getCurrentUserId();
-
             ArticleShare share = new ArticleShare();
             share.setArticleId(article.getId());
             share.setUserId(userId);
             share.setPlatform(request.getPlatform());
             share.setCreatedAt(LocalDateTime.now());
-
             articleShareMapper.insert(share);
-
             newspaperMapper.incrementShareCount(article.getId());
-
             return new DataResponse<>(SUCCESS, "Share tracked successfully", HttpStatus.OK.value(), null);
-
         } catch (Exception e) {
             log.error("Error tracking share for: {}", articleSlug, e);
             throw e;
@@ -526,12 +424,10 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
         if (username == null || username.isEmpty()) {
             throw new UnauthorizedException();
         }
-
         User user = userMapper.findUserByUsername(username);
         if (user == null) {
             throw new UnauthorizedException();
         }
-
         return user;
     }
 
@@ -543,13 +439,11 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
         }
     }
 
-    private NewspaperArticle getArticleOrThrow(String categorySlug, LocalDate date, String articleSlug) {
-        NewspaperArticle article = newspaperMapper.findArticleByCategoryDateAndSlug(categorySlug, date, articleSlug);
-
+    private NewspaperArticle getArticleOrThrow(String sourceSlug, LocalDate date, String articleSlug) {
+        NewspaperArticle article = newspaperMapper.findArticleBySourceDateAndSlug(sourceSlug, date, articleSlug);
         if (article == null) {
             throw new DataNotFoundException();
         }
-
         return article;
     }
 
@@ -581,7 +475,6 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
 
     private ArticleReviewResponse mapToArticleReviewResponse(ArticleReview review, Long currentUserId) {
         User reviewUser = userMapper.findUserById(review.getUserId());
-
         ArticleReviewResponse response = new ArticleReviewResponse();
         response.setId(review.getId());
         response.setUserId(review.getUserId());
@@ -595,26 +488,19 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
         response.setReplyCount(review.getReplyCount());
         response.setCreatedAt(review.getCreatedAt());
         response.setUpdatedAt(review.getUpdatedAt());
-
         response.setIsOwner(currentUserId != null && currentUserId.equals(review.getUserId()));
-
         if (currentUserId != null) {
             ArticleReviewFeedback feedback = articleReviewFeedbackMapper.findByUserAndReview(currentUserId, review.getId());
             response.setCurrentUserFeedback(feedback != null ? feedback.getIsHelpful() : null);
         }
-
         List<ArticleReviewReply> replies = articleReviewReplyMapper.findByReviewId(review.getId());
-        List<ArticleReviewReplyResponse> replyResponses = replies.stream()
-                .map(reply -> mapToReviewReplyResponse(reply, currentUserId))
-                .toList();
+        List<ArticleReviewReplyResponse> replyResponses = replies.stream().map(reply -> mapToReviewReplyResponse(reply, currentUserId)).toList();
         response.setReplies(replyResponses);
-
         return response;
     }
 
     private ArticleReviewReplyResponse mapToReviewReplyResponse(ArticleReviewReply reply, Long currentUserId) {
         User replyUser = userMapper.findUserById(reply.getUserId());
-
         ArticleReviewReplyResponse response = new ArticleReviewReplyResponse();
         response.setId(reply.getId());
         response.setUserId(reply.getUserId());
@@ -626,7 +512,6 @@ public class NewspaperReactionServiceImpl implements NewspaperReactionService {
         response.setCreatedAt(reply.getCreatedAt());
         response.setUpdatedAt(reply.getUpdatedAt());
         response.setIsOwner(currentUserId != null && currentUserId.equals(reply.getUserId()));
-
         return response;
     }
 
