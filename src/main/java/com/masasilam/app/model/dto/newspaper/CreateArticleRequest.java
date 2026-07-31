@@ -1,5 +1,6 @@
 package com.masasilam.app.model.dto.newspaper;
 
+import com.masasilam.app.model.dto.ContributorMetadata;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -20,8 +22,6 @@ public class CreateArticleRequest {
     private String sourceName;
     @NotBlank
     private String slug;
-    @NotBlank
-    private String category;
     @NotNull
     private LocalDate publishDate;
     @NotBlank
@@ -30,7 +30,9 @@ public class CreateArticleRequest {
     private String subtitle;
     @NotBlank
     private String htmlContent;
-    private String author;
+    private List<String> authorNames;
+    private List<String> genreNames;
+    private List<ContributorMetadata> contributors;
     private Integer pageNumber;
     private String importance;
     private String imageUrl;
