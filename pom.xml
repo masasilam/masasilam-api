@@ -14,7 +14,7 @@
     <artifactId>app</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    <name>demo</name>
+    <name>masasilam</name>
     <description>Service for masasilam</description>
 
     <properties>
