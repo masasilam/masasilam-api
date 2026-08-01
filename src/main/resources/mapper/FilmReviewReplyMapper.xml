@@ -14,33 +14,23 @@
     </resultMap>
 
     <select id="findById" resultMap="FilmReviewReplyResultMap">
-        SELECT * FROM film_review_reply
-        WHERE id = #{id} AND is_deleted = 0
+        SELECT * FROM film_review_reply WHERE id = #{id} AND is_deleted = false
     </select>
 
     <select id="findByReviewId" resultMap="FilmReviewReplyResultMap">
-        SELECT * FROM film_review_reply
-        WHERE review_id = #{reviewId} AND is_deleted = 0
-        ORDER BY created_at ASC
+        SELECT * FROM film_review_reply WHERE review_id = #{reviewId} AND is_deleted = false ORDER BY created_at ASC
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO film_review_reply
-        (review_id, user_id, parent_reply_id, content, is_deleted, created_at, updated_at)
-        VALUES
-        (#{reviewId}, #{userId}, #{parentReplyId}, #{content}, 0, NOW(), NOW())
+        INSERT INTO film_review_reply (review_id, user_id, parent_reply_id, content, is_deleted, created_at, updated_at)
+        VALUES (#{reviewId}, #{userId}, #{parentReplyId}, #{content}, false, NOW(), NOW())
     </insert>
 
     <update id="update">
-        UPDATE film_review_reply
-        SET content = #{content},
-        updated_at = NOW()
-        WHERE id = #{id}
+        UPDATE film_review_reply SET content = #{content}, updated_at = NOW() WHERE id = #{id}
     </update>
 
     <update id="softDelete">
-        UPDATE film_review_reply
-        SET is_deleted = 1, updated_at = NOW()
-        WHERE id = #{id}
+        UPDATE film_review_reply SET is_deleted = true, updated_at = NOW() WHERE id = #{id}
     </update>
 </mapper>
