@@ -17,6 +17,7 @@
         <result property="color" column="color"/>
         <result property="originalLanguage" column="original_language"/>
         <result property="posterUrl" column="poster_url"/>
+        <result property="posterPortraitUrl" column="poster_portrait_url"/>
         <result property="imageUrls" column="image_urls"/>
         <result property="copyrightStatusId" column="copyright_status_id"/>
         <result property="videoUrl" column="video_url"/>
@@ -52,13 +53,13 @@
         wikidata_qid, slug, judul, title_eng,
         tahun_rilis, jenis, deskripsi, catatan, durasi,
         negara_asal, original_language, color,
-        poster_url, image_urls, trailer_url,
+        poster_url, poster_portrait_url, image_urls, trailer_url,
         followed_by, part_of_series
         ) VALUES (
         #{wikidataQid}, #{slug}, #{judul}, #{titleEng},
         #{tahunRilis}, #{jenis}, #{deskripsi}, #{catatan}, #{durasi},
         #{negaraAsal}, #{originalLanguage}, #{color},
-        #{posterUrl}, #{imageUrls}, #{trailerUrl},
+        #{posterUrl}, #{posterPortraitUrl}, #{imageUrls}, #{trailerUrl},
         #{followedBy}, #{partOfSeries}
         )
     </insert>
@@ -77,6 +78,7 @@
             <if test="originalLanguage != null">original_language = #{originalLanguage},</if>
             <if test="color != null">color = #{color},</if>
             <if test="posterUrl != null">poster_url = #{posterUrl},</if>
+            <if test="posterPortraitUrl != null">poster_portrait_url = #{posterPortraitUrl},</if>
             <if test="imageUrls != null">image_urls = #{imageUrls},</if>
             <if test="trailerUrl != null">trailer_url = #{trailerUrl},</if>
             <if test="followedBy != null">followed_by = #{followedBy},</if>

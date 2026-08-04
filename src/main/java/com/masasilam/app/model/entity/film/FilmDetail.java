@@ -35,6 +35,7 @@ public class FilmDetail {
     private List<String> narrativeLocation;
     private List<String> filmingLocation;
     private String posterUrl;
+    private String posterPortraitUrl;
     private List<String> imageUrls;
     private String videoUrl;
     private String trailerUrl;
