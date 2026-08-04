@@ -1,6 +1,7 @@
 package com.masasilam.app.mapper.newspaper;
 
 import com.masasilam.app.model.dto.newspaper.*;
+import com.masasilam.app.model.entity.Author;
 import com.masasilam.app.model.entity.newspaper.*;
 import org.apache.ibatis.annotations.*;
 
@@ -17,8 +18,7 @@ public interface NewspaperMapper {
     int countArticlesByCategory(@Param("categorySlug") String categorySlug, @Param("criteria") NewspaperSearchCriteria criteria);
     List<NewspaperArticleResponse> getArticlesByDate(@Param("date") LocalDate date, @Param("offset") int offset, @Param("limit") int limit, @Param("sortBy") String sortBy, @Param("category") String category);
     int countArticlesByDate(@Param("date") LocalDate date, @Param("category") String category);
-    NewspaperArticle findArticleByCategoryDateAndSlug(@Param("categorySlug") String categorySlug, @Param("date") LocalDate date, @Param("articleSlug") String articleSlug);
-    NewspaperArticleDetailResponse getArticleDetailBySlug(@Param("slug") String slug);
+    NewspaperArticleDetailResponse getArticleDetailBySourceAndSlug(@Param("sourceSlug") String sourceSlug, @Param("articleSlug") String articleSlug);
     NewspaperArticleDetailResponse getArticleDetailById(@Param("id") Long id);
     List<NewspaperArticleResponse> searchArticles(@Param("criteria") NewspaperSearchCriteria criteria, @Param("offset") int offset, @Param("limit") int limit);
     int countSearchArticles(@Param("criteria") NewspaperSearchCriteria criteria);
@@ -36,12 +36,32 @@ public interface NewspaperMapper {
     void insertArticle(NewspaperArticle article);
     void updateArticle(NewspaperArticle article);
     void softDeleteArticle(@Param("id") Long id);
-    boolean existsBySlug(@Param("slug") String slug);
     NewspaperArticle findById(@Param("id") Long id);
     void incrementSaveCount(@Param("articleId") Long articleId);
     void decrementSaveCount(@Param("articleId") Long articleId);
     void incrementShareCount(@Param("articleId") Long articleId);
     Long findSourceIdByName(@Param("name") String name);
+    Long findSourceIdBySlug(@Param("slug") String slug);
     void insertSource(NewspaperSource source);
-    boolean existsBySlugExcluding(@Param("slug") String slug, @Param("excludeId") Long excludeId);
+    boolean existsBySlugForSource(@Param("sourceId") Long sourceId, @Param("slug") String slug);
+    boolean existsBySlugForSourceExcluding(@Param("sourceId") Long sourceId, @Param("slug") String slug, @Param("excludeId") Long excludeId);
+    void insertArticleAuthor(@Param("articleId") Long articleId, @Param("authorId") Long authorId);
+    void deleteArticleAuthors(@Param("articleId") Long articleId);
+    List<Author> findAuthorsByArticleId(@Param("articleId") Long articleId);
+    void insertArticleGenre(@Param("articleId") Long articleId, @Param("genreId") Long genreId);
+    void deleteArticleGenres(@Param("articleId") Long articleId);
+    boolean genreSlugExists(@Param("slug") String slug);
+    void insertArticleContributor(@Param("articleId") Long articleId, @Param("contributorId") Long contributorId, @Param("role") String role);
+    void deleteArticleContributors(@Param("articleId") Long articleId);
+    NewspaperSourceDetailResponse getSourceDetailBySlug(@Param("slug") String slug);
+    List<Integer> getSourceAvailableYears(@Param("sourceId") Long sourceId);
+    List<NewspaperEditionResponse> getEditionsBySourceAndYear(@Param("sourceId") Long sourceId, @Param("year") int year, @Param("month") Integer month, @Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
+    List<NewspaperArticleResponse> getArticlesBySourceAndDate(@Param("sourceId") Long sourceId, @Param("date") LocalDate date);
+    List<NewspaperSourceResponse> getAllSourcesForSitemap();
+    List<NewspaperSitemapItemResponse> getArticlesForSitemap();
+    NewspaperArticle findArticleBySourceDateAndSlug(@Param("sourceSlug") String sourceSlug, @Param("date") LocalDate date, @Param("articleSlug") String articleSlug);
+    NewspaperSource findSourceById(@Param("id") Long id);
+    void updateSource(@Param("id") Long id, @Param("name") String name, @Param("description") String description, @Param("location") String location, @Param("logoUrl") String logoUrl);
+    NewspaperSourceResponse getSourceById(@Param("id") Long id);
+    List<NewspaperArticleResponse> getLatestArticles(@Param("offset") int offset, @Param("limit") int limit);
 }

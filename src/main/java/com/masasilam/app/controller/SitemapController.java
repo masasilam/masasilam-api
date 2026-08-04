@@ -1,11 +1,15 @@
 package com.masasilam.app.controller;
 
+import com.masasilam.app.model.dto.newspaper.NewspaperCategoryResponse;
+import com.masasilam.app.model.dto.newspaper.NewspaperSitemapItemResponse;
+import com.masasilam.app.model.dto.newspaper.NewspaperSourceResponse;
 import com.masasilam.app.model.entity.Author;
 import com.masasilam.app.model.entity.Book;
 import com.masasilam.app.model.entity.Genre;
 import com.masasilam.app.service.common.AuthorService;
 import com.masasilam.app.service.common.GenreService;
 import com.masasilam.app.service.book.BookService;
+import com.masasilam.app.service.newspaper.NewspaperService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -23,6 +27,7 @@ public class SitemapController {
     private final BookService bookService;
     private final AuthorService authorService;
     private final GenreService genreService;
+    private final NewspaperService newspaperService;
     private static final String SITE_URL = "https://masasilam.com";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_DATE;
 
@@ -51,6 +56,10 @@ public class SitemapController {
                 "    <loc>" + SITE_URL + "/sitemap-chapters.xml</loc>\n" +
                 "    <lastmod>" + today + "</lastmod>\n" +
                 "  </sitemap>\n" +
+                "  <sitemap>\n" +
+                "    <loc>" + SITE_URL + "/sitemap-newspapers.xml</loc>\n" +
+                "    <lastmod>" + today + "</lastmod>\n" +
+                "  </sitemap>\n" +
                 "</sitemapindex>";
     }
 
@@ -64,9 +73,11 @@ public class SitemapController {
         addUrl(xml, "/buku", "daily", "0.9", today);
         addUrl(xml, "/kategori", "weekly", "0.9", today);
         addUrl(xml, "/penulis", "weekly", "0.9", today);
+        addUrl(xml, "/koran", "daily", "0.9", today);
         addUrl(xml, "/buku/terpopuler", "daily", "0.8", today);
         addUrl(xml, "/buku/terbaru", "daily", "0.8", today);
         addUrl(xml, "/buku/rekomendasi", "weekly", "0.7", today);
+        addUrl(xml, "/koran/hari-ini", "daily", "0.6", today);
         addUrl(xml, "/cari", "weekly", "0.6", today);
         addUrl(xml, "/tentang", "monthly", "0.5", today);
         addUrl(xml, "/cara-membaca", "monthly", "0.5", today);
@@ -167,6 +178,41 @@ public class SitemapController {
             }
         } catch (Exception e) {
             log.error("Error generating chapters sitemap: {}", e.getMessage(), e);
+        }
+        xml.append("</urlset>");
+        return xml.toString();
+    }
+
+    @GetMapping(value = "/sitemap-newspapers.xml", produces = MediaType.APPLICATION_XML_VALUE)
+    public String sitemapNewspapers() {
+        String today = LocalDateTime.now().format(DATE_FORMATTER);
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+        try {
+            List<NewspaperCategoryResponse> categories = newspaperService.getAllCategories().getData();
+            for (NewspaperCategoryResponse category : categories) {
+                addUrl(xml, "/koran/rubrik/" + category.getSlug(), "daily", "0.7", today);
+            }
+        } catch (Exception e) {
+            log.error("Error generating newspaper rubrik sitemap: {}", e.getMessage());
+        }
+        try {
+            List<NewspaperSourceResponse> sources = newspaperService.getAllSourcesForSitemap();
+            for (NewspaperSourceResponse source : sources) {
+                addUrl(xml, "/koran/" + source.getSlug(), "weekly", "0.7", today);
+            }
+        } catch (Exception e) {
+            log.error("Error generating newspaper source sitemap: {}", e.getMessage());
+        }
+        try {
+            List<NewspaperSitemapItemResponse> articles = newspaperService.getArticlesForSitemap();
+            for (NewspaperSitemapItemResponse article : articles) {
+                String lastmod = article.getUpdatedAt() != null ? article.getUpdatedAt().format(DATE_FORMATTER) : today;
+                addUrl(xml, "/koran/" + article.getSourceSlug() + "/" + article.getSlug(), "monthly", "0.6", lastmod);
+            }
+        } catch (Exception e) {
+            log.error("Error generating newspaper articles sitemap: {}", e.getMessage());
         }
         xml.append("</urlset>");
         return xml.toString();

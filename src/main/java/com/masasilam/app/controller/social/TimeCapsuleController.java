@@ -43,7 +43,7 @@ public class TimeCapsuleController {
                     c.setEntityType("NEWSPAPER");
                     c.setEntityTitle(a.getTitle());
                     c.setEntitySlug(a.getSlug());
-                    c.setCategory(a.getCategory());
+                    c.setCategory(a.getGenres());
                     c.setExcerpt(a.getExcerpt());
                     c.setReaderCount(0);
                     return c;

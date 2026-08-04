@@ -18,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -27,7 +29,6 @@ public class ActivityFeedServiceImpl implements ActivityFeedService {
     private final SocialActivityMapper activityMapper;
     private final UserMapper userMapper;
     private final HeaderHolder headerHolder;
-
     private static final String SUCCESS = "Success";
 
     private User requireAuth() {
@@ -167,7 +168,7 @@ public class ActivityFeedServiceImpl implements ActivityFeedService {
     @Override
     public void publishActivity(Long userId, String activityType, String entityType,
                                 Long entityId, String entitySlug, String entityTitle,
-                                String entityCover, String metadataJson, String visibility) {
+                                String entityCover, Map<String, Object> metadata, String visibility) {
         try {
             SocialActivity activity = new SocialActivity();
             activity.setUserId(userId);
@@ -177,7 +178,7 @@ public class ActivityFeedServiceImpl implements ActivityFeedService {
             activity.setEntitySlug(entitySlug);
             activity.setEntityTitle(entityTitle);
             activity.setEntityCover(entityCover);
-            activity.setMetadata(metadataJson != null ? metadataJson : "{}");
+            activity.setMetadata(metadata != null ? metadata : Collections.emptyMap());
             activity.setVisibility(visibility != null ? visibility : "public");
             activityMapper.insertActivity(activity);
         } catch (Exception e) {

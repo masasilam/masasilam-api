@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class ReviewJoinRequestRequest {
     @NotBlank
-    private String action; // approve, reject
+    private String action;
     private String note;
 }

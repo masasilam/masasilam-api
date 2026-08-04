@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -112,8 +113,7 @@ public class ReadingGroupServiceImpl implements ReadingGroupService {
         groupMapper.insertMember(member);
 
         feedService.publishActivity(me.getId(), "created_group", "GROUP",
-                group.getId(), finalSlug, request.getName(), null, "{}", PUBLIC);
-
+                group.getId(), finalSlug, request.getName(), null, Collections.emptyMap(), PUBLIC);
         ReadingGroupResponse response = groupMapper.getGroupDetail(group.getId(), me.getId());
         List<GroupMemberResponse> members = groupMapper.findMembers(group.getId(), 0, 5);
         response.setRecentMembers(members);
@@ -234,8 +234,7 @@ public class ReadingGroupServiceImpl implements ReadingGroupService {
         groupMapper.insertMember(member);
 
         feedService.publishActivity(me.getId(), "joined_group", "GROUP",
-                groupId, group.getSlug(), group.getName(), group.getCoverImageUrl(), "{}", PUBLIC);
-
+                groupId, group.getSlug(), group.getName(), group.getCoverImageUrl(), Collections.emptyMap(), PUBLIC);
         notificationService.sendNotification(group.getOwnerId(), me.getId(),
                 "group_join_request", "GROUP", groupId,
                 me.getUsername() + " bergabung ke grup \"" + group.getName() + "\"", "{}");

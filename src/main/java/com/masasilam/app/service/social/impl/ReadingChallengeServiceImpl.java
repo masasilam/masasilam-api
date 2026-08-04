@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -28,7 +29,6 @@ public class ReadingChallengeServiceImpl implements ReadingChallengeService {
     private final ActivityFeedService feedService;
     private final NotificationService notificationService;
     private final HeaderHolder headerHolder;
-
     private static final String SUCCESS = "Success";
     private static final String BOOK = "BOOK";
     private static final String ABANDONED = "abandoned";
@@ -183,7 +183,7 @@ public class ReadingChallengeServiceImpl implements ReadingChallengeService {
 
         feedService.publishActivity(me.getId(), "joined_challenge", "CHALLENGE",
                 challengeId, challenge.getSlug(), challenge.getTitle(),
-                challenge.getCoverImageUrl(), "{}", "public");
+                challenge.getCoverImageUrl(), Collections.emptyMap(), "public");
 
         return new DataResponse<>(SUCCESS, "Joined challenge", HttpStatus.OK.value(), null);
     }
@@ -235,7 +235,7 @@ public class ReadingChallengeServiceImpl implements ReadingChallengeService {
 
             feedService.publishActivity(me.getId(), "completed_challenge", "CHALLENGE",
                     challengeId, challenge.getSlug(), challenge.getTitle(),
-                    challenge.getCoverImageUrl(), "{}", "public");
+                    challenge.getCoverImageUrl(), Collections.emptyMap(), "public");
         }
 
         challengeMapper.updateParticipant(participant);

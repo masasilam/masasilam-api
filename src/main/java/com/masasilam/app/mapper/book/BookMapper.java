@@ -1,8 +1,9 @@
 package com.masasilam.app.mapper.book;
 
-import com.masasilam.app.model.dto.BookSearchCriteria;
+import com.masasilam.app.model.dto.ContentSearchCriteria;
 import com.masasilam.app.model.dto.response.BookRecommendationResponse;
 import com.masasilam.app.model.dto.response.BookResponse;
+import com.masasilam.app.model.dto.response.ContentResponse;
 import com.masasilam.app.model.entity.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -27,8 +28,8 @@ public interface BookMapper {
     List<Book> findAllBooksForSitemap();
     List<String> getChapterPathsForSitemap(@Param("bookSlug") String bookSlug);
     List<BookResponse> getBookListWithFilters(@Param("searchTitle") String searchTitle, @Param("seriesId") Long seriesId, @Param("genreId") Long genreId, @Param("subGenreId") Long subGenreId, @Param("offset") Integer offset, @Param("limit") Integer limit, @Param("sortColumn") String sortColumn, @Param("sortType") String sortType);
-    List<BookResponse> getBookListWithAdvancedFilters(@Param("criteria") BookSearchCriteria criteria, @Param("offset") int offset, @Param("limit") int limit, @Param("sortColumn") String sortColumn, @Param("sortType") String sortType);
-    int countBooksWithAdvancedFilters(@Param("criteria") BookSearchCriteria criteria);
+    List<ContentResponse> getContentListWithAdvancedFilters(@Param("criteria") ContentSearchCriteria criteria, @Param("offset") int offset, @Param("limit") int limit, @Param("sortColumn") String sortColumn, @Param("sortType") String sortType);
+    int countContentWithAdvancedFilters(@Param("criteria") ContentSearchCriteria criteria);
     void updateBook(Book book);
     void deleteEbook(@Param("id") Long id);
     void deleteBook(@Param("id") Long id);
