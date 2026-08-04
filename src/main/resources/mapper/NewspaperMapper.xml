@@ -50,6 +50,8 @@
     <sql id="articleListColumns">
         na.id, na.slug, na.title, na.subtitle,
         na.publish_date as publishDate,
+        na.created_at as createdAt,
+        na.updated_at as updatedAt,
         na.page_number as pageNumber,
         na.importance,
         na.view_count as viewCount,
@@ -608,5 +610,15 @@
     <select id="getSourceById" resultType="com.masasilam.app.model.dto.newspaper.NewspaperSourceResponse">
         SELECT id, name, slug, location, description, logo_url as logoUrl
         FROM newspaper_sources WHERE id = #{id}
+    </select>
+
+    <select id="getLatestArticles" resultType="com.masasilam.app.model.dto.newspaper.NewspaperArticleResponse">
+        SELECT
+        <include refid="articleListColumns"/>
+        FROM newspaper_articles na
+        LEFT JOIN newspaper_sources ns ON na.source_id = ns.id
+        WHERE na.is_active = true
+        ORDER BY na.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

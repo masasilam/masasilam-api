@@ -157,9 +157,13 @@ public class NewspaperController {
     }
 
     @PutMapping("/sources/{id}")
-    public ResponseEntity<DataResponse<NewspaperSourceResponse>> updateSource(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateSourceRequest request) {
+    public ResponseEntity<DataResponse<NewspaperSourceResponse>> updateSource(@PathVariable Long id,
+                                                                              @Valid @RequestBody UpdateSourceRequest request) {
         return ResponseEntity.ok(newspaperService.updateSource(id, request));
+    }
+
+    @GetMapping("/articles/latest")
+    public ResponseEntity<DataResponse<List<NewspaperArticleResponse>>> getLatestArticles(@RequestParam(defaultValue = "12") int limit) {
+        return ResponseEntity.ok(newspaperService.getLatestArticles(limit));
     }
 }

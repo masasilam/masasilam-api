@@ -29,4 +29,5 @@ public interface NewspaperService {
     List<NewspaperSourceResponse> getAllSourcesForSitemap();
     List<NewspaperSitemapItemResponse> getArticlesForSitemap();
     DataResponse<NewspaperSourceResponse> updateSource(Long id, UpdateSourceRequest request);
+    DataResponse<List<NewspaperArticleResponse>> getLatestArticles(int limit);
 }

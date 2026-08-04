@@ -27,6 +27,8 @@
         <result property="filePath" column="file_path"/>
         <result property="budget" column="budget"/>
         <result property="budgetDisplay" column="budget_display"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <resultMap id="PersonResultMap" type="com.masasilam.app.model.entity.film.Person">
@@ -53,13 +55,13 @@
         tahun_rilis, jenis, deskripsi, catatan, durasi,
         negara_asal, original_language, color,
         poster_url, image_urls, trailer_url,
-        followed_by, part_of_series
+        followed_by, part_of_series, created_at, updated_at
         ) VALUES (
         #{wikidataQid}, #{slug}, #{judul}, #{titleEng},
         #{tahunRilis}, #{jenis}, #{deskripsi}, #{catatan}, #{durasi},
         #{negaraAsal}, #{originalLanguage}, #{color},
         #{posterUrl}, #{imageUrls}, #{trailerUrl},
-        #{followedBy}, #{partOfSeries}
+        #{followedBy}, #{partOfSeries}, NOW(), NOW()
         )
     </insert>
 
@@ -81,6 +83,7 @@
             <if test="trailerUrl != null">trailer_url = #{trailerUrl},</if>
             <if test="followedBy != null">followed_by = #{followedBy},</if>
             <if test="partOfSeries != null">part_of_series = #{partOfSeries},</if>
+            updated_at = NOW()
         </set>
         WHERE id = #{id}
     </update>
