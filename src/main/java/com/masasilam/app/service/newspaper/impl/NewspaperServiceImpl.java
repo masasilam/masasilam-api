@@ -1,16 +1,24 @@
 package com.masasilam.app.service.newspaper.impl;
 
 import com.masasilam.app.exception.custom.*;
+import com.masasilam.app.mapper.author.AuthorMapper;
+import com.masasilam.app.mapper.author.ContributorMapper;
+import com.masasilam.app.mapper.book.GenreMapper;
 import com.masasilam.app.mapper.newspaper.ArticleRatingMapper;
 import com.masasilam.app.mapper.newspaper.NewspaperMapper;
 import com.masasilam.app.mapper.user.UserMapper;
+import com.masasilam.app.model.dto.ContributorMetadata;
 import com.masasilam.app.model.dto.newspaper.*;
 import com.masasilam.app.model.dto.response.*;
+import com.masasilam.app.model.entity.Author;
+import com.masasilam.app.model.entity.Contributor;
+import com.masasilam.app.model.entity.Genre;
 import com.masasilam.app.model.entity.User;
 import com.masasilam.app.model.entity.newspaper.*;
 import com.masasilam.app.service.newspaper.NewspaperService;
 import com.masasilam.app.util.HashUtil;
 import com.masasilam.app.util.IPUtil;
+import com.masasilam.app.util.file.FileUtil;
 import com.masasilam.app.util.interceptor.HeaderHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +27,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,50 +42,19 @@ public class NewspaperServiceImpl implements NewspaperService {
     private final ArticleRatingMapper articleRatingMapper;
     private final UserMapper userMapper;
     private final HeaderHolder headerHolder;
+    private final AuthorMapper authorMapper;
+    private final ContributorMapper contributorMapper;
+    private final GenreMapper genreMapper;
+    private final FileUtil fileUtil;
 
     private static final String SUCCESS = "Success";
     private static final String UNKNOWN = "Unknown";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
 
-    private static final Map<String, String> CATEGORY_NAMES = Map.ofEntries(
-            Map.entry("nasional", "Nasional"),
-            Map.entry("internasional", "Internasional"),
-            Map.entry("daerah", "Daerah / Lokal"),
-            Map.entry("politik", "Politik"),
-            Map.entry("hukum", "Hukum & Kriminal"),
-            Map.entry("pemerintahan", "Pemerintahan"),
-            Map.entry("ekonomi", "Ekonomi"),
-            Map.entry("bisnis", "Bisnis & Keuangan"),
-            Map.entry("pertanian", "Pertanian"),
-            Map.entry("sosial", "Sosial"),
-            Map.entry("pendidikan", "Pendidikan"),
-            Map.entry("kesehatan", "Kesehatan"),
-            Map.entry("agama", "Agama"),
-            Map.entry("lingkungan", "Lingkungan"),
-            Map.entry("teknologi", "Teknologi"),
-            Map.entry("sains", "Sains & Iptek"),
-            Map.entry("budaya", "Budaya"),
-            Map.entry("hiburan", "Hiburan"),
-            Map.entry("olahraga", "Olahraga"),
-            Map.entry("gaya-hidup", "Gaya Hidup"),
-            Map.entry("kuliner", "Kuliner"),
-            Map.entry("wisata", "Wisata"),
-            Map.entry("opini", "Opini / Kolom"),
-            Map.entry("sastra", "Sastra & Cerita"),
-            Map.entry("cerita-bersambung", "Cerita Bersambung"),
-            Map.entry("iklan", "Iklan / Pengumuman"),
-            Map.entry("lainnya", "Lainnya")
-    );
-
     @Override
     public DataResponse<List<NewspaperCategoryResponse>> getAllCategories() {
         try {
             List<NewspaperCategoryResponse> categories = newspaperMapper.getAllCategories();
-            categories.forEach(cat -> {
-                cat.setName(CATEGORY_NAMES.getOrDefault(cat.getSlug(), cat.getSlug()));
-                cat.setIcon(getCategoryIcon(cat.getSlug()));
-                cat.setDescription(getCategoryDescription(cat.getSlug()));
-            });
             return new DataResponse<>(SUCCESS, "Categories retrieved successfully",
                     HttpStatus.OK.value(), categories);
         } catch (Exception e) {
@@ -115,16 +95,14 @@ public class NewspaperServiceImpl implements NewspaperService {
             String categorySlug, int page, int limit, String sortBy,
             String sortOrder, NewspaperSearchCriteria criteria) {
         try {
-            validateCategory(categorySlug);
+            validateGenreSlug(categorySlug);
             int offset = (page - 1) * limit;
-            List<NewspaperArticleResponse> articles = newspaperMapper.getArticlesByCategory(
-                    categorySlug, offset, limit, sortBy, sortOrder, criteria);
+            List<NewspaperArticleResponse> articles = newspaperMapper.getArticlesByCategory(categorySlug, offset, limit, sortBy, sortOrder, criteria);
             int totalCount = newspaperMapper.countArticlesByCategory(categorySlug, criteria);
             Long currentUserId = getCurrentUserId();
             articles.forEach(article -> enrichArticleResponse(article, currentUserId));
             PageDataResponse<NewspaperArticleResponse> pageData = new PageDataResponse<>(page, limit, totalCount, articles);
-            return new DatatableResponse<>(SUCCESS, "Articles retrieved successfully",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Articles retrieved successfully", HttpStatus.OK.value(), pageData);
         } catch (Exception e) {
             log.error("Error getting articles by category: {}", categorySlug, e);
             throw e;
@@ -136,14 +114,12 @@ public class NewspaperServiceImpl implements NewspaperService {
             LocalDate date, int page, int limit, String sortBy, String category) {
         try {
             int offset = (page - 1) * limit;
-            List<NewspaperArticleResponse> articles = newspaperMapper.getArticlesByDate(
-                    date, offset, limit, sortBy, category);
+            List<NewspaperArticleResponse> articles = newspaperMapper.getArticlesByDate(date, offset, limit, sortBy, category);
             int totalCount = newspaperMapper.countArticlesByDate(date, category);
             Long currentUserId = getCurrentUserId();
             articles.forEach(article -> enrichArticleResponse(article, currentUserId));
             PageDataResponse<NewspaperArticleResponse> pageData = new PageDataResponse<>(page, limit, totalCount, articles);
-            return new DatatableResponse<>(SUCCESS, "Articles retrieved successfully",
-                    HttpStatus.OK.value(), pageData);
+            return new DatatableResponse<>(SUCCESS, "Articles retrieved successfully", HttpStatus.OK.value(), pageData);
         } catch (Exception e) {
             log.error("Error getting articles by date: {}", date, e);
             throw e;
@@ -151,48 +127,26 @@ public class NewspaperServiceImpl implements NewspaperService {
     }
 
     @Override
-    public DatatableResponse<NewspaperArticleResponse> getArticlesByCategoryAndDate(
-            String categorySlug, LocalDate date, int page, int limit,
-            String sortBy, String source) {
-        try {
-            validateCategory(categorySlug);
-            NewspaperSearchCriteria criteria = NewspaperSearchCriteria.builder()
-                    .dateFrom(date).dateTo(date).source(source).build();
-            return getArticlesByCategory(categorySlug, page, limit, sortBy, "DESC", criteria);
-        } catch (Exception e) {
-            log.error("Error getting articles by category and date: {} on {}", categorySlug, date, e);
-            throw e;
-        }
-    }
-
-    @Override
     @Transactional
     public DataResponse<NewspaperArticleDetailResponse> getArticleDetail(
-            String categorySlug, LocalDate date, String articleSlug,
-            HttpServletRequest request) {
+            String sourceSlug, String articleSlug, HttpServletRequest request) {
         try {
-            validateCategory(categorySlug);
-            NewspaperArticle article = newspaperMapper.findArticleByCategoryDateAndSlug(
-                    categorySlug, date, articleSlug);
-            if (article == null) throw new DataNotFoundException();
-
-            trackArticleView(article, request);
-
-            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailBySlug(articleSlug);
+            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailBySourceAndSlug(sourceSlug, articleSlug);
             if (detail == null) throw new DataNotFoundException();
+
+            trackArticleView(detail.getId(), detail.getSlug(), request);
 
             Long currentUserId = getCurrentUserId();
             enrichArticleDetailResponse(detail, currentUserId);
-            detail.setRelatedArticles(getRelatedArticles(article.getId(), article.getCategory(), 5));
-            detail.setSameDateArticles(getSameDateArticles(article.getId(), article.getPublishDate(), 5));
+            detail.setRelatedArticles(getRelatedArticles(detail.getId(), primaryGenreSlug(detail)));
+            detail.setSameDateArticles(getSameDateArticles(detail.getId(), detail.getPublishDate()));
 
             log.info("Retrieved newspaper detail: {} (views: {})", detail.getTitle(), detail.getViewCount());
-            return new DataResponse<>(SUCCESS, "Article detail retrieved successfully",
-                    HttpStatus.OK.value(), detail);
-        } catch (DataNotFoundException e) {
+            return new DataResponse<>(SUCCESS, "Article detail retrieved successfully", HttpStatus.OK.value(), detail);
+        } catch (DataNotFoundException | InvalidDataException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error getting newspaper detail: {}/{}/{}", categorySlug, date, articleSlug, e);
+            log.error("Error getting newspaper detail: {}/{}", sourceSlug, articleSlug, e);
             throw new InternalServerErrorException();
         }
     }
@@ -286,25 +240,25 @@ public class NewspaperServiceImpl implements NewspaperService {
     @Transactional
     public DataResponse<NewspaperArticleDetailResponse> createArticle(CreateArticleRequest request) {
         try {
-            validateCategory(request.getCategory());
-            if (newspaperMapper.existsBySlug(request.getSlug())) {
-                throw new IllegalArgumentException("Article with this slug already exists");
-            }
             Long sourceId = resolveSourceId(request.getSourceId(), request.getSourceName());
+            if (sourceId == null) {
+                throw new IllegalArgumentException("Sumber koran wajib diisi");
+            }
+            if (newspaperMapper.existsBySlugForSource(sourceId, request.getSlug())) {
+                throw new IllegalArgumentException("Artikel dengan slug ini sudah ada untuk sumber tersebut");
+            }
             String plainText = convertHtmlToPlainText(request.getHtmlContent());
             int wordCount = calculateWordCount(plainText);
 
             NewspaperArticle article = NewspaperArticle.builder()
                     .sourceId(sourceId)
                     .slug(request.getSlug())
-                    .category(request.getCategory())
                     .publishDate(request.getPublishDate())
                     .title(request.getTitle())
                     .subtitle(request.getSubtitle())
                     .content(plainText)
                     .htmlContent(request.getHtmlContent())
                     .wordCount(wordCount)
-                    .author(request.getAuthor())
                     .pageNumber(request.getPageNumber())
                     .importance(request.getImportance() != null ? request.getImportance() : "medium")
                     .imageUrl(request.getImageUrl())
@@ -315,10 +269,14 @@ public class NewspaperServiceImpl implements NewspaperService {
                     .build();
 
             newspaperMapper.insertArticle(article);
-            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailBySlug(article.getSlug());
+
+            authorProcessing(request.getAuthorNames(), article.getId());
+            genreProcessing(request.getGenreNames(), article.getId());
+            contributorProcessing(request.getContributors(), article.getId());
+
+            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailById(article.getId());
             log.info("Article created: {} (ID: {})", article.getTitle(), article.getId());
-            return new DataResponse<>(SUCCESS, "Article created successfully",
-                    HttpStatus.CREATED.value(), detail);
+            return new DataResponse<>(SUCCESS, "Article created successfully", HttpStatus.CREATED.value(), detail);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -334,10 +292,6 @@ public class NewspaperServiceImpl implements NewspaperService {
             NewspaperArticle existing = newspaperMapper.findById(id);
             if (existing == null) throw new DataNotFoundException();
 
-            if (request.getCategory() != null && !request.getCategory().trim().isEmpty()) {
-                validateCategory(request.getCategory());
-            }
-
             String htmlContent = request.getHtmlContent();
             if (htmlContent == null || htmlContent.trim().isEmpty()) {
                 htmlContent = existing.getHtmlContent();
@@ -346,9 +300,11 @@ public class NewspaperServiceImpl implements NewspaperService {
             String plainText = convertHtmlToPlainText(htmlContent);
             int wordCount = calculateWordCount(plainText);
 
-            Long sourceId = resolveSourceId(request.getSourceId(), request.getSourceName());
-            if (sourceId != null) {
-                existing.setSourceId(sourceId);
+            Long resolvedSourceId = existing.getSourceId();
+            Long candidateSourceId = resolveSourceId(request.getSourceId(), request.getSourceName());
+            if (candidateSourceId != null) {
+                resolvedSourceId = candidateSourceId;
+                existing.setSourceId(candidateSourceId);
             }
 
             existing.setTitle(request.getTitle());
@@ -356,22 +312,19 @@ public class NewspaperServiceImpl implements NewspaperService {
             existing.setContent(plainText);
             existing.setHtmlContent(htmlContent);
             existing.setWordCount(wordCount);
-            existing.setAuthor(request.getAuthor());
             existing.setPageNumber(request.getPageNumber());
             if (request.getImportance() != null && !request.getImportance().isBlank())
                 existing.setImportance(request.getImportance());
             if (request.getImageUrl() != null)
                 existing.setImageUrl(request.getImageUrl());
-            if (request.getCategory() != null && !request.getCategory().trim().isEmpty())
-                existing.setCategory(request.getCategory());
             if (request.getPublishDate() != null)
                 existing.setPublishDate(request.getPublishDate());
 
             if (request.getSlug() != null && !request.getSlug().trim().isEmpty()) {
                 String newSlug = request.getSlug().trim();
                 if (!newSlug.equals(existing.getSlug())) {
-                    if (newspaperMapper.existsBySlugExcluding(newSlug, id)) {
-                        throw new IllegalArgumentException("Slug sudah digunakan: " + newSlug);
+                    if (newspaperMapper.existsBySlugForSourceExcluding(resolvedSourceId, newSlug, id)) {
+                        throw new IllegalArgumentException("Slug sudah digunakan untuk sumber ini: " + newSlug);
                     }
                     log.info("Slug updated for newspaper {}: {} -> {}", id, existing.getSlug(), newSlug);
                     existing.setSlug(newSlug);
@@ -380,7 +333,19 @@ public class NewspaperServiceImpl implements NewspaperService {
 
             newspaperMapper.updateArticle(existing);
 
-            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailBySlug(existing.getSlug());
+            if (request.getAuthorNames() != null) {
+                authorProcessing(request.getAuthorNames(), id);
+            }
+            if (request.getGenreNames() != null) {
+                newspaperMapper.deleteArticleGenres(id);
+                genreProcessing(request.getGenreNames(), id);
+            }
+            if (request.getContributors() != null) {
+                newspaperMapper.deleteArticleContributors(id);
+                contributorProcessing(request.getContributors(), id);
+            }
+
+            NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailById(id);
             log.info("Article updated: {} (ID: {}, slug: {})", existing.getTitle(), id, existing.getSlug());
             return new DataResponse<>(SUCCESS, "Article updated successfully",
                     HttpStatus.OK.value(), detail);
@@ -410,16 +375,193 @@ public class NewspaperServiceImpl implements NewspaperService {
         }
     }
 
-    private void trackArticleView(NewspaperArticle article, HttpServletRequest request) {
+    @Override
+    public DataResponse<NewspaperSourceDetailResponse> getSourceDetail(String sourceSlug) {
+        try {
+            NewspaperSourceDetailResponse source = newspaperMapper.getSourceDetailBySlug(sourceSlug);
+            if (source == null) throw new DataNotFoundException();
+            source.setYears(newspaperMapper.getSourceAvailableYears(source.getId()));
+            return new DataResponse<>(SUCCESS, "Source detail retrieved successfully", HttpStatus.OK.value(), source);
+        } catch (DataNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error getting source detail: {}", sourceSlug, e);
+            throw new InternalServerErrorException();
+        }
+    }
+
+    @Override
+    public DataResponse<List<NewspaperEditionResponse>> getEditions(String sourceSlug, int year, Integer month, LocalDate dateFrom, LocalDate dateTo) {
+        try {
+            Long sourceId = newspaperMapper.findSourceIdBySlug(sourceSlug);
+            if (sourceId == null) throw new DataNotFoundException();
+            List<NewspaperEditionResponse> editions = newspaperMapper.getEditionsBySourceAndYear(sourceId, year, month, dateFrom, dateTo);
+            editions.forEach(e -> e.setDateFormatted(e.getPublishDate().format(DATE_FORMATTER)));
+            return new DataResponse<>(SUCCESS, "Editions retrieved successfully", HttpStatus.OK.value(), editions);
+        } catch (DataNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error getting editions: {}/{}", sourceSlug, year, e);
+            throw new InternalServerErrorException();
+        }
+    }
+
+    @Override
+    public DataResponse<List<NewspaperArticleResponse>> getEditionArticles(String sourceSlug, LocalDate date) {
+        try {
+            Long sourceId = newspaperMapper.findSourceIdBySlug(sourceSlug);
+            if (sourceId == null) throw new DataNotFoundException();
+            List<NewspaperArticleResponse> articles = newspaperMapper.getArticlesBySourceAndDate(sourceId, date);
+            if (articles.isEmpty()) throw new DataNotFoundException();
+            Long currentUserId = getCurrentUserId();
+            articles.forEach(a -> enrichArticleResponse(a, currentUserId));
+            return new DataResponse<>(SUCCESS, "Edition articles retrieved successfully", HttpStatus.OK.value(), articles);
+        } catch (DataNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error getting edition articles: {}/{}", sourceSlug, date, e);
+            throw new InternalServerErrorException();
+        }
+    }
+
+    @Override
+    public List<NewspaperSourceResponse> getAllSourcesForSitemap() {
+        try {
+            return newspaperMapper.getAllSourcesForSitemap();
+        } catch (Exception e) {
+            log.error("Error getting sources for sitemap", e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<NewspaperSitemapItemResponse> getArticlesForSitemap() {
+        try {
+            return newspaperMapper.getArticlesForSitemap();
+        } catch (Exception e) {
+            log.error("Error getting articles for sitemap", e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    @Transactional
+    public DataResponse<NewspaperSourceResponse> updateSource(Long id, UpdateSourceRequest request) {
+        try {
+            if (newspaperMapper.findSourceById(id) == null) throw new DataNotFoundException();
+            newspaperMapper.updateSource(id, request.getName(), request.getDescription(), request.getLocation(), request.getLogoUrl());
+            NewspaperSourceResponse updated = newspaperMapper.getSourceById(id);
+            return new DataResponse<>(SUCCESS, "Source updated successfully", HttpStatus.OK.value(), updated);
+        } catch (DataNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error updating source: {}", id, e);
+            throw new InternalServerErrorException();
+        }
+    }
+
+    @Override
+    public DataResponse<List<NewspaperArticleResponse>> getLatestArticles(int limit) {
+        try {
+            List<NewspaperArticleResponse> articles = newspaperMapper.getLatestArticles(0, limit);
+            Long currentUserId = getCurrentUserId();
+            articles.forEach(article -> enrichArticleResponse(article, currentUserId));
+            return new DataResponse<>(SUCCESS, "Latest articles retrieved successfully", HttpStatus.OK.value(), articles);
+        } catch (Exception e) {
+            log.error("Error getting latest articles", e);
+            throw new InternalServerErrorException();
+        }
+    }
+
+    private void genreProcessing(List<String> genreNames, Long articleId) {
+        if (genreNames == null || genreNames.isEmpty()) return;
+        for (String name : genreNames) {
+            if (name == null || name.isBlank()) continue;
+            Genre genre = genreMapper.findByName(name);
+            if (genre == null) {
+                genre = new Genre();
+                genre.setName(name.trim());
+                genre.setSlug(fileUtil.sanitizeFilename(name));
+                genre.setDescription("Auto-generated from newspaper article");
+                genre.setColorHex("#6B7280");
+                genre.setIconName("newspaper");
+                genre.setIsFiction(false);
+                genre.setCreatedAt(Instant.now());
+                genreMapper.insertGenre(genre);
+                log.info("Auto-created genre from article: {}", name);
+            }
+            newspaperMapper.insertArticleGenre(articleId, genre.getId());
+        }
+    }
+
+    private void authorProcessing(List<String> authorNames, Long articleId) {
+        if (authorNames == null || authorNames.isEmpty()) return;
+
+        Set<Long> existingAuthorIds = newspaperMapper.findAuthorsByArticleId(articleId).stream()
+                .map(Author::getId)
+                .collect(Collectors.toSet());
+
+        for (String name : authorNames) {
+            if (name == null || name.isBlank()) continue;
+            String slug = fileUtil.sanitizeFilename(name);
+            Author author = authorMapper.findAuthorBySlug(slug);
+
+            if (author == null) {
+                author = new Author();
+                author.setName(name.trim());
+                author.setSlug(slug);
+                author.setTotalBooks(1);
+                author.setCreatedAt(LocalDateTime.now());
+                author.setUpdatedAt(LocalDateTime.now());
+                authorMapper.insertAuthor(author);
+                newspaperMapper.insertArticleAuthor(articleId, author.getId());
+                log.info("Auto-created author from article: {} (total karya: 1)", name);
+                continue;
+            }
+
+            if (!existingAuthorIds.contains(author.getId())) {
+                author.setTotalBooks((author.getTotalBooks() != null ? author.getTotalBooks() : 0) + 1);
+                author.setUpdatedAt(LocalDateTime.now());
+                authorMapper.updateAuthor(author);
+                newspaperMapper.insertArticleAuthor(articleId, author.getId());
+                log.info("Linked existing author '{}' to article, total karya sekarang: {}", name, author.getTotalBooks());
+            }
+        }
+    }
+
+    private void contributorProcessing(List<ContributorMetadata> contributors, Long articleId) {
+        if (contributors == null || contributors.isEmpty()) return;
+        for (ContributorMetadata c : contributors) {
+            if (c.getName() == null || c.getName().isBlank()) continue;
+            Contributor contributor = contributorMapper.findByNameAndRole(c.getName(), c.getRole());
+            if (contributor == null) {
+                contributor = new Contributor();
+                contributor.setName(c.getName().trim());
+                contributor.setRole(c.getRole());
+                String baseSlug = fileUtil.sanitizeFilename(c.getName());
+                String finalSlug = contributorMapper.findBySlug(baseSlug) != null
+                        ? baseSlug + "-" + c.getRole().toLowerCase().replace(" ", "-")
+                        : baseSlug;
+                contributor.setSlug(finalSlug);
+                contributor.setCreatedAt(LocalDateTime.now());
+                contributor.setUpdatedAt(LocalDateTime.now());
+                contributorMapper.insertContributor(contributor);
+                log.info("Auto-created contributor from article: {} ({})", c.getName(), c.getRole());
+            }
+            newspaperMapper.insertArticleContributor(articleId, contributor.getId(), c.getRole());
+        }
+    }
+
+    private void trackArticleView(Long articleId, String slug, HttpServletRequest request) {
         try {
             String ipAddress = IPUtil.getClientIP(request);
             String userAgent = IPUtil.getUserAgent(request);
             Long userId = getCurrentUserId();
-            String viewerHash = HashUtil.generateViewerHash(article.getSlug(), userId, ipAddress, userAgent);
+            String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
 
             if (!newspaperMapper.hasViewByHash(viewerHash, "view")) {
                 ArticleView view = ArticleView.builder()
-                        .articleId(article.getId())
+                        .articleId(articleId)
                         .userId(userId)
                         .ipAddress(ipAddress)
                         .userAgent(userAgent)
@@ -427,11 +569,11 @@ public class NewspaperServiceImpl implements NewspaperService {
                         .actionType("view")
                         .build();
                 newspaperMapper.insertArticleView(view);
-                newspaperMapper.incrementViewCount(article.getId());
-                log.debug("New view recorded for newspaper: {}", article.getTitle());
+                newspaperMapper.incrementViewCount(articleId);
+                log.debug("New view recorded for newspaper: {}", slug);
             }
         } catch (Exception e) {
-            log.warn("View tracking failed for newspaper {}: {}", article.getId(), e.getMessage());
+            log.warn("View tracking failed for newspaper {}: {}", articleId, e.getMessage());
         }
     }
 
@@ -468,8 +610,12 @@ public class NewspaperServiceImpl implements NewspaperService {
         return text.trim().replaceAll("\\s+", " ");
     }
 
+    private String primaryGenreSlug(NewspaperArticleDetailResponse detail) {
+        if (detail.getGenreSlugs() == null || detail.getGenreSlugs().isBlank()) return null;
+        return detail.getGenreSlugs().split(",")[0].trim();
+    }
+
     private void enrichArticleResponse(NewspaperArticleResponse article, Long userId) {
-        article.setCategoryName(CATEGORY_NAMES.getOrDefault(article.getCategory(), article.getCategory()));
         article.setDateFormatted(article.getPublishDate().format(DATE_FORMATTER));
         article.setIsSaved(false);
         article.setMyRating(null);
@@ -489,7 +635,6 @@ public class NewspaperServiceImpl implements NewspaperService {
     }
 
     private void enrichArticleDetailResponse(NewspaperArticleDetailResponse detail, Long userId) {
-        detail.setCategoryName(CATEGORY_NAMES.getOrDefault(detail.getCategory(), detail.getCategory()));
         detail.setDateFormatted(detail.getPublishDate().format(DATE_FORMATTER));
         detail.setIsSaved(false);
         detail.setMyRating(null);
@@ -499,6 +644,7 @@ public class NewspaperServiceImpl implements NewspaperService {
             NewspaperSourceResponse sourceObj = new NewspaperSourceResponse();
             sourceObj.setId(detail.getSourceId());
             sourceObj.setName(detail.getSourceName() != null ? detail.getSourceName() : UNKNOWN);
+            sourceObj.setSlug(detail.getSourceSlug());
             sourceObj.setLocation(detail.getSourceLocation());
             sourceObj.setDescription(detail.getSourceDescription());
             detail.setSource(sourceObj);
@@ -524,18 +670,19 @@ public class NewspaperServiceImpl implements NewspaperService {
         }
     }
 
-    private List<NewspaperArticleResponse> getRelatedArticles(Long articleId, String category, int limit) {
+    private List<NewspaperArticleResponse> getRelatedArticles(Long articleId, String categorySlug) {
         try {
-            return newspaperMapper.getRelatedArticles(articleId, category, limit);
+            if (categorySlug == null) return Collections.emptyList();
+            return newspaperMapper.getRelatedArticles(articleId, categorySlug, 5);
         } catch (Exception e) {
             log.error("Error getting related articles", e);
             return Collections.emptyList();
         }
     }
 
-    private List<NewspaperArticleResponse> getSameDateArticles(Long articleId, LocalDate date, int limit) {
+    private List<NewspaperArticleResponse> getSameDateArticles(Long articleId, LocalDate date) {
         try {
-            return newspaperMapper.getSameDateArticles(articleId, date, limit);
+            return newspaperMapper.getSameDateArticles(articleId, date, 5);
         } catch (Exception e) {
             log.error("Error getting same date articles", e);
             return Collections.emptyList();
@@ -555,78 +702,14 @@ public class NewspaperServiceImpl implements NewspaperService {
         }
     }
 
-    private void validateCategory(String categorySlug) {
-        if (!CATEGORY_NAMES.containsKey(categorySlug)) {
-            throw new IllegalArgumentException("Invalid category: " + categorySlug);
+    private void validateGenreSlug(String slug) {
+        if (!newspaperMapper.genreSlugExists(slug)) {
+            throw new InvalidDataException("Genre tidak ditemukan: " + slug);
         }
     }
 
     private int calculateWordCount(String content) {
         if (content == null || content.trim().isEmpty()) return 0;
         return content.trim().split("\\s+").length;
-    }
-
-    private String getCategoryIcon(String category) {
-        return switch (category) {
-            case "nasional" -> "🇮🇩";
-            case "internasional" -> "🌏";
-            case "daerah" -> "📍";
-            case "politik" -> "🏛️";
-            case "hukum" -> "⚖️";
-            case "pemerintahan" -> "🏢";
-            case "ekonomi" -> "💰";
-            case "bisnis" -> "📈";
-            case "pertanian" -> "🌾";
-            case "sosial" -> "👥";
-            case "pendidikan" -> "📚";
-            case "kesehatan" -> "🏥";
-            case "agama" -> "🕌";
-            case "lingkungan" -> "🌿";
-            case "teknologi" -> "💻";
-            case "sains" -> "🔬";
-            case "budaya" -> "🎭";
-            case "hiburan" -> "🎬";
-            case "olahraga" -> "⚽";
-            case "gaya-hidup" -> "✨";
-            case "kuliner" -> "🍜";
-            case "wisata" -> "✈️";
-            case "opini" -> "✍️";
-            case "sastra" -> "📖";
-            case "cerita-bersambung" -> "📜";
-            case "iklan" -> "📢";
-            default -> "📰";
-        };
-    }
-
-    private String getCategoryDescription(String category) {
-        return switch (category) {
-            case "nasional" -> "Berita nasional dalam negeri";
-            case "internasional" -> "Berita mancanegara dan dunia";
-            case "daerah" -> "Berita daerah dan lokal";
-            case "politik" -> "Berita politik dan pemerintahan";
-            case "hukum" -> "Berita hukum dan kriminal";
-            case "pemerintahan" -> "Berita kebijakan pemerintah";
-            case "ekonomi" -> "Berita ekonomi makro";
-            case "bisnis" -> "Berita bisnis dan keuangan";
-            case "pertanian" -> "Berita pertanian dan pangan";
-            case "sosial" -> "Berita sosial kemasyarakatan";
-            case "pendidikan" -> "Berita pendidikan dan akademis";
-            case "kesehatan" -> "Berita kesehatan dan medis";
-            case "agama" -> "Berita keagamaan";
-            case "lingkungan" -> "Berita lingkungan dan alam";
-            case "teknologi" -> "Berita teknologi dan inovasi";
-            case "sains" -> "Berita sains dan iptek";
-            case "budaya" -> "Berita seni dan budaya";
-            case "hiburan" -> "Berita hiburan dan gaya hidup";
-            case "olahraga" -> "Berita olahraga";
-            case "gaya-hidup" -> "Gaya hidup dan lifestyle";
-            case "kuliner" -> "Berita kuliner dan makanan";
-            case "wisata" -> "Berita wisata dan perjalanan";
-            case "opini" -> "Kolom opini dan editorial";
-            case "sastra" -> "Sastra, puisi, dan cerita";
-            case "cerita-bersambung" -> "Cerita bersambung dan serial";
-            case "iklan" -> "Iklan dan pengumuman";
-            default -> "Artikel berita umum";
-        };
     }
 }

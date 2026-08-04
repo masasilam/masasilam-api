@@ -7,6 +7,7 @@ import org.apache.ibatis.type.BaseTypeHandler;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedJdbcTypes;
 import org.apache.ibatis.type.MappedTypes;
+import org.postgresql.util.PGobject;
 
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
@@ -24,7 +25,10 @@ public class JsonMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
     public void setNonNullParameter(PreparedStatement ps, int i, Map<String, Object> parameter, JdbcType jdbcType) throws SQLException {
         try {
             String json = objectMapper.writeValueAsString(parameter);
-            ps.setString(i, json);
+            PGobject pgObject = new PGobject();
+            pgObject.setType("jsonb");
+            pgObject.setValue(json);
+            ps.setObject(i, pgObject);
         } catch (JsonProcessingException e) {
             throw new SQLException("Error converting Map to JSON", e);
         }
@@ -61,6 +65,15 @@ public class JsonMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
 
             if (jsonObject instanceof String json) {
                 if (json.isEmpty()) {
+                    return Collections.emptyMap();
+                }
+                return objectMapper.readValue(json, new TypeReference<>() {
+                });
+            }
+
+            if (jsonObject instanceof PGobject pgObject) {
+                String json = pgObject.getValue();
+                if (json == null || json.isEmpty()) {
                     return Collections.emptyMap();
                 }
                 return objectMapper.readValue(json, new TypeReference<>() {

@@ -5,21 +5,24 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class NewspaperSourceResponse {
+public class NewspaperSourceDetailResponse {
     private Long id;
-    private String slug;
     private String name;
-    private String nameOriginal;
+    private String slug;
     private String logoUrl;
     private String description;
-    private String publisher;
     private String location;
-    private Integer yearStart;
-    private Integer yearEnd;
-    private Integer totalArticles;
-    private Long totalViews;
+    private String coverImageUrl;
+    private Long articleCount;
+    private Long editionCount;
+    private Integer yearFrom;
+    private Integer yearTo;
+    private List<Integer> years;
+    private List<NewspaperCategoryResponse> genres;
 }

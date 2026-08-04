@@ -17,14 +17,12 @@ public class NewspaperArticle {
     private Long id;
     private Long sourceId;
     private String slug;
-    private String category;
     private LocalDate publishDate;
     private String title;
     private String subtitle;
     private String content;
     private String htmlContent;
     private Integer wordCount;
-    private String author;
     private Integer pageNumber;
     private String importance;
     private Long parentArticleId;

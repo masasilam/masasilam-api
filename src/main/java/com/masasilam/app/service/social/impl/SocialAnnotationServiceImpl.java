@@ -16,7 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -27,7 +29,6 @@ public class SocialAnnotationServiceImpl implements SocialAnnotationService {
     private final ActivityFeedService feedService;
     private final NotificationService notificationService;
     private final HeaderHolder headerHolder;
-
     private static final String SUCCESS = "Success";
     private static final String PUBLIC = "public";
 
@@ -72,14 +73,16 @@ public class SocialAnnotationServiceImpl implements SocialAnnotationService {
         annotation.setVisibility(request.getVisibility() != null ? request.getVisibility() : PUBLIC);
         annotationMapper.insert(annotation);
 
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("annotationId", annotation.getId());
         feedService.publishActivity(me.getId(), "shared_annotation",
                 request.getEntityType(), request.getEntityId(),
                 request.getEntitySlug(), request.getEntityTitle(), null,
-                "{\"annotationId\":" + annotation.getId() + "}",
+                metadata,
                 annotation.getVisibility());
 
         List<SocialAnnotationResponse> results = annotationMapper.findByUser(me.getId(), me.getId(), 0, 1);
-        SocialAnnotationResponse response = results.isEmpty() ? new SocialAnnotationResponse() : results.get(0);
+        SocialAnnotationResponse response = results.isEmpty() ? new SocialAnnotationResponse() : results.getFirst();
         return new DataResponse<>(SUCCESS, "Annotation published", HttpStatus.CREATED.value(), response);
     }
 
@@ -217,10 +220,12 @@ public class SocialAnnotationServiceImpl implements SocialAnnotationService {
         reshare.setVisibility(PUBLIC);
         annotationMapper.insert(reshare);
 
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("resharedFrom", annotationId);
         feedService.publishActivity(me.getId(), "shared_annotation",
                 original.getEntityType(), original.getEntityId(),
                 original.getEntitySlug(), original.getEntityTitle(), null,
-                "{\"resharedFrom\":" + annotationId + "}", PUBLIC);
+                metadata, PUBLIC);
         return new DataResponse<>(SUCCESS, "Annotation reshared", HttpStatus.OK.value(), null);
     }
 

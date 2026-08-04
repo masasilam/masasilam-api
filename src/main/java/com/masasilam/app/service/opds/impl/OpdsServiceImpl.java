@@ -2,9 +2,9 @@ package com.masasilam.app.service.opds.impl;
 
 import com.masasilam.app.mapper.book.BookMapper;
 import com.masasilam.app.mapper.book.GenreMapper;
-import com.masasilam.app.model.dto.BookSearchCriteria;
+import com.masasilam.app.model.dto.ContentSearchCriteria;
 import com.masasilam.app.model.dto.opds.*;
-import com.masasilam.app.model.dto.response.BookResponse;
+import com.masasilam.app.model.dto.response.ContentResponse;
 import com.masasilam.app.model.entity.Genre;
 import com.masasilam.app.service.opds.OpdsService;
 import lombok.RequiredArgsConstructor;
@@ -61,13 +61,13 @@ public class OpdsServiceImpl implements OpdsService {
 
     @Override
     public OpdsFeed getNewBooks(int page, int limit) {
-        BookSearchCriteria criteria = BookSearchCriteria.builder().build();
+        ContentSearchCriteria criteria = ContentSearchCriteria.builder().build();
         int offset = (page - 1) * limit;
 
-        List<BookResponse> books = bookMapper.getBookListWithAdvancedFilters(
+        List<ContentResponse> books = bookMapper.getContentListWithAdvancedFilters(
                 criteria, offset, limit, "b.updated_at", "DESC"
         );
-        int totalCount = bookMapper.countBooksWithAdvancedFilters(criteria);
+        int totalCount = bookMapper.countContentWithAdvancedFilters(criteria);
 
         OpdsFeed feed = new OpdsFeed();
         feed.setId(apiUrl + "/opds/new");
@@ -100,15 +100,15 @@ public class OpdsServiceImpl implements OpdsService {
 
     @Override
     public OpdsFeed searchBooks(String query, int page, int limit) {
-        BookSearchCriteria criteria = BookSearchCriteria.builder()
+        ContentSearchCriteria criteria = ContentSearchCriteria.builder()
                 .searchTitle(query)
                 .build();
         int offset = (page - 1) * limit;
 
-        List<BookResponse> books = bookMapper.getBookListWithAdvancedFilters(
+        List<ContentResponse> books = bookMapper.getContentListWithAdvancedFilters(
                 criteria, offset, limit, "b.updated_at", "DESC"
         );
-        int totalCount = bookMapper.countBooksWithAdvancedFilters(criteria);
+        int totalCount = bookMapper.countContentWithAdvancedFilters(criteria);
 
         OpdsFeed feed = new OpdsFeed();
         feed.setId(apiUrl + "/opds/search?q=" + query);
@@ -131,15 +131,15 @@ public class OpdsServiceImpl implements OpdsService {
 
     @Override
     public OpdsFeed getBooksByGenre(String genreSlug, int page, int limit) {
-        BookSearchCriteria criteria = BookSearchCriteria.builder()
+        ContentSearchCriteria criteria = ContentSearchCriteria.builder()
                 .genre(genreSlug)
                 .build();
         int offset = (page - 1) * limit;
 
-        List<BookResponse> books = bookMapper.getBookListWithAdvancedFilters(
+        List<ContentResponse> books = bookMapper.getContentListWithAdvancedFilters(
                 criteria, offset, limit, "b.updated_at", "DESC"
         );
-        int totalCount = bookMapper.countBooksWithAdvancedFilters(criteria);
+        int totalCount = bookMapper.countContentWithAdvancedFilters(criteria);
 
         OpdsFeed feed = new OpdsFeed();
         feed.setId(apiUrl + "/opds/genre/" + genreSlug);
@@ -198,7 +198,7 @@ public class OpdsServiceImpl implements OpdsService {
         return feed;
     }
 
-    private OpdsEntry toOpdsEntry(BookResponse book) {
+    private OpdsEntry toOpdsEntry(ContentResponse book) {
         OpdsEntry entry = new OpdsEntry();
         entry.setId(apiUrl + "/opds/book/" + book.getSlug());
         entry.setTitle(book.getTitle());

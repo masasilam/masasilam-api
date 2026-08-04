@@ -18,15 +18,19 @@ public class NewspaperArticleResponse {
     private String slug;
     private Long sourceId;
     private String sourceName;
+    private String sourceSlug;
     private String sourceLocation;
-    private String category;
-    private String categoryName;
     private LocalDate publishDate;
     private String dateFormatted;
     private String title;
     private String subtitle;
     private String excerpt;
-    private String author;
+    private String authorNames;
+    private String authorSlugs;
+    private String authorPhotoUrls;
+    private String genres;
+    private String genreSlugs;
+    private String contributors;
     private Integer pageNumber;
     private String importance;
     private Long viewCount;
@@ -37,4 +41,5 @@ public class NewspaperArticleResponse {
     private Boolean isSaved;
     private Double myRating;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

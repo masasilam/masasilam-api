@@ -13,23 +13,16 @@
 
     <select id="findByUserAndReview" resultMap="FilmReviewFeedbackResultMap">
         SELECT * FROM film_review_feedback
-        WHERE user_id = #{userId}
-        AND review_id = #{reviewId}
-        LIMIT 1
+        WHERE user_id = #{userId} AND review_id = #{reviewId} LIMIT 1
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO film_review_feedback
-        (review_id, user_id, is_helpful, created_at, updated_at)
-        VALUES
-        (#{reviewId}, #{userId}, #{isHelpful}, NOW(), NOW())
+        INSERT INTO film_review_feedback (review_id, user_id, is_helpful, created_at, updated_at)
+        VALUES (#{reviewId}, #{userId}, #{isHelpful}, NOW(), NOW())
     </insert>
 
     <update id="update">
-        UPDATE film_review_feedback
-        SET is_helpful = #{isHelpful},
-        updated_at = NOW()
-        WHERE id = #{id}
+        UPDATE film_review_feedback SET is_helpful = #{isHelpful}, updated_at = NOW() WHERE id = #{id}
     </update>
 
     <delete id="delete">

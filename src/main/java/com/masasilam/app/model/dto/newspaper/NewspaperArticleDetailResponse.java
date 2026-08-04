@@ -23,12 +23,11 @@ public class NewspaperArticleDetailResponse {
     private Long sourceId;
     @JsonIgnore
     private String sourceName;
+    private String sourceSlug;
     @JsonIgnore
     private String sourceLocation;
     @JsonIgnore
     private String sourceDescription;
-    private String category;
-    private String categoryName;
     private LocalDate publishDate;
     private String dateFormatted;
     private String title;
@@ -36,7 +35,12 @@ public class NewspaperArticleDetailResponse {
     private String bodyOriginal;
     private String bodyModern;
     private String excerpt;
-    private String author;
+    private String authorNames;
+    private String authorSlugs;
+    private String authorPhotoUrls;
+    private String genres;
+    private String genreSlugs;
+    private String contributors;
     private Integer pageNumber;
     private Integer columnNumber;
     private String importance;

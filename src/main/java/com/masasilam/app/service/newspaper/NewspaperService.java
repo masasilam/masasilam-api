@@ -1,7 +1,8 @@
 package com.masasilam.app.service.newspaper;
 
 import com.masasilam.app.model.dto.newspaper.*;
-import com.masasilam.app.model.dto.response.*;
+import com.masasilam.app.model.dto.response.DataResponse;
+import com.masasilam.app.model.dto.response.DatatableResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
@@ -13,8 +14,7 @@ public interface NewspaperService {
     DataResponse<NewspaperStatsResponse> getOverallStats();
     DatatableResponse<NewspaperArticleResponse> getArticlesByCategory(String categorySlug, int page, int limit, String sortBy, String sortOrder, NewspaperSearchCriteria criteria);
     DatatableResponse<NewspaperArticleResponse> getArticlesByDate(LocalDate date, int page, int limit, String sortBy, String category);
-    DatatableResponse<NewspaperArticleResponse> getArticlesByCategoryAndDate(String categorySlug, LocalDate date, int page, int limit, String sortBy, String source);
-    DataResponse<NewspaperArticleDetailResponse> getArticleDetail(String categorySlug, LocalDate date, String articleSlug, HttpServletRequest request);
+    DataResponse<NewspaperArticleDetailResponse> getArticleDetail(String sourceSlug, String articleSlug, HttpServletRequest request);
     DataResponse<NewspaperArticleDetailResponse> getArticleById(Long id);
     DatatableResponse<NewspaperArticleResponse> searchArticles(NewspaperSearchCriteria criteria, int page, int limit);
     DatatableResponse<NewspaperArticleResponse> getArticlesOnThisDay(int month, int day, int page, int limit);
@@ -23,4 +23,11 @@ public interface NewspaperService {
     DataResponse<NewspaperArticleDetailResponse> createArticle(CreateArticleRequest request);
     DataResponse<NewspaperArticleDetailResponse> updateArticle(Long id, UpdateArticleRequest request);
     DataResponse<Void> deleteArticle(Long id);
+    DataResponse<NewspaperSourceDetailResponse> getSourceDetail(String sourceSlug);
+    DataResponse<List<NewspaperEditionResponse>> getEditions(String sourceSlug, int year, Integer month, LocalDate dateFrom, LocalDate dateTo);
+    DataResponse<List<NewspaperArticleResponse>> getEditionArticles(String sourceSlug, LocalDate date);
+    List<NewspaperSourceResponse> getAllSourcesForSitemap();
+    List<NewspaperSitemapItemResponse> getArticlesForSitemap();
+    DataResponse<NewspaperSourceResponse> updateSource(Long id, UpdateSourceRequest request);
+    DataResponse<List<NewspaperArticleResponse>> getLatestArticles(int limit);
 }
