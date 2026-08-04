@@ -41,4 +41,5 @@ public class NewspaperArticleResponse {
     private Boolean isSaved;
     private Double myRating;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

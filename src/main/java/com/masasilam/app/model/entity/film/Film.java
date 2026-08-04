@@ -2,6 +2,8 @@ package com.masasilam.app.model.entity.film;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class Film {
     private Long id;
@@ -28,4 +30,6 @@ public class Film {
     private String followedBy;
     private String partOfSeries;
     private String filePath;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

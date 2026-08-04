@@ -460,6 +460,19 @@ public class NewspaperServiceImpl implements NewspaperService {
         }
     }
 
+    @Override
+    public DataResponse<List<NewspaperArticleResponse>> getLatestArticles(int limit) {
+        try {
+            List<NewspaperArticleResponse> articles = newspaperMapper.getLatestArticles(0, limit);
+            Long currentUserId = getCurrentUserId();
+            articles.forEach(article -> enrichArticleResponse(article, currentUserId));
+            return new DataResponse<>(SUCCESS, "Latest articles retrieved successfully", HttpStatus.OK.value(), articles);
+        } catch (Exception e) {
+            log.error("Error getting latest articles", e);
+            throw new InternalServerErrorException();
+        }
+    }
+
     private void genreProcessing(List<String> genreNames, Long articleId) {
         if (genreNames == null || genreNames.isEmpty()) return;
         for (String name : genreNames) {

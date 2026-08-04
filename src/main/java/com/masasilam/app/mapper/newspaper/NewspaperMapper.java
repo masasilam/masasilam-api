@@ -63,4 +63,5 @@ public interface NewspaperMapper {
     NewspaperSource findSourceById(@Param("id") Long id);
     void updateSource(@Param("id") Long id, @Param("name") String name, @Param("description") String description, @Param("location") String location, @Param("logoUrl") String logoUrl);
     NewspaperSourceResponse getSourceById(@Param("id") Long id);
+    List<NewspaperArticleResponse> getLatestArticles(@Param("offset") int offset, @Param("limit") int limit);
 }
