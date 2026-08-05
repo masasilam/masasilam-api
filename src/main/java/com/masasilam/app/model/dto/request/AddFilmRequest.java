@@ -20,6 +20,7 @@ public class AddFilmRequest {
     private String color;
     private Integer copyrightStatusId;
     private String posterUrl;
+    private String posterPortraitUrl;
     private String trailerUrl;
     private String followedBy;
     private String partOfSeries;

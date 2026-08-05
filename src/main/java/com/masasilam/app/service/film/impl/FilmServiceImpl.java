@@ -65,6 +65,7 @@ public class FilmServiceImpl implements FilmService {
         film.setOriginalLanguage(req.getOriginalLanguage());
         film.setColor(req.getColor());
         film.setPosterUrl(req.getPosterUrl());
+        film.setPosterPortraitUrl(req.getPosterPortraitUrl());
         film.setCopyrightStatusId(req.getCopyrightStatusId());
         film.setTrailerUrl(req.getTrailerUrl());
         film.setFollowedBy(req.getFollowedBy());
@@ -100,6 +101,7 @@ public class FilmServiceImpl implements FilmService {
         if (isValid(req.getColor())) film.setColor(req.getColor());
         if (req.getCopyrightStatusId() != null) film.setCopyrightStatusId(req.getCopyrightStatusId());
         if (isValid(req.getPosterUrl())) film.setPosterUrl(req.getPosterUrl());
+        if (isValid(req.getPosterPortraitUrl())) film.setPosterPortraitUrl(req.getPosterPortraitUrl());
         if (isValid(req.getTrailerUrl())) film.setTrailerUrl(req.getTrailerUrl());
         if (isValid(req.getFollowedBy())) film.setFollowedBy(req.getFollowedBy());
         if (isValid(req.getPartOfSeries())) film.setPartOfSeries(req.getPartOfSeries());
@@ -168,6 +170,7 @@ public class FilmServiceImpl implements FilmService {
         detail.setOriginalLanguage(film.getOriginalLanguage());
         detail.setColor(film.getColor());
         detail.setPosterUrl(film.getPosterUrl());
+        detail.setPosterPortraitUrl(film.getPosterPortraitUrl());
         detail.setCopyrightStatusId(film.getCopyrightStatusId());
         detail.setTrailerUrl(film.getTrailerUrl());
         detail.setFollowedBy(film.getFollowedBy());

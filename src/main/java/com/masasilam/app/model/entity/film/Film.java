@@ -18,6 +18,7 @@ public class Film {
     private String durasi;
     private String negaraAsal;
     private String posterUrl;
+    private String posterPortraitUrl;
     private String imageUrls;
     private String videoUrl;
     private String trailerUrl;
