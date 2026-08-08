@@ -50,6 +50,7 @@ public class NewspaperServiceImpl implements NewspaperService {
     private static final String SUCCESS = "Success";
     private static final String UNKNOWN = "Unknown";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
+    private static final DateTimeFormatter SLUG_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     @Override
     public DataResponse<List<NewspaperCategoryResponse>> getAllCategories() {
@@ -244,15 +245,13 @@ public class NewspaperServiceImpl implements NewspaperService {
             if (sourceId == null) {
                 throw new IllegalArgumentException("Sumber koran wajib diisi");
             }
-            if (newspaperMapper.existsBySlugForSource(sourceId, request.getSlug())) {
-                throw new IllegalArgumentException("Artikel dengan slug ini sudah ada untuk sumber tersebut");
-            }
+            String slug = resolveUniqueSlug(sourceId, request.getSlug(), request.getPublishDate());
             String plainText = convertHtmlToPlainText(request.getHtmlContent());
             int wordCount = calculateWordCount(plainText);
 
             NewspaperArticle article = NewspaperArticle.builder()
                     .sourceId(sourceId)
-                    .slug(request.getSlug())
+                    .slug(slug)
                     .publishDate(request.getPublishDate())
                     .title(request.getTitle())
                     .subtitle(request.getSubtitle())
@@ -275,7 +274,7 @@ public class NewspaperServiceImpl implements NewspaperService {
             contributorProcessing(request.getContributors(), article.getId());
 
             NewspaperArticleDetailResponse detail = newspaperMapper.getArticleDetailById(article.getId());
-            log.info("Article created: {} (ID: {})", article.getTitle(), article.getId());
+            log.info("Article created: {} (ID: {}, slug: {})", article.getTitle(), article.getId(), article.getSlug());
             return new DataResponse<>(SUCCESS, "Article created successfully", HttpStatus.CREATED.value(), detail);
         } catch (IllegalArgumentException e) {
             throw e;
@@ -323,11 +322,8 @@ public class NewspaperServiceImpl implements NewspaperService {
             if (request.getSlug() != null && !request.getSlug().trim().isEmpty()) {
                 String newSlug = request.getSlug().trim();
                 if (!newSlug.equals(existing.getSlug())) {
-                    if (newspaperMapper.existsBySlugForSourceExcluding(resolvedSourceId, newSlug, id)) {
-                        throw new IllegalArgumentException("Slug sudah digunakan untuk sumber ini: " + newSlug);
-                    }
+                    existing.setSlug(resolveUniqueSlugForUpdate(resolvedSourceId, newSlug, existing.getPublishDate(), id));
                     log.info("Slug updated for newspaper {}: {} -> {}", id, existing.getSlug(), newSlug);
-                    existing.setSlug(newSlug);
                 }
             }
 
@@ -355,6 +351,24 @@ public class NewspaperServiceImpl implements NewspaperService {
             log.error("Error updating newspaper ID: {}", id, e);
             throw new InternalServerErrorException();
         }
+    }
+
+    private String resolveUniqueSlug(Long sourceId, String baseSlug, LocalDate publishDate) {
+        if (baseSlug == null || baseSlug.isBlank()) {
+            throw new IllegalArgumentException("Slug wajib diisi");
+        }
+        String slug = baseSlug.trim();
+        if (!newspaperMapper.existsBySlugForSource(sourceId, slug)) {
+            return slug;
+        }
+        if (publishDate == null) {
+            throw new IllegalArgumentException("Artikel dengan slug ini sudah ada untuk sumber tersebut");
+        }
+        String candidate = slug + "-" + publishDate.format(SLUG_DATE_FORMATTER);
+        if (newspaperMapper.existsBySlugForSource(sourceId, candidate)) {
+            throw new IllegalArgumentException("Artikel dengan slug ini sudah ada untuk sumber tersebut");
+        }
+        return candidate;
     }
 
     @Override
@@ -471,6 +485,20 @@ public class NewspaperServiceImpl implements NewspaperService {
             log.error("Error getting latest articles", e);
             throw new InternalServerErrorException();
         }
+    }
+
+    private String resolveUniqueSlugForUpdate(Long sourceId, String baseSlug, LocalDate publishDate, Long excludeId) {
+        if (!newspaperMapper.existsBySlugForSourceExcluding(sourceId, baseSlug, excludeId)) {
+            return baseSlug;
+        }
+        if (publishDate == null) {
+            throw new IllegalArgumentException("Slug sudah digunakan untuk sumber ini: " + baseSlug);
+        }
+        String candidate = baseSlug + "-" + publishDate.format(SLUG_DATE_FORMATTER);
+        if (newspaperMapper.existsBySlugForSourceExcluding(sourceId, candidate, excludeId)) {
+            throw new IllegalArgumentException("Slug sudah digunakan untuk sumber ini: " + baseSlug);
+        }
+        return candidate;
     }
 
     private void genreProcessing(List<String> genreNames, Long articleId) {
