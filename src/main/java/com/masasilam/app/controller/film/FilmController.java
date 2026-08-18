@@ -8,6 +8,7 @@ import com.masasilam.app.model.entity.film.Film;
 import com.masasilam.app.model.entity.film.FilmDetail;
 import com.masasilam.app.service.film.FilmReactionService;
 import com.masasilam.app.service.film.FilmService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,16 +36,29 @@ public class FilmController {
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> getAllFilms(@RequestParam(defaultValue = "0") int page,
-                                                           @RequestParam(defaultValue = "20") int size) {
-        List<Film> films = filmService.getAllFilms(page, size);
+                                                           @RequestParam(defaultValue = "20") int size,
+                                                           @RequestParam(defaultValue = "tahunRilis") String sortBy,
+                                                           @RequestParam(defaultValue = "DESC") String sortOrder) {
+        Map<String, String> allowedSortFields = new HashMap<>();
+        allowedSortFields.put("viewCount", "view_count");
+        allowedSortFields.put("tahunRilis", "tahun_rilis");
+        allowedSortFields.put("judul", "judul");
+        allowedSortFields.put("durasi", "durasi");
+        allowedSortFields.put("updatedAt", "updated_at");
+        String sortColumn = allowedSortFields.getOrDefault(sortBy, "tahun_rilis");
+        String sortType = "DESC".equalsIgnoreCase(sortOrder) ? "DESC" : "ASC";
+
+        List<Film> films = filmService.getAllFilms(page, size, sortColumn, sortType);
         int total = filmService.getTotalFilms();
 
-        Map<String, Object> res = new HashMap<>();
-        res.put("films", films);
-        res.put("currentPage", page);
-        res.put("totalItems", total);
-        res.put("totalPages", (int) Math.ceil((double) total / size));
-        return ResponseEntity.ok(res);
+        Map<String, Object> response = new HashMap<>();
+        response.put("films", films);
+        response.put("currentPage", page);
+        response.put("totalItems", total);
+        response.put("totalPages", (int) Math.ceil((double) total / size));
+        response.put("sortBy", sortBy);
+        response.put("sortOrder", sortOrder);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -69,8 +84,8 @@ public class FilmController {
     }
 
     @GetMapping(value = "/{slug}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<FilmDetail> getFilmBySlug(@PathVariable String slug) {
-        FilmDetail film = filmService.getFilmDetailBySlug(slug);
+    public ResponseEntity<FilmDetail> getFilmBySlug(@PathVariable String slug, HttpServletRequest request) throws NoSuchAlgorithmException {
+        FilmDetail film = filmService.getFilmDetailBySlug(slug, request);
         return film == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(film);
     }
 
