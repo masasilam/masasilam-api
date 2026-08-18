@@ -47,6 +47,7 @@ public class FilmDetail {
     private List<ContentRating> contentRatings;
     private String followedBy;
     private String partOfSeries;
+    private Long viewCount;
 
     @Data
     public static class BudgetData {

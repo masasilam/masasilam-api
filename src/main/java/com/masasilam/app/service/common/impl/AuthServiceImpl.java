@@ -158,6 +158,18 @@ public class AuthServiceImpl implements AuthService {
         return new DataResponse<>("Success", "Registration successful", HttpStatus.CREATED.value(), response);
     }
 
+    private String generateUniqueUsername(String baseUsername) {
+        if (userMapper.findUserByUsername(baseUsername) == null) {
+            return baseUsername;
+        }
+
+        int suffix = 1;
+        while (userMapper.findUserByUsername(baseUsername + suffix) != null) {
+            suffix++;
+        }
+        return baseUsername + suffix;
+    }
+
     @Override
     @Transactional
     public DataResponse<LoginResponse> googleAuth(GoogleAuthRequest request) {
@@ -180,8 +192,13 @@ public class AuthServiceImpl implements AuthService {
             User user = userMapper.findUserByEmail(email);
 
             if (user == null) {
+                String baseUsername = email.split("@")[0].replaceAll("[^a-zA-Z0-9_]", "");
+                if (baseUsername.isEmpty()) {
+                    baseUsername = "user";
+                }
+
                 user = new User();
-                user.setUsername(email.split("@")[0] + "_" + System.currentTimeMillis());
+                user.setUsername(generateUniqueUsername(baseUsername));
                 user.setEmail(email);
                 user.setFullName(name);
                 user.setGoogleId(googleId);
@@ -302,8 +319,7 @@ public class AuthServiceImpl implements AuthService {
         String verificationToken = jwtUtil.generateVerificationToken(user.getId());
         userMapper.saveVerificationToken(user.getId(), verificationToken, LocalDateTime.now().plusHours(24));
 
-        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(),
-                frontendUrl + "/verifikasi-email?token=" + verificationToken);
+        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), frontendUrl + "/verifikasi-email?token=" + verificationToken);
 
         return new DataResponse<>("Success", "Verification email sent", HttpStatus.OK.value(), null);
     }
@@ -318,8 +334,7 @@ public class AuthServiceImpl implements AuthService {
         String resetToken = jwtUtil.generateVerificationToken(user.getId());
         userMapper.savePasswordResetToken(user.getId(), resetToken, LocalDateTime.now().plusHours(1));
 
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(),
-                frontendUrl + "/reset-password?token=" + resetToken);
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), frontendUrl + "/reset-kata-sandi?token=" + resetToken);
 
         return new DataResponse<>("Success", "Password reset link sent to your email", HttpStatus.OK.value(), null);
     }

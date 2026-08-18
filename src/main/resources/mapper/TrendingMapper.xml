@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.trending.TrendingMapper">
+    <delete id="deleteByType">
+        DELETE FROM trending_weekly WHERE content_type = #{contentType}
+    </delete>
+
+    <insert id="insertBookTrending">
+        INSERT INTO trending_weekly
+        (content_type, content_id, slug, title, cover_image_url, author_names, description,
+        view_count, download_count, unique_viewers, score, rank_position, computed_at)
+        SELECT
+        'BOOK', b.id, b.slug, b.title, b.cover_image_url,
+        (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM book_authors ba
+        JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id),
+        b.description,
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
+        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        NOW()
+        FROM (
+        SELECT
+        book_id,
+        COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
+        COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
+        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        SUM(
+        CASE action_type
+        WHEN 'download' THEN #{downloadWeight}
+        WHEN 'view' THEN #{viewWeight}
+        ELSE 0
+        END
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - viewed_at)) / (86400.0 * #{halfLifeDays}))
+        ) AS score
+        FROM book_views
+        WHERE viewed_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY book_id
+        ) agg
+        JOIN books b ON b.id = agg.book_id AND b.is_active = true
+        ORDER BY agg.score DESC
+        LIMIT #{limit}
+    </insert>
+
+    <insert id="insertZineTrending">
+        INSERT INTO trending_weekly
+        (content_type, content_id, slug, title, cover_image_url, author_names, description, subtitle,
+        view_count, download_count, unique_viewers, score, rank_position, computed_at)
+        SELECT
+        'ZINE', z.id, z.slug, z.title, z.cover_image_url, z.first_publisher, z.description, z.subtitle,
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
+        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        NOW()
+        FROM (
+        SELECT
+        zine_id,
+        COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
+        COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
+        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        SUM(
+        CASE action_type
+        WHEN 'download' THEN #{downloadWeight}
+        WHEN 'view' THEN #{viewWeight}
+        ELSE 0
+        END
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - created_at)) / (86400.0 * #{halfLifeDays}))
+        ) AS score
+        FROM zine_views
+        WHERE created_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY zine_id
+        ) agg
+        JOIN zines z ON z.id = agg.zine_id AND z.is_active = true
+        ORDER BY agg.score DESC
+        LIMIT #{limit}
+    </insert>
+
+    <insert id="insertFilmTrending">
+        INSERT INTO trending_weekly
+        (content_type, content_id, slug, title, cover_image_url, poster_portrait_url, release_year, description,
+        view_count, download_count, unique_viewers, score, rank_position, computed_at)
+        SELECT
+        'FILM', f.id, f.slug, f.judul, f.poster_url, f.poster_portrait_url, f.tahun_rilis, f.deskripsi,
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
+        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        NOW()
+        FROM (
+        SELECT
+        film_id,
+        COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
+        COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
+        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        SUM(
+        CASE action_type
+        WHEN 'download' THEN #{downloadWeight}
+        WHEN 'view' THEN #{viewWeight}
+        ELSE 0
+        END
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - viewed_at)) / (86400.0 * #{halfLifeDays}))
+        ) AS score
+        FROM film_views
+        WHERE viewed_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY film_id
+        ) agg
+        JOIN film f ON f.id = agg.film_id
+        ORDER BY agg.score DESC
+        LIMIT #{limit}
+    </insert>
+
+    <insert id="insertNewspaperTrending">
+        INSERT INTO trending_weekly
+        (content_type, content_id, slug, title, cover_image_url,
+        view_count, download_count, unique_viewers, score, rank_position, computed_at)
+        SELECT
+        'NEWSPAPER', ns.id, ns.slug, ns.name, ns.logo_url,
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
+        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        NOW()
+        FROM (
+        SELECT
+        na.source_id,
+        COUNT(*) FILTER (WHERE av.action_type::text = 'view') AS view_count,
+        COUNT(*) FILTER (WHERE av.action_type::text = 'download') AS download_count,
+        COUNT(DISTINCT COALESCE(av.user_id::text, av.viewer_hash)) AS unique_viewers,
+        SUM(
+        CASE av.action_type::text
+        WHEN 'download' THEN #{downloadWeight}
+        WHEN 'view' THEN #{viewWeight}
+        ELSE 0
+        END
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - av.created_at)) / (86400.0 * #{halfLifeDays}))
+        ) AS score
+        FROM article_views av
+        JOIN newspaper_articles na ON na.id = av.article_id AND na.is_active = true
+        WHERE av.created_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY na.source_id
+        ) agg
+        JOIN newspaper_sources ns ON ns.id = agg.source_id AND ns.is_active = true
+        ORDER BY agg.score DESC
+        LIMIT #{limit}
+    </insert>
+
+    <update id="normalizeScores">
+        UPDATE trending_weekly t
+        SET normalized_score = CASE WHEN m.max_score > 0 THEN t.score / m.max_score ELSE 0 END
+        FROM (
+        SELECT content_type, MAX(score) AS max_score
+        FROM trending_weekly
+        GROUP BY content_type
+        ) m
+        WHERE t.content_type = m.content_type
+    </update>
+
+    <select id="findByType" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
+        SELECT
+        content_type AS contentType,
+        content_id AS contentId,
+        slug,
+        title,
+        subtitle,
+        cover_image_url AS coverImageUrl,
+        poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames,
+        release_year AS releaseYear,
+        description,
+        source_slug AS sourceSlug,
+        view_count AS viewCount,
+        download_count AS downloadCount,
+        unique_viewers AS uniqueViewers,
+        score,
+        normalized_score AS normalizedScore,
+        rank_position AS rankPosition,
+        computed_at AS computedAt
+        FROM trending_weekly
+        WHERE content_type = #{contentType}
+        ORDER BY rank_position ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findAll" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
+        SELECT
+        content_type AS contentType,
+        content_id AS contentId,
+        slug,
+        title,
+        subtitle,
+        cover_image_url AS coverImageUrl,
+        poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames,
+        release_year AS releaseYear,
+        description,
+        source_slug AS sourceSlug,
+        view_count AS viewCount,
+        download_count AS downloadCount,
+        unique_viewers AS uniqueViewers,
+        score,
+        normalized_score AS normalizedScore,
+        rank_position AS rankPosition,
+        computed_at AS computedAt
+        FROM trending_weekly
+        WHERE rank_position &lt;= #{limitPerType}
+        ORDER BY content_type ASC, rank_position ASC
+    </select>
+
+    <select id="findTopOverall" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
+        SELECT
+        content_type AS contentType,
+        content_id AS contentId,
+        slug,
+        title,
+        subtitle,
+        cover_image_url AS coverImageUrl,
+        poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames,
+        release_year AS releaseYear,
+        description,
+        source_slug AS sourceSlug,
+        view_count AS viewCount,
+        download_count AS downloadCount,
+        unique_viewers AS uniqueViewers,
+        score,
+        normalized_score AS normalizedScore,
+        rank_position AS rankPosition,
+        computed_at AS computedAt
+        FROM trending_weekly
+        ORDER BY normalized_score DESC, score DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

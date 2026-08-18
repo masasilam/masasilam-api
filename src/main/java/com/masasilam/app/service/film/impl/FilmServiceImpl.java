@@ -3,20 +3,28 @@ package com.masasilam.app.service.film.impl;
 import com.masasilam.app.exception.custom.DataNotFoundException;
 import com.masasilam.app.mapper.film.FilmMapper;
 import com.masasilam.app.mapper.film.FilmVideoSourceMapper;
+import com.masasilam.app.mapper.user.UserMapper;
 import com.masasilam.app.model.dto.request.AddFilmRequest;
 import com.masasilam.app.model.dto.request.AddFilmRequest.CompanyInput;
 import com.masasilam.app.model.dto.request.AddFilmRequest.PersonInput;
 import com.masasilam.app.model.dto.request.AddFilmRequest.VideoSourceInput;
 import com.masasilam.app.model.dto.request.UpdateFilmRequest;
+import com.masasilam.app.model.entity.User;
 import com.masasilam.app.model.entity.film.*;
 import com.masasilam.app.model.entity.film.FilmDetail.*;
 import com.masasilam.app.service.film.FilmService;
 import com.masasilam.app.service.film.video.VideoProviderService;
+import com.masasilam.app.util.HashUtil;
+import com.masasilam.app.util.IPUtil;
+import com.masasilam.app.util.interceptor.HeaderHolder;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -29,6 +37,8 @@ public class FilmServiceImpl implements FilmService {
     private final FilmMapper filmMapper;
     private final FilmVideoSourceMapper filmVideoSourceMapper;
     private final VideoProviderService videoProviderService;
+    private final HeaderHolder headerHolder;
+    private final UserMapper userMapper;
 
     private static final Pattern NON_LATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
@@ -128,14 +138,56 @@ public class FilmServiceImpl implements FilmService {
     }
 
     @Override
-    public FilmDetail getFilmDetailBySlug(String slug) {
-        Film film = filmMapper.findBySlug(slug);
-        return film == null ? null : buildFilmDetail(film);
+    @Transactional
+    public FilmDetail getFilmDetailBySlug(String slug, HttpServletRequest request) throws NoSuchAlgorithmException {
+        try {
+            String ipAddress = IPUtil.getClientIP(request);
+            String userAgent = IPUtil.getUserAgent(request);
+            Long userId = getCurrentUserId();
+            String userType = userId != null ? "authenticated (userId: " + userId + ")" : "guest";
+            String viewerHash = HashUtil.generateViewerHash(slug, userId, ipAddress, userAgent);
+
+            log.info("Checking view for film slug: {}, User: {}, IP: {}, Hash: {}", slug, userType, ipAddress, viewerHash);
+
+            Long filmId = filmMapper.getFilmIdBySlug(slug);
+            if (filmId == null) {
+                Film film = filmMapper.findBySlug(slug);
+                return film == null ? null : buildFilmDetail(film);
+            }
+
+            boolean hasViewed = userId != null
+                    ? filmMapper.hasActionByUserAndFilm(filmId, userId, "view")
+                    : filmMapper.hasActionByHash(viewerHash, "view");
+
+            if (!hasViewed) {
+                try {
+                    filmMapper.insertAction(FilmView.builder()
+                            .filmId(filmId).slug(slug).userId(userId)
+                            .ipAddress(ipAddress).userAgent(userAgent)
+                            .viewerHash(viewerHash).actionType("view")
+                            .build());
+                    filmMapper.incrementViewCountBySlug(slug);
+                    log.info("✓ New view recorded for film slug: {} by {}", slug, userType);
+                } catch (DuplicateKeyException e) {
+                    log.warn("Race condition on view insert for film slug: {} by {} — skipping", slug, userType);
+                }
+            } else {
+                log.info("✗ Duplicate view detected for film slug: {} by {} - NOT incrementing", slug, userType);
+            }
+
+            Film film = filmMapper.findBySlug(slug);
+            return film == null ? null : buildFilmDetail(film);
+
+        } catch (Exception e) {
+            log.error("Error when get film detail for slug: {}", slug, e);
+            throw e;
+        }
     }
 
     @Override
-    public List<Film> getAllFilms(int page, int size) {
-        return filmMapper.findAll(size, page * size);
+    public List<Film> getAllFilms(int page, int size, String sortColumn, String sortType) {
+        int offset = page * size;
+        return filmMapper.findAll(size, offset, sortColumn, sortType);
     }
 
     @Override
@@ -175,6 +227,7 @@ public class FilmServiceImpl implements FilmService {
         detail.setTrailerUrl(film.getTrailerUrl());
         detail.setFollowedBy(film.getFollowedBy());
         detail.setPartOfSeries(film.getPartOfSeries());
+        detail.setViewCount(film.getViewCount() != null ? film.getViewCount() : 0);
         detail.setImageUrls(deserialize(film.getImageUrls()));
 
         detail.setGenre(filmMapper.findGenresByFilmId(film.getId()));
@@ -454,5 +507,19 @@ public class FilmServiceImpl implements FilmService {
             }
         }
         return result;
+    }
+
+    private Long getCurrentUserId() {
+        try {
+            String username = headerHolder.getUsername();
+            if (username != null && !username.isEmpty()) {
+                User user = userMapper.findUserByUsername(username);
+                return user != null ? user.getId() : null;
+            }
+            return null;
+        } catch (Exception e) {
+            log.debug("No authenticated user found, treating as guest");
+            return null;
+        }
     }
 }
