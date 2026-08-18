@@ -98,8 +98,10 @@
         SELECT * FROM film WHERE slug = #{slug}
     </select>
 
-    <select id="findAll" resultMap="FilmResultMap">
-        SELECT * FROM film ORDER BY tahun_rilis DESC
+    <select id="findAll" resultType="com.masasilam.app.model.entity.film.Film">
+        SELECT *
+        FROM film
+        ORDER BY ${sortColumn} ${sortType}
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -285,4 +287,41 @@
     <delete id="deleteContentRatingsByFilmId">
         DELETE FROM film_content_rating WHERE film_id = #{filmId}
     </delete>
+
+    <select id="getFilmIdBySlug" resultType="java.lang.Long">
+        SELECT id FROM film WHERE slug = #{slug}
+    </select>
+
+    <select id="hasActionByUserAndFilm" resultType="boolean">
+        SELECT EXISTS (
+        SELECT 1 FROM film_views
+        WHERE film_id = #{filmId}
+        AND user_id = #{userId}
+        AND action_type = #{actionType}
+        )
+    </select>
+
+    <select id="hasActionByHash" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM film_views
+        WHERE viewer_hash = #{viewerHash} AND action_type = #{actionType}
+    </select>
+
+    <insert id="insertAction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO film_views
+        (film_id, slug, user_id, ip_address, user_agent, viewer_hash, action_type, viewed_at)
+        VALUES
+        (#{filmId}, #{slug}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash}, #{actionType}, NOW())
+        <choose>
+            <when test="userId != null">
+                ON CONFLICT (film_id, user_id, action_type) WHERE user_id IS NOT NULL DO NOTHING
+            </when>
+            <otherwise>
+                ON CONFLICT (viewer_hash, action_type) WHERE user_id IS NULL DO NOTHING
+            </otherwise>
+        </choose>
+    </insert>
+
+    <update id="incrementViewCountBySlug">
+        UPDATE film SET view_count = view_count + 1 WHERE slug = #{slug}
+    </update>
 </mapper>
