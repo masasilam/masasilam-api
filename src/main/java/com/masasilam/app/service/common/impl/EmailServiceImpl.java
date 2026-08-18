@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 @Slf4j
@@ -39,16 +38,15 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, appName);
             helper.setTo(to);
-            helper.setSubject("Verify Your " + appName + " Account");
+            helper.setSubject("Verifikasi Akun " + appName + " Anda");
             helper.setText(htmlContent, true);
 
             javaMailSender.send(message);
             log.info("Verification email sent successfully to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send verification email to: {}", to, e);
-            throw new RuntimeException("Failed to send verification email");
         }
     }
 
@@ -65,16 +63,15 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, appName);
             helper.setTo(to);
-            helper.setSubject("Reset Your " + appName + " Password");
+            helper.setSubject("Atur Ulang Kata Sandi " + appName + " Anda");
             helper.setText(htmlContent, true);
 
             javaMailSender.send(message);
             log.info("Password reset email sent successfully to: {}", to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send password reset email to: {}", to, e);
-            throw new RuntimeException("Failed to send password reset email");
         }
     }
 }
