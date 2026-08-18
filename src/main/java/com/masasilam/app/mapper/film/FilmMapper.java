@@ -1,6 +1,7 @@
 package com.masasilam.app.mapper.film;
 
 import com.masasilam.app.model.entity.film.Company;
+import com.masasilam.app.model.entity.film.FilmView;
 import com.masasilam.app.model.entity.film.Person;
 import com.masasilam.app.model.entity.film.Film;
 import org.apache.ibatis.annotations.Mapper;
@@ -14,7 +15,7 @@ public interface FilmMapper {
     void update(Film film);
     void delete(Long id);
     Film findBySlug(String slug);
-    List<Film> findAll(@Param("limit") int limit, @Param("offset") int offset);
+    List<Film> findAll(@Param("limit") int limit, @Param("offset") int offset, @Param("sortColumn") String sortColumn, @Param("sortType") String sortType);
     int count();
     List<Film> search(@Param("query") String query, @Param("limit") int limit, @Param("offset") int offset);
     int countSearch(@Param("query") String query);
@@ -47,4 +48,9 @@ public interface FilmMapper {
     void deleteBoxOfficeByFilmId(Long filmId);
     void deleteReviewsByFilmId(Long filmId);
     void deleteContentRatingsByFilmId(Long filmId);
+    Long getFilmIdBySlug(@Param("slug") String slug);
+    boolean hasActionByUserAndFilm(@Param("filmId") Long filmId, @Param("userId") Long userId, @Param("actionType") String actionType);
+    boolean hasActionByHash(@Param("viewerHash") String viewerHash, @Param("actionType") String actionType);
+    void insertAction(FilmView filmView);
+    void incrementViewCountBySlug(@Param("slug") String slug);
 }
