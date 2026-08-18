@@ -33,4 +33,5 @@ public class Film {
     private String filePath;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long viewCount;
 }
