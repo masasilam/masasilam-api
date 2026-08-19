@@ -44,7 +44,7 @@ public class ZineResponse {
     private Long totalRatings;
     private List<AuthorResponse> authors;
     private List<ContributorResponse> contributors;
-    private List<GenreResponse> genres;
+    private String genres;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
     private String firstPublisher;
