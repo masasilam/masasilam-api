@@ -278,7 +278,7 @@ public class EpubRebuildServiceImpl implements EpubRebuildService {
                 <!DOCTYPE html>
                 <html xmlns="http://www.w3.org/1999/xhtml"
                       xmlns:epub="http://www.idpf.org/2007/ops"
-                      xml:lang="id" lang="id">
+                      xml:lang="en" lang="en">
                 <head>
                   <meta name="language" content="Indonesian"/>
                   <meta name="dc:language" content="id"/>
@@ -340,7 +340,7 @@ public class EpubRebuildServiceImpl implements EpubRebuildService {
                 <!DOCTYPE html>
                 <html xmlns="http://www.w3.org/1999/xhtml"
                       xmlns:epub="http://www.idpf.org/2007/ops"
-                      xml:lang="id" lang="id">
+                      xml:lang="en" lang="en">
                 <head>
                     <meta name="language" content="Indonesian"/>
                     <meta name="dc:language" content="id"/>
