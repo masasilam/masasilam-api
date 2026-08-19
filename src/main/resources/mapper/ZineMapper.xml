@@ -74,6 +74,7 @@
         <result property="firstPublisher" column="first_publisher"/>
         <result property="firstPublishedDate" column="first_published_date"/>
         <result property="collectionName" column="collection_name"/>
+        <result property="genres" column="genres"/>
     </resultMap>
 
     <sql id="baseZineSelect">
@@ -88,6 +89,9 @@
         z.created_at, z.updated_at, z.collection_name, z.first_publisher, z.first_published_date,
         l.name AS language_name,
         cs.name AS copyright_status_name,
+        (SELECT STRING_AGG(g.name, ', ' ORDER BY g.name)
+        FROM zine_genres zg JOIN genres g ON g.id = zg.genre_id
+        WHERE zg.zine_id = z.id) AS genres,
         COALESCE(AVG(zr.rating), 0) AS average_rating,
         COUNT(DISTINCT zr.id) AS total_ratings
         FROM zines z
