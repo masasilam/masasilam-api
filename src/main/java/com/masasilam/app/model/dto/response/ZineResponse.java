@@ -50,4 +50,5 @@ public class ZineResponse {
     private String firstPublisher;
     private String firstPublishedDate;
     private String collectionName;
+    private Integer guestReadCount;
 }

@@ -11,13 +11,22 @@ public class TrendingRefreshExecutor {
     private final TrendingMapper trendingMapper;
 
     @Transactional
-    public void refreshType(String type, int windowDays, double viewWeight, double downloadWeight, double halfLifeDays, int storeLimit) {
+    public void refreshType(String type, int windowDays, double viewWeight, double readWeight,
+                            double downloadWeight, double halfLifeDays,
+                            double qualityMin, double qualityMax, int qualityMinRatings,
+                            int storeLimit) {
         trendingMapper.deleteByType(type);
         switch (type) {
-            case "BOOK" -> trendingMapper.insertBookTrending(windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
-            case "ZINE" -> trendingMapper.insertZineTrending(windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
-            case "FILM" -> trendingMapper.insertFilmTrending(windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
-            case "NEWSPAPER" -> trendingMapper.insertNewspaperTrending(windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
+            case "BOOK" -> trendingMapper.insertBookTrending(
+                    windowDays, viewWeight, readWeight, downloadWeight, halfLifeDays,
+                    qualityMin, qualityMax, qualityMinRatings, storeLimit);
+            case "ZINE" -> trendingMapper.insertZineTrending(
+                    windowDays, viewWeight, readWeight, downloadWeight, halfLifeDays,
+                    qualityMin, qualityMax, qualityMinRatings, storeLimit);
+            case "FILM" -> trendingMapper.insertFilmTrending(
+                    windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
+            case "NEWSPAPER" -> trendingMapper.insertNewspaperTrending(
+                    windowDays, viewWeight, downloadWeight, halfLifeDays, storeLimit);
             default -> throw new IllegalArgumentException("Unknown content type: " + type);
         }
     }

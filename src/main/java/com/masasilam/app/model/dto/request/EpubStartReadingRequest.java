@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class EpubStartReadingRequest {
     private String sessionId;
+    private String guestId;
     private String deviceType;
     private String source;
     private String chapterLabel;

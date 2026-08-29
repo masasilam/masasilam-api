@@ -8,4 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class BookRequest {
     @NotNull
     private MultipartFile bookFile;
+    private MultipartFile backCoverFile;
+    private MultipartFile spineCoverFile;
+    private MultipartFile frontFlapFile;
 }

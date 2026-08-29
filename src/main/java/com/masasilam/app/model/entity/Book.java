@@ -19,6 +19,9 @@ public class Book {
     private String summary;
     private String source;
     private String coverImageUrl;
+    private String backCoverUrl;
+    private String spineCoverUrl;
+    private String frontFlapUrl;
     private String fileUrl;
     private String fileFormat;
     private Long fileSize;
@@ -28,6 +31,7 @@ public class Book {
     private String difficultyLevel;
     private Integer viewCount;
     private Integer readCount;
+    private Integer guestReadCount;
     private Integer downloadCount;
     private Boolean isFeatured;
     private Boolean isActive;

@@ -5,6 +5,7 @@ import com.masasilam.app.exception.custom.UnauthorizedException;
 import com.masasilam.app.mapper.annotation.EpubAnnotationMapper;
 import com.masasilam.app.mapper.book.BookMapper;
 import com.masasilam.app.mapper.book.EpubBookmarkMapper;
+import com.masasilam.app.mapper.reading.GuestReadLogMapper;
 import com.masasilam.app.mapper.reading.ReadingProgressMapper;
 import com.masasilam.app.mapper.reading.ReadingSessionMapper;
 import com.masasilam.app.mapper.user.UserMapper;
@@ -13,14 +14,19 @@ import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.model.entity.*;
 import com.masasilam.app.service.book.EpubAnnotationService;
+import com.masasilam.app.util.HashUtil;
+import com.masasilam.app.util.IPUtil;
 import com.masasilam.app.util.interceptor.HeaderHolder;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,8 +41,8 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
     private final UserMapper userMapper;
     private final ReadingSessionMapper sessionMapper;
     private final ReadingProgressMapper readingProgressMapper;
+    private final GuestReadLogMapper guestReadLogMapper;
     private final HeaderHolder headerHolder;
-
     private static final String SESSION_TYPE_EPUB = "EPUB";
     private static final String SUCCESS = "Success";
     private static final String COMPLETED = "completed";
@@ -172,51 +178,108 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
 
     @Override
     @Transactional
-    public DataResponse<EpubStartReadingResponse> startReading(String slug, EpubStartReadingRequest request) {
-        User user = getCurrentUser();
-        long[] ids = resolveContentId(slug);
+    public DataResponse<EpubStartReadingResponse> startReading(String slug, EpubStartReadingRequest request, HttpServletRequest httpRequest) throws NoSuchAlgorithmException {
+        String username = headerHolder.getUsername();
+        boolean authenticated = username != null && !username.isBlank();
 
+        long[] ids = resolveContentId(slug);
         EpubStartReadingResponse response = new EpubStartReadingResponse();
 
+        String ipAddress = IPUtil.getClientIP(httpRequest);
+        String userAgent = IPUtil.getUserAgent(httpRequest);
+
+        if (authenticated) {
+            User user = getCurrentUser();
+            handleAuthenticatedStart(slug, ids, user, response, ipAddress, userAgent);
+        } else {
+            handleGuestStart(slug, ids, request.getGuestId(), response, ipAddress, userAgent);
+        }
+
+        return new DataResponse<>(SUCCESS, "EPUB reading started", HttpStatus.OK.value(), response);
+    }
+
+    private void handleAuthenticatedStart(String slug, long[] ids, User user, EpubStartReadingResponse response,
+                                          String ipAddress, String userAgent) throws NoSuchAlgorithmException {
         if (isBook(ids)) {
             long bookId = ids[0];
             int existingSessions = bookMapper.countUserReadSessions(bookId, user.getId());
             if (existingSessions == 0) {
                 bookMapper.incrementReadCount(bookId);
+                String viewerHash = HashUtil.generateViewerHash(slug, user.getId(), ipAddress, userAgent);
+                bookMapper.insertEvent(bookId, slug, user.getId(), null, "read", ipAddress, userAgent, viewerHash);
                 response.setFirstTime(true);
-                log.info("EPUB first-time read: user={} book={}", user.getId(), slug);
             } else {
-                ReadingProgress progress = readingProgressMapper.findByUserAndBook(user.getId(), bookId);
-                response.setFirstTime(false);
-                if (progress != null) {
-                    response.setLastCfi(progress.getCurrentPosition());
-                    response.setLastProgress(progress.getPercentageCompleted() != null ? progress.getPercentageCompleted().doubleValue() : null);
-                    response.setLastChapterIndex(progress.getCurrentPage() != null ? progress.getCurrentPage() - 1 : null);
-                    response.setTotalChapters(progress.getTotalPages());
-                    response.setLastReadAt(progress.getLastReadAt());
-                }
+                fillLastProgress(response, readingProgressMapper.findByUserAndBook(user.getId(), bookId));
             }
         } else {
             long zineId = ids[1];
             int existingSessions = zineMapper.countUserReadSessions(zineId, user.getId());
             if (existingSessions == 0) {
                 zineMapper.incrementReadCount(zineId);
+                String viewerHash = HashUtil.generateViewerHash(slug, user.getId(), ipAddress, userAgent);
+                zineMapper.insertEvent(zineId, slug, user.getId(), null, "read", ipAddress, userAgent, viewerHash);
                 response.setFirstTime(true);
-                log.info("EPUB first-time read: user={} zine={}", user.getId(), slug);
             } else {
-                ReadingProgress progress = readingProgressMapper.findByUserAndZine(user.getId(), zineId);
-                response.setFirstTime(false);
-                if (progress != null) {
-                    response.setLastCfi(progress.getCurrentPosition());
-                    response.setLastProgress(progress.getPercentageCompleted() != null ? progress.getPercentageCompleted().doubleValue() : null);
-                    response.setLastChapterIndex(progress.getCurrentPage() != null ? progress.getCurrentPage() - 1 : null);
-                    response.setTotalChapters(progress.getTotalPages());
-                    response.setLastReadAt(progress.getLastReadAt());
-                }
+                fillLastProgress(response, readingProgressMapper.findByUserAndZine(user.getId(), zineId));
             }
         }
+    }
 
-        return new DataResponse<>(SUCCESS, "EPUB reading started", HttpStatus.OK.value(), response);
+    private void handleGuestStart(String slug, long[] ids, String guestId, EpubStartReadingResponse response,
+                                  String ipAddress, String userAgent) {
+        if (guestId == null || guestId.isBlank()) {
+            response.setFirstTime(false);
+            return;
+        }
+        try {
+            if (isBook(ids)) {
+                long bookId = ids[0];
+                boolean alreadyLogged = guestReadLogMapper.existsByGuestAndBook(guestId, bookId);
+                if (!alreadyLogged) {
+                    bookMapper.incrementGuestReadCount(bookId);
+                    String viewerHash = HashUtil.generateViewerHash(slug, null, ipAddress, userAgent);
+                    bookMapper.insertEvent(bookId, slug, null, guestId, "read", ipAddress, userAgent, viewerHash);
+                    GuestReadLog logEntry = new GuestReadLog();
+                    logEntry.setGuestId(guestId);
+                    logEntry.setBookId(bookId);
+                    logEntry.setCreatedAt(LocalDateTime.now());
+                    guestReadLogMapper.insert(logEntry);
+                    response.setFirstTime(true);
+                } else {
+                    response.setFirstTime(false);
+                }
+            } else {
+                long zineId = ids[1];
+                boolean alreadyLogged = guestReadLogMapper.existsByGuestAndZine(guestId, zineId);
+                if (!alreadyLogged) {
+                    zineMapper.incrementGuestReadCount(zineId);
+                    String viewerHash = HashUtil.generateViewerHash(slug, null, ipAddress, userAgent);
+                    zineMapper.insertEvent(zineId, slug, null, guestId, "read", ipAddress, userAgent, viewerHash);
+                    GuestReadLog logEntry = new GuestReadLog();
+                    logEntry.setGuestId(guestId);
+                    logEntry.setZineId(zineId);
+                    logEntry.setCreatedAt(LocalDateTime.now());
+                    guestReadLogMapper.insert(logEntry);
+                    response.setFirstTime(true);
+                } else {
+                    response.setFirstTime(false);
+                }
+            }
+        } catch (DuplicateKeyException | NoSuchAlgorithmException e) {
+            log.debug("Guest read log duplicate ignored: guestId={}", guestId);
+            response.setFirstTime(false);
+        }
+    }
+
+    private void fillLastProgress(EpubStartReadingResponse response, ReadingProgress progress) {
+        response.setFirstTime(false);
+        if (progress != null) {
+            response.setLastCfi(progress.getCurrentPosition());
+            response.setLastProgress(progress.getPercentageCompleted() != null ? progress.getPercentageCompleted().doubleValue() : null);
+            response.setLastChapterIndex(progress.getCurrentPage() != null ? progress.getCurrentPage() - 1 : null);
+            response.setTotalChapters(progress.getTotalPages());
+            response.setLastReadAt(progress.getLastReadAt());
+        }
     }
 
     @Override
@@ -254,7 +317,7 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
         }
 
         double currentPct = request.getProgressPercent() != null ? request.getProgressPercent().doubleValue() : 0.0;
-        boolean progressIsAccurate = request.getProgressIsAccurate() == null || request.getProgressIsAccurate();
+        boolean progressIsAccurate = Boolean.TRUE.equals(request.getProgressIsAccurate());
         String lastCfi = (request.getLastCfi() != null && !request.getLastCfi().isBlank()) ? request.getLastCfi() : null;
 
         ReadingProgress existingProgress = isBook(ids) ? readingProgressMapper.findByUserAndBook(user.getId(), ids[0]) : readingProgressMapper.findByUserAndZine(user.getId(), ids[1]);
@@ -285,10 +348,12 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
         int addedMins = durationSeconds / 60;
 
         if (existingProgress == null) {
+            double insertPct = progressIsAccurate ? currentPct : 0.0;
+
             String newStatus;
-            if (currentPct >= 95.0) {
+            if (insertPct >= 95.0) {
                 newStatus = COMPLETED;
-            } else if (currentPct > 0) {
+            } else if (insertPct > 0) {
                 newStatus = READING;
             } else {
                 newStatus = STARTED;
@@ -298,7 +363,7 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
             progress.setUserId(user.getId());
             progress.setBookId(isBook(ids) ? ids[0] : null);
             progress.setZineId(!isBook(ids) ? ids[1] : null);
-            progress.setPercentageCompleted(BigDecimal.valueOf(currentPct));
+            progress.setPercentageCompleted(BigDecimal.valueOf(insertPct));
             progress.setReadingTimeMinutes(addedMins);
             progress.setStatus(newStatus);
             progress.setLastReadAt(endedAt);
@@ -309,8 +374,8 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
             progress.setCurrentPosition(lastCfi);
             readingProgressMapper.insert(progress);
 
-            log.info("EPUB progress created: user={} slug={} type={} pct={}% status={}", user.getId(), slug, isBook(ids) ? "book" : "zine", currentPct, newStatus);
-
+            log.info("EPUB progress created: user={} slug={} type={} pct={}% status={} accurate={}",
+                    user.getId(), slug, isBook(ids) ? "book" : "zine", insertPct, newStatus, progressIsAccurate);
         } else {
             double existingPct = existingProgress.getPercentageCompleted() != null ? existingProgress.getPercentageCompleted().doubleValue() : 0.0;
             int prevMins = existingProgress.getReadingTimeMinutes() != null ? existingProgress.getReadingTimeMinutes() : 0;
@@ -353,5 +418,28 @@ public class EpubAnnotationServiceImpl implements EpubAnnotationService {
         log.info("EPUB session recorded: user={} slug={} type={} duration={}s progress={}%", user.getId(), slug, isBook(ids) ? "book" : "zine", durationSeconds, currentPct);
 
         return new DataResponse<>(SUCCESS, "EPUB session recorded", 200, null);
+    }
+
+    @Override
+    public DataResponse<ReadingProgressCheckResponse> checkProgress(String slug) {
+        User user = getCurrentUser();
+        long[] ids = resolveContentId(slug);
+
+        ReadingProgress progress = isBook(ids)
+                ? readingProgressMapper.findByUserAndBook(user.getId(), ids[0])
+                : readingProgressMapper.findByUserAndZine(user.getId(), ids[1]);
+
+        ReadingProgressCheckResponse response = new ReadingProgressCheckResponse();
+        if (progress != null && progress.getCurrentPosition() != null && !progress.getCurrentPosition().isBlank()) {
+            response.setHasProgress(true);
+            response.setLastCfi(progress.getCurrentPosition());
+            response.setPercentageCompleted(
+                    progress.getPercentageCompleted() != null ? progress.getPercentageCompleted().doubleValue() : null
+            );
+            response.setLastReadAt(progress.getLastReadAt());
+        } else {
+            response.setHasProgress(false);
+        }
+        return new DataResponse<>(SUCCESS, "Reading progress retrieved", HttpStatus.OK.value(), response);
     }
 }

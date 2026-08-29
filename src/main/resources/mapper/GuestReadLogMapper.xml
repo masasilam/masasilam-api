@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.reading.GuestReadLogMapper">
+    <select id="existsByGuestAndBook" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM guest_read_log WHERE guest_id = #{guestId} AND book_id = #{bookId}
+        )
+    </select>
+
+    <select id="existsByGuestAndZine" resultType="boolean">
+        SELECT EXISTS(
+        SELECT 1 FROM guest_read_log WHERE guest_id = #{guestId} AND zine_id = #{zineId}
+        )
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO guest_read_log (guest_id, book_id, zine_id, created_at)
+        VALUES (#{guestId}, #{bookId}, #{zineId}, #{createdAt})
+    </insert>
+</mapper>

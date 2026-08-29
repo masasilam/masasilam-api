@@ -11,6 +11,7 @@ public class LibraryBookResponse {
     private String bookTitle;
     private String authorName;
     private String coverImageUrl;
+    private String spineCoverUrl;
     private Double progressPercentage;
     private String readingStatus;
     private LocalDateTime lastReadAt;

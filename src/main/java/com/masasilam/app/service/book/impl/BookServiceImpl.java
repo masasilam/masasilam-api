@@ -110,7 +110,7 @@ public class BookServiceImpl implements BookService {
 
             if (existingBook != null) {
                 log.info("Found existing book with same slug '{}' and author(s). Updating instead of creating new.", baseSlug);
-                return updateExistingBook(existingBook, request.getBookFile(), epubMeta);
+                return updateExistingBook(existingBook, request, epubMeta);
             }
 
             String finalSlug = baseSlug;
@@ -170,6 +170,8 @@ public class BookServiceImpl implements BookService {
             book.setUpdatedAt(epubMeta.getUpdatedAt());
             book.setFirstPublished(epubMeta.getFirstPublished());
             book.setFirstPublisher(epubMeta.getFirstPublisher());
+
+            processCoverVariants(request.getBackCoverFile(), request.getSpineCoverFile(), request.getFrontFlapFile(), book);
 
             bookMapper.insertBook(book);
             log.info("Book created with ID: {} and slug: {}", book.getId(), book.getSlug());
@@ -262,7 +264,7 @@ public class BookServiceImpl implements BookService {
     @Transactional
     @ClearChapterCache
     public DataResponse<BookResponse> updateExistingBook(
-            Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException {
+            Book existingBook, BookRequest request, CompleteEpubMetadata epubMeta) throws IOException {
 
         log.info("Updating existing book ID: {} - {}", existingBook.getId(), existingBook.getTitle());
 
@@ -279,8 +281,8 @@ public class BookServiceImpl implements BookService {
         bookMapper.deleteBookContributors(existingBook.getId());
         log.info("Deleted old relationships for book ID: {}", existingBook.getId());
 
-        FileStorageResult bookResult = fileUtil.saveAndUploadBookFile(newFile, existingBook.getTitle());
-        BookMetadata metadata = fileUtil.extractBookMetadata(newFile);
+        FileStorageResult bookResult = fileUtil.saveAndUploadBookFile(request.getBookFile(), existingBook.getTitle());
+        BookMetadata metadata = fileUtil.extractBookMetadata(request.getBookFile());
 
         Language language = languageMapper.findLanguageByName(epubMeta.getLanguage());
         CopyrightStatus copyrightStatus = copyrightStatusMapper.findByCopyrightStatusCode(epubMeta.getCopyrightStatus());
@@ -307,7 +309,9 @@ public class BookServiceImpl implements BookService {
         existingBook.setFirstPublisher(epubMeta.getFirstPublisher());
         existingBook.setEdition(existingBook.getEdition() == null ? 1 : Math.min(existingBook.getEdition() + 1, 2));
 
-        EpubProcessResult result = epubService.processEpubFileForUpdate(newFile, existingBook, bookChapterRepository);
+        processCoverVariants(request.getBackCoverFile(), request.getSpineCoverFile(), request.getFrontFlapFile(), existingBook);
+
+        EpubProcessResult result = epubService.processEpubFileForUpdate(request.getBookFile(), existingBook, bookChapterRepository);
         log.info("New EPUB processed: {} chapters, {} words", result.getTotalChapters(), result.getTotalWords());
 
         existingBook.setTotalWord(result.getTotalWords());
@@ -470,6 +474,22 @@ public class BookServiceImpl implements BookService {
         }
     }
 
+    private void processCoverVariants(MultipartFile backCoverFile, MultipartFile spineCoverFile,
+                                      MultipartFile frontFlapFile, Book book) throws IOException {
+        if (backCoverFile != null && !backCoverFile.isEmpty()) {
+            if (book.getBackCoverUrl() != null) fileUtil.deleteFile(book.getBackCoverUrl());
+            book.setBackCoverUrl(fileUtil.uploadBookCoverVariant(backCoverFile, book.getTitle(), "back-cover"));
+        }
+        if (spineCoverFile != null && !spineCoverFile.isEmpty()) {
+            if (book.getSpineCoverUrl() != null) fileUtil.deleteFile(book.getSpineCoverUrl());
+            book.setSpineCoverUrl(fileUtil.uploadBookCoverVariant(spineCoverFile, book.getTitle(), "spine"));
+        }
+        if (frontFlapFile != null && !frontFlapFile.isEmpty()) {
+            if (book.getFrontFlapUrl() != null) fileUtil.deleteFile(book.getFrontFlapUrl());
+            book.setFrontFlapUrl(fileUtil.uploadBookCoverVariant(frontFlapFile, book.getTitle(), "front-flap"));
+        }
+    }
+
     @Override
     @Transactional
     public DataResponse<BookResponse> getBookDetailBySlug(String slug, HttpServletRequest request) throws NoSuchAlgorithmException {
@@ -529,7 +549,7 @@ public class BookServiceImpl implements BookService {
             allowedSortFields.put("totalWord", "total_word");
             allowedSortFields.put("averageRating", "average_rating");
             allowedSortFields.put("viewCount", "view_count");
-            allowedSortFields.put("readCount", "read_count");
+            allowedSortFields.put("readCount", "(read_count + guest_read_count)");
             allowedSortFields.put("downloadCount", "download_count");
             allowedSortFields.put("fileSize", "file_size");
             allowedSortFields.put("totalPages", "total_pages");
@@ -559,7 +579,9 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException {
+    public DataResponse<Book> update(Long id, Book book, MultipartFile file,
+                                     MultipartFile backCoverFile, MultipartFile spineCoverFile,
+                                     MultipartFile frontFlapFile) throws IOException {
         try {
             Book existingEbook = bookMapper.getDetailEbook(id);
             if (existingEbook == null) {
@@ -580,6 +602,11 @@ public class BookServiceImpl implements BookService {
                 book.setFilePath(existingEbook.getFilePath());
             }
 
+            book.setBackCoverUrl(existingEbook.getBackCoverUrl());
+            book.setSpineCoverUrl(existingEbook.getSpineCoverUrl());
+            book.setFrontFlapUrl(existingEbook.getFrontFlapUrl());
+            processCoverVariants(backCoverFile, spineCoverFile, frontFlapFile, book);
+
             bookMapper.updateBook(book);
             Book data = bookMapper.getDetailEbook(id);
             if (data != null) {
@@ -592,6 +619,15 @@ public class BookServiceImpl implements BookService {
             log.error("Error when update ebook", e);
             throw e;
         }
+    }
+
+    @Override
+    public DataResponse<Book> getBookForEdit(String slug) {
+        Book book = bookMapper.findBySlug(slug);
+        if (book == null) {
+            throw new DataNotFoundException();
+        }
+        return new DataResponse<>(SUCCESS, ResponseMessage.DATA_FETCHED, HttpStatus.OK.value(), book);
     }
 
     @Override

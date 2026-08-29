@@ -3,11 +3,14 @@ package com.masasilam.app.controller.book;
 import com.masasilam.app.model.dto.request.*;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.service.book.EpubAnnotationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.NoSuchAlgorithmException;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -53,8 +56,8 @@ public class EpubAnnotationController {
     }
 
     @PostMapping("/reading/start")
-    public ResponseEntity<DataResponse<EpubStartReadingResponse>> startReading(@PathVariable String slug, @Valid @RequestBody EpubStartReadingRequest request) {
-        DataResponse<EpubStartReadingResponse> response = epubAnnotationService.startReading(slug, request);
+    public ResponseEntity<DataResponse<EpubStartReadingResponse>> startReading(@PathVariable String slug, @Valid @RequestBody EpubStartReadingRequest request, HttpServletRequest httpRequest)  throws NoSuchAlgorithmException {
+        DataResponse<EpubStartReadingResponse> response = epubAnnotationService.startReading(slug, request, httpRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -67,6 +70,12 @@ public class EpubAnnotationController {
     @PostMapping("/reading/heartbeat")
     public ResponseEntity<DataResponse<Void>> readingHeartbeat(@PathVariable String slug, @Valid @RequestBody ReadingHeartbeatRequest request) {
         DataResponse<Void> response = new DataResponse<>("Success", "Heartbeat received", 200, null);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/reading/progress")
+    public ResponseEntity<DataResponse<ReadingProgressCheckResponse>> checkProgress(@PathVariable String slug) {
+        DataResponse<ReadingProgressCheckResponse> response = epubAnnotationService.checkProgress(slug);
         return ResponseEntity.ok(response);
     }
 }
