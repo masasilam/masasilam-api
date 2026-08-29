@@ -59,4 +59,9 @@ public interface BookMapper {
     boolean hasActionByUserAndBook(@Param("bookId") Long bookId, @Param("userId") Long userId, @Param("actionType") String actionType);
     List<BookResponse> getBooksBySeriesSlug(@Param("seriesSlug") String seriesSlug, @Param("offset") int offset, @Param("limit") int limit);
     int countBooksBySeriesSlug(@Param("seriesSlug") String seriesSlug);
+    void incrementGuestReadCount(@Param("bookId") Long bookId);
+    void insertEvent(@Param("contentId") long contentId, @Param("slug") String slug, @Param("userId") Long userId,
+                     @Param("guestId") String guestId, @Param("actionType") String actionType,
+                     @Param("ipAddress") String ipAddress, @Param("userAgent") String userAgent,
+                     @Param("viewerHash") String viewerHash);
 }

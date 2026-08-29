@@ -118,7 +118,7 @@ public class ZineServiceImpl implements ZineService {
             Language language = languageMapper.findLanguageByName(epubMeta.getLanguage());
             CopyrightStatus copyrightStatus = copyrightStatusMapper.findByCopyrightStatusCode(epubMeta.getCopyrightStatus());
 
-            FileStorageResult zineResult = fileUtil.saveAndUploadBookFile(request.getZineFile(), finalTitle);
+            FileStorageResult zineResult = fileUtil.saveAndUploadBookFile(request.getZineFile(), finalSlug);
             BookMetadata metadata = fileUtil.extractBookMetadata(request.getZineFile());
 
             Zine zine = new Zine();
@@ -293,7 +293,7 @@ public class ZineServiceImpl implements ZineService {
         allowedSortFields.put("totalWord", "z.total_word");
         allowedSortFields.put("averageRating", "average_rating");
         allowedSortFields.put("viewCount", "z.view_count");
-        allowedSortFields.put("readCount", "z.read_count");
+        allowedSortFields.put("readCount", "(z.read_count + z.guest_read_count)");
         allowedSortFields.put("downloadCount", "z.download_count");
         allowedSortFields.put("fileSize", "z.file_size");
         allowedSortFields.put("totalPages", "z.total_pages");

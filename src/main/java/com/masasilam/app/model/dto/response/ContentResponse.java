@@ -34,6 +34,7 @@ public class ContentResponse {
     private String difficultyLevel;
     private Integer viewCount;
     private Integer readCount;
+    private Integer guestReadCount;
     private Integer downloadCount;
     private String firstPublished;
     private String firstPublisher;

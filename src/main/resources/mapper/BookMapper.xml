@@ -83,7 +83,8 @@
         INSERT INTO books (
         title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
-        cover_image_url, file_url, file_format, file_size,
+        cover_image_url, back_cover_url, spine_cover_url, front_flap_url,
+        file_url, file_format, file_size,
         total_word, total_pages, estimated_read_time,
         copyright_status_id, view_count, read_count, download_count,
         is_featured, is_active, published_at, category,
@@ -91,7 +92,8 @@
         ) VALUES (
         #{title}, #{slug}, #{subtitle}, #{seriesId}, #{seriesOrder}, #{edition},
         #{publicationYear}, #{publisher}, #{languageId}, #{description},
-        #{coverImageUrl}, #{fileUrl}, #{fileFormat}, #{fileSize},
+        #{coverImageUrl}, #{backCoverUrl}, #{spineCoverUrl}, #{frontFlapUrl},
+        #{fileUrl}, #{fileFormat}, #{fileSize},
         #{totalWord}, #{totalPages}, #{estimatedReadTime},
         #{copyrightStatusId}, #{viewCount}, #{readCount}, #{downloadCount},
         #{isFeatured}, #{isActive}, #{publishedAt}, #{category},
@@ -127,11 +129,13 @@
         SELECT
         id, title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
-        file_url, cover_image_url, source, file_format, file_size,
+        file_url, cover_image_url, back_cover_url, spine_cover_url, front_flap_url,
+        source, file_format, file_size,
         total_pages, total_word, estimated_read_time,
         copyright_status_id, view_count, read_count, download_count,
         is_active, is_featured, published_at, category,
         epub_generated_at, file_url_archive,
+        first_published, first_publisher,
         created_at, updated_at
         FROM books
         WHERE slug = #{slug}
@@ -145,7 +149,8 @@
         SELECT
         id, title, slug, subtitle, series_id, series_order, edition,
         publication_year, publisher, language_id, description,
-        cover_image_url, file_url, file_format, file_size,
+        cover_image_url, back_cover_url, spine_cover_url, front_flap_url,
+        file_url, file_format, file_size,
         total_word, total_pages, estimated_read_time,
         copyright_status_id, view_count, read_count, download_count,
         is_featured, is_active, published_at, category,
@@ -192,6 +197,9 @@
         b.subtitle,
         b.edition,
         b.cover_image_url,
+        b.back_cover_url,
+        b.spine_cover_url,
+        b.front_flap_url,
         b.publisher,
         b.publication_year,
         b.file_url,
@@ -205,6 +213,7 @@
         b.difficulty_level,
         b.view_count,
         b.read_count,
+        b.guest_read_count,
         b.download_count,
         b.series_id,
         b.series_order,
@@ -363,7 +372,7 @@
         NULL::int AS volume, NULL::text AS issue_number, NULL AS collection_name,
         b.cover_image_url, b.publisher, b.publication_year, b.file_url, b.file_format,
         b.file_size, b.total_pages, b.description, b.estimated_read_time, l.name AS language,
-        b.total_word, b.difficulty_level::text AS difficulty_level, b.view_count, b.read_count, b.download_count,
+        b.total_word, b.difficulty_level::text AS difficulty_level, b.view_count, b.read_count, b.guest_read_count, b.download_count,
         b.first_published::text AS first_published, b.first_publisher,
         cs.name AS copyright_status, b.published_at, b.category, b.source,
         b.created_at, b.updated_at, b.is_active, b.is_featured,
@@ -408,7 +417,7 @@
         z.volume, z.issue_number, z.collection_name,
         z.cover_image_url, z.publisher, z.publication_year, z.file_url, z.file_format,
         z.file_size, z.total_pages, z.description, z.estimated_read_time, l.name AS language,
-        z.total_word, z.difficulty_level, z.view_count, z.read_count, z.download_count,
+        z.total_word, z.difficulty_level, z.view_count, z.read_count, 0 AS guest_read_count, z.download_count,
         z.first_published_date::text AS first_published, z.first_publisher,
         cs.name AS copyright_status, z.published_at::timestamp AS published_at, z.category, z.source,
         z.created_at::timestamp AS created_at, z.updated_at::timestamp AS updated_at, z.is_active, z.is_featured,
@@ -548,6 +557,9 @@
         language_id = #{languageId},
         description = #{description},
         cover_image_url = #{coverImageUrl},
+        back_cover_url = #{backCoverUrl},
+        spine_cover_url = #{spineCoverUrl},
+        front_flap_url = #{frontFlapUrl},
         file_format = #{fileFormat},
         file_size = #{fileSize},
         total_word = #{totalWord},
@@ -652,8 +664,8 @@
     </update>
 
     <select id="countUserReadSessions" resultType="int">
-        SELECT COUNT(*) FROM reading_sessions
-        WHERE book_id = #{bookId} AND user_id = #{userId}
+        SELECT COUNT(*) FROM book_views
+        WHERE book_id = #{bookId} AND user_id = #{userId} AND action_type = 'read'
     </select>
 
     <select id="hasActionByHash" resultType="boolean">
@@ -822,4 +834,12 @@
         AND b.is_active = true
     </select>
 
+    <update id="incrementGuestReadCount">
+        UPDATE books SET guest_read_count = guest_read_count + 1 WHERE id = #{bookId}
+    </update>
+
+    <insert id="insertEvent">
+        INSERT INTO book_views (book_id, slug, user_id, viewer_hash, ip_address, user_agent, action_type, viewed_at)
+        VALUES (#{contentId}, #{slug}, #{userId}, #{viewerHash}, #{ipAddress}, #{userAgent}, #{actionType}, NOW())
+    </insert>
 </mapper>

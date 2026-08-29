@@ -17,7 +17,8 @@ public interface BookService {
     DataResponse<BookResponse> createBook(BookRequest request);
     DataResponse<BookResponse> getBookDetailBySlug(String slug, HttpServletRequest request) throws NoSuchAlgorithmException;
     ResponseEntity<?> getDownloadUrl(String slug, HttpServletRequest request);
-    DataResponse<Book> update(Long id, Book book, MultipartFile file) throws IOException;
+    DataResponse<Book> update(Long id, Book book, MultipartFile file, MultipartFile backCoverFile, MultipartFile spineCoverFile, MultipartFile frontFlapFile) throws IOException;
+    DataResponse<Book> getBookForEdit(String slug);
     DefaultResponse delete(Long id) throws IOException;
     DataResponse<List<GenreResponse>> getAllGenres(boolean includeBookCount);
     DatatableResponse<AuthorResponse> getAllAuthors(int page, int limit, String search, String sortBy);
@@ -25,6 +26,6 @@ public interface BookService {
     DatatableResponse<ContentResponse> getPaginatedContent(int page, int limit, String sortField, String sortOrder, ContentSearchCriteria criteria);
     List<Book> getAllBooksForSitemap();
     List<String> getChapterPaths(String slug);
-    DataResponse<BookResponse> updateExistingBook(Book existingBook, MultipartFile newFile, CompleteEpubMetadata epubMeta) throws IOException;
+    DataResponse<BookResponse> updateExistingBook(Book existingBook, BookRequest request, CompleteEpubMetadata epubMeta) throws IOException;
     DatatableResponse<BookResponse> getBooksBySeries(String seriesSlug, int page, int limit);
 }

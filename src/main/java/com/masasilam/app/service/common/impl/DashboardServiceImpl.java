@@ -540,6 +540,7 @@ public class DashboardServiceImpl implements DashboardService {
                     r.setBookTitle(book.getTitle());
                     r.setAuthorName(getBookAuthorName(book.getId()));
                     r.setCoverImageUrl(book.getCoverImageUrl());
+                    r.setSpineCoverUrl(book.getSpineCoverUrl());
                     r.setProgressPercentage(pct);
                     r.setReadingStatus(status);
                     r.setLastReadAt(session.getStartedAt());

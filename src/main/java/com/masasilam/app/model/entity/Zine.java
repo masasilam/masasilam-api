@@ -31,6 +31,7 @@ public class Zine {
     private Long copyrightStatusId;
     private Integer viewCount;
     private Integer readCount;
+    private Integer guestReadCount;
     private Integer downloadCount;
     private Integer totalWord;
     private Integer totalPages;

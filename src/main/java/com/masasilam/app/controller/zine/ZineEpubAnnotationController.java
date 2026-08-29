@@ -6,11 +6,14 @@ import com.masasilam.app.model.dto.request.EpubSessionRequest;
 import com.masasilam.app.model.dto.request.EpubStartReadingRequest;
 import com.masasilam.app.model.dto.response.*;
 import com.masasilam.app.service.book.EpubAnnotationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.NoSuchAlgorithmException;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -56,7 +59,14 @@ public class ZineEpubAnnotationController {
 
     @PostMapping("/reading/start")
     public ResponseEntity<DataResponse<EpubStartReadingResponse>> startReading(@PathVariable String slug,
-                                                                               @Valid @RequestBody EpubStartReadingRequest request) {
-        return ResponseEntity.ok(epubAnnotationService.startReading(slug, request));
+                                                                               @Valid @RequestBody EpubStartReadingRequest request,
+                                                                               HttpServletRequest httpRequest) throws NoSuchAlgorithmException {
+        return ResponseEntity.ok(epubAnnotationService.startReading(slug, request, httpRequest));
+    }
+
+    @GetMapping("/reading/progress")
+    public ResponseEntity<DataResponse<ReadingProgressCheckResponse>> checkProgress(@PathVariable String slug) {
+        DataResponse<ReadingProgressCheckResponse> response = epubAnnotationService.checkProgress(slug);
+        return ResponseEntity.ok(response);
     }
 }

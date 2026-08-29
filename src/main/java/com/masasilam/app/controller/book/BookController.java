@@ -42,6 +42,12 @@ public class BookController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{slug}/edit")
+    public ResponseEntity<DataResponse<Book>> getBookForEdit(@PathVariable String slug) {
+        DataResponse<Book> response = bookService.getBookForEdit(slug);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<DatatableResponse<ContentResponse>> getContentPaginated(
             @RequestParam(defaultValue = "1") @Min(1) int page,
@@ -96,8 +102,11 @@ public class BookController {
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<Book>> updateBook(@RequestParam Long id, @RequestPart("ebook") @Valid Book book,
-                                                         @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
-        DataResponse<Book> response = bookService.update(id, book, file);
+                                                         @RequestPart(value = "file", required = false) MultipartFile file,
+                                                         @RequestPart(value = "backCoverFile", required = false) MultipartFile backCoverFile,
+                                                         @RequestPart(value = "spineCoverFile", required = false) MultipartFile spineCoverFile,
+                                                         @RequestPart(value = "frontFlapFile", required = false) MultipartFile frontFlapFile) throws IOException {
+        DataResponse<Book> response = bookService.update(id, book, file, backCoverFile, spineCoverFile, frontFlapFile);
         return ResponseEntity.ok(response);
     }
 

@@ -22,8 +22,12 @@ public class TrendingServiceImpl implements TrendingService {
     private static final int STORE_LIMIT = 30;
     private static final int PER_CATEGORY_LIMIT = 10;
     private static final double VIEW_WEIGHT = 1.0;
+    private static final double READ_WEIGHT = 5.0;
     private static final double DOWNLOAD_WEIGHT = 3.0;
-    private static final double HALF_LIFE_DAYS = 3.0;
+    private static final double HALF_LIFE_DAYS = 2.0;
+    private static final double QUALITY_MULTIPLIER_MIN = 0.85;
+    private static final double QUALITY_MULTIPLIER_MAX = 1.15;
+    private static final int QUALITY_MIN_RATINGS_FOR_TRUST = 10;
 
     @Override
     public List<TrendingItemResponse> getTrendingByType(String contentType, int limit) {
@@ -47,17 +51,13 @@ public class TrendingServiceImpl implements TrendingService {
         refreshType("ZINE");
         refreshType("FILM");
         refreshType("NEWSPAPER");
-        try {
-            trendingMapper.normalizeScores();
-            log.info("[Trending] Normalized scores across all types");
-        } catch (Exception e) {
-            log.error("[Trending] Failed to normalize scores: {}", e.getMessage(), e);
-        }
     }
 
     private void refreshType(String type) {
         try {
-            refreshExecutor.refreshType(type, WINDOW_DAYS, VIEW_WEIGHT, DOWNLOAD_WEIGHT, HALF_LIFE_DAYS, STORE_LIMIT);
+            refreshExecutor.refreshType(type, WINDOW_DAYS, VIEW_WEIGHT, READ_WEIGHT, DOWNLOAD_WEIGHT,
+                    HALF_LIFE_DAYS, QUALITY_MULTIPLIER_MIN, QUALITY_MULTIPLIER_MAX,
+                    QUALITY_MIN_RATINGS_FOR_TRUST, STORE_LIMIT);
             log.info("[Trending] Refreshed {}", type);
         } catch (Exception e) {
             log.error("[Trending] Failed to refresh {}: {}", type, e.getMessage(), e);

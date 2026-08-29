@@ -366,4 +366,11 @@ public class FileUtil {
         if (word == null || word.isEmpty()) return word;
         return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
+
+    public String uploadBookCoverVariant(MultipartFile file, String bookTitle, String variant) throws IOException {
+        String ext = getFileExtension(file.getOriginalFilename());
+        String filename = variant + "-" + sanitizeFilename(bookTitle) + "." + ext;
+        String remotePath = FOLDER_COVERS + DELIMETER + filename;
+        return vpsStorage.upload(file.getBytes(), remotePath);
+    }
 }

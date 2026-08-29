@@ -1,6 +1,7 @@
 package com.masasilam.app.model.dto.response;
 
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -11,6 +12,9 @@ public class BookResponse {
     private String subtitle;
     private Integer edition;
     private String coverImageUrl;
+    private String backCoverUrl;
+    private String spineCoverUrl;
+    private String frontFlapUrl;
     private String publisher;
     private Integer publicationYear;
     private String fileUrl;
@@ -54,4 +58,5 @@ public class BookResponse {
     private Integer totalComments;
     private Double averageRating;
     private Double totalReactions;
+    private Integer guestReadCount;
 }

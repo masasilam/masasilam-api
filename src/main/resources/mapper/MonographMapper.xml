@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.masasilam.app.mapper.monograph.MonographMapper">
+    <insert id="insertMonograph" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monographs (
+        slug, title, subtitle, newspaper_source_id, edition_date, edition_date_to,
+        editorial_note, colophon, central_question, method_note, cover_image_url,
+        citation_format_template, status, view_count, is_active, created_by
+        ) VALUES (
+        #{slug}, #{title}, #{subtitle}, #{newspaperSourceId}, #{editionDate}, #{editionDateTo},
+        #{editorialNote}, #{colophon}, #{centralQuestion}, #{methodNote}, #{coverImageUrl},
+        #{citationFormatTemplate}, #{status}, #{viewCount}, #{isActive}, #{createdBy}
+        )
+    </insert>
+
+    <update id="updateMonograph">
+        UPDATE monographs SET
+        slug = #{slug}, title = #{title}, subtitle = #{subtitle},
+        newspaper_source_id = #{newspaperSourceId}, edition_date = #{editionDate}, edition_date_to = #{editionDateTo},
+        editorial_note = #{editorialNote}, colophon = #{colophon}, central_question = #{centralQuestion},
+        method_note = #{methodNote}, cover_image_url = #{coverImageUrl},
+        citation_format_template = #{citationFormatTemplate},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateMonographStatus">
+        UPDATE monographs SET status = #{status}, published_at = #{publishedAt}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteMonograph">
+        UPDATE monographs SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <select id="findById" resultType="com.masasilam.app.model.entity.monograph.Monograph">
+        SELECT * FROM monographs WHERE id = #{id}
+    </select>
+
+    <select id="findBySlug" resultType="com.masasilam.app.model.entity.monograph.Monograph">
+        SELECT * FROM monographs WHERE slug = #{slug}
+    </select>
+
+    <select id="existsBySlug" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM monographs WHERE slug = #{slug})
+    </select>
+
+    <select id="existsBySlugExcluding" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM monographs WHERE slug = #{slug} AND id != #{excludeId})
+    </select>
+
+    <select id="getMonographBaseById" resultType="com.masasilam.app.model.dto.monograph.MonographDetailResponse">
+        SELECT
+        m.id, m.slug, m.title, m.subtitle,
+        m.edition_date as editionDate,
+        m.editorial_note as editorialNote,
+        m.colophon,
+        m.central_question as centralQuestion,
+        m.method_note as methodNote,
+        m.cover_image_url as coverImageUrl,
+        m.citation_format_template as citationFormatTemplate,
+        m.status,
+        m.view_count as viewCount,
+        m.newspaper_source_id as newspaperSourceId,
+        ns.name as newspaperSourceName,
+        ns.slug as newspaperSourceSlug
+        FROM monographs m
+        JOIN newspaper_sources ns ON ns.id = m.newspaper_source_id
+        WHERE m.id = #{id} AND m.is_active = true
+    </select>
+
+    <!--
+        BARU: agregat hanya menghitung role yang bernilai konten (5 role, carry_forward
+        sengaja tidak dihitung sebagai word count utama karena isinya adalah sambungan
+        yang sudah/akan dihitung di edisi yang bersangkutan).
+    -->
+    <sql id="monographListAggregates">
+        LEFT JOIN (
+        SELECT me.monograph_id,
+        COUNT(*) as total_articles,
+        COUNT(*) FILTER (WHERE me.role IN ('main_arc','counterpoint','interlude','peripheral')) as in_book_count,
+        COUNT(*) FILTER (WHERE me.role = 'appendix') as appendix_count,
+        SUM(na.word_count) FILTER (WHERE me.role IN ('main_arc','counterpoint','interlude','peripheral','appendix')) as
+        word_count
+        FROM monograph_entries me
+        JOIN newspaper_articles na ON na.id = me.article_id
+        GROUP BY me.monograph_id
+        ) ec ON ec.monograph_id = m.id
+    </sql>
+
+    <select id="getMonographs" resultType="com.masasilam.app.model.dto.monograph.MonographResponse">
+        SELECT
+        m.id, m.slug, m.title, m.subtitle,
+        m.edition_date as editionDate,
+        m.cover_image_url as coverImageUrl,
+        m.status, m.view_count as viewCount, m.published_at as publishedAt,
+        ns.name as newspaperSourceName, ns.slug as newspaperSourceSlug,
+        COALESCE(ec.total_articles, 0) as totalArticles,
+        COALESCE(ec.in_book_count, 0) as inBookCount,
+        COALESCE(ec.appendix_count, 0) as appendixCount,
+        COALESCE(ec.word_count, 0) as wordCount,
+        CEIL(COALESCE(ec.word_count, 0) / 200.0)::int as readingTimeMinutes
+        FROM monographs m
+        JOIN newspaper_sources ns ON ns.id = m.newspaper_source_id
+        <include refid="monographListAggregates"/>
+        WHERE m.is_active = true
+        <choose>
+            <when test="criteria.status == null">AND m.status = 'published'</when>
+            <when test="criteria.status == 'all'"/>
+            <otherwise>AND m.status = #{criteria.status}</otherwise>
+        </choose>
+        <if test="criteria.searchQuery != null and criteria.searchQuery != ''">
+            AND (m.title ILIKE CONCAT('%', #{criteria.searchQuery}, '%')
+            OR m.subtitle ILIKE CONCAT('%', #{criteria.searchQuery}, '%')
+            OR ns.name ILIKE CONCAT('%', #{criteria.searchQuery}, '%'))
+        </if>
+        <if test="criteria.sourceSlug != null and criteria.sourceSlug != ''">AND ns.slug = #{criteria.sourceSlug}</if>
+        <if test="criteria.decade != null">
+            AND EXTRACT(YEAR FROM m.edition_date) BETWEEN #{criteria.decade} AND (#{criteria.decade} + 9)
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sortField == 'title'">m.title</when>
+            <when test="sortField == 'viewCount'">m.view_count</when>
+            <otherwise>m.edition_date</otherwise>
+        </choose>
+        <if test="sortOrder == 'ASC'">ASC</if>
+        <if test="sortOrder == 'DESC'">DESC</if>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMonographs" resultType="int">
+        SELECT COUNT(*)
+        FROM monographs m
+        JOIN newspaper_sources ns ON ns.id = m.newspaper_source_id
+        WHERE m.is_active = true
+        <choose>
+            <when test="criteria.status == null">AND m.status = 'published'</when>
+            <when test="criteria.status == 'all'"/>
+            <otherwise>AND m.status = #{criteria.status}</otherwise>
+        </choose>
+        <if test="criteria.searchQuery != null and criteria.searchQuery != ''">
+            AND (m.title ILIKE CONCAT('%', #{criteria.searchQuery}, '%')
+            OR m.subtitle ILIKE CONCAT('%', #{criteria.searchQuery}, '%')
+            OR ns.name ILIKE CONCAT('%', #{criteria.searchQuery}, '%'))
+        </if>
+        <if test="criteria.sourceSlug != null and criteria.sourceSlug != ''">AND ns.slug = #{criteria.sourceSlug}</if>
+        <if test="criteria.decade != null">
+            AND EXTRACT(YEAR FROM m.edition_date) BETWEEN #{criteria.decade} AND (#{criteria.decade} + 9)
+        </if>
+    </select>
+
+    <select id="getLatestMonographs" resultType="com.masasilam.app.model.dto.monograph.MonographResponse">
+        SELECT
+        m.id, m.slug, m.title, m.subtitle,
+        m.edition_date as editionDate,
+        m.cover_image_url as coverImageUrl,
+        m.status, m.view_count as viewCount, m.published_at as publishedAt,
+        ns.name as newspaperSourceName, ns.slug as newspaperSourceSlug,
+        COALESCE(ec.total_articles, 0) as totalArticles,
+        COALESCE(ec.in_book_count, 0) as inBookCount,
+        COALESCE(ec.appendix_count, 0) as appendixCount,
+        COALESCE(ec.word_count, 0) as wordCount,
+        CEIL(COALESCE(ec.word_count, 0) / 200.0)::int as readingTimeMinutes
+        FROM monographs m
+        JOIN newspaper_sources ns ON ns.id = m.newspaper_source_id
+        <include refid="monographListAggregates"/>
+        WHERE m.is_active = true AND m.status = 'published'
+        ORDER BY m.published_at DESC NULLS LAST, m.edition_date DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getMonographsForSitemap"
+            resultType="com.masasilam.app.model.dto.monograph.MonographSitemapItemResponse">
+        SELECT slug, updated_at as updatedAt FROM monographs
+        WHERE is_active = true AND status = 'published'
+        ORDER BY updated_at DESC
+    </select>
+
+    <insert id="insertChapter" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monograph_chapters (monograph_id, chapter_order, title, narrative_summary)
+        VALUES (#{monographId}, #{chapterOrder}, #{title}, #{narrativeSummary})
+    </insert>
+
+    <delete id="deleteChaptersByMonograph">
+        DELETE FROM monograph_chapters WHERE monograph_id = #{monographId}
+    </delete>
+
+    <select id="getChaptersByMonograph" resultType="com.masasilam.app.model.dto.monograph.MonographChapterResponse">
+        SELECT id, chapter_order as chapterOrder, title, narrative_summary as narrativeSummary
+        FROM monograph_chapters
+        WHERE monograph_id = #{monographId}
+        ORDER BY chapter_order
+    </select>
+
+    <insert id="insertEntry" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monograph_entries (
+        monograph_id, chapter_id, article_id, role, text_status,
+        entry_order, position_label, column_info, editorial_note
+        ) VALUES (
+        #{monographId}, #{chapterId}, #{articleId}, #{role}, #{textStatus},
+        #{entryOrder}, #{positionLabel}, #{columnInfo}, #{editorialNote}
+        )
+    </insert>
+
+    <delete id="deleteEntriesByMonograph">
+        DELETE FROM monograph_entries WHERE monograph_id = #{monographId}
+    </delete>
+
+    <!-- role dipangkas jadi 6: main_arc, counterpoint, interlude, peripheral, appendix, carry_forward -->
+    <select id="getAllEntries" resultType="com.masasilam.app.model.dto.monograph.MonographEntryResponse">
+        SELECT
+        me.article_id as articleId,
+        na.slug as articleSlug,
+        na.title as title,
+        na.subtitle as subtitle,
+        (LEFT(na.content, 220) || CASE WHEN LENGTH(na.content) > 220 THEN '…' ELSE '' END) as leadSnippet,
+        na.page_number as pageNumber,
+        me.column_info as columnInfo,
+        na.publish_date as publishDate,
+        na.word_count as wordCount,
+        na.parent_article_id as parentArticleId,
+        na.article_level as articleLevel,
+        ns.slug as sourceSlug,
+        ns.name as sourceName,
+        me.role as role,
+        me.text_status as textStatus,
+        me.position_label as positionLabel,
+        me.editorial_note as editorialNote,
+        me.entry_order as entryOrder,
+        me.chapter_id as chapterId
+        FROM monograph_entries me
+        JOIN newspaper_articles na ON na.id = me.article_id
+        JOIN newspaper_sources ns ON ns.id = na.source_id
+        WHERE me.monograph_id = #{monographId}
+        ORDER BY
+        CASE me.role
+        WHEN 'main_arc' THEN 1 WHEN 'counterpoint' THEN 2 WHEN 'interlude' THEN 3
+        WHEN 'peripheral' THEN 4 WHEN 'appendix' THEN 5 WHEN 'carry_forward' THEN 6
+        ELSE 7
+        END,
+        me.chapter_id NULLS LAST,
+        me.entry_order
+    </select>
+
+    <insert id="insertCriticalNote" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monograph_critical_notes (monograph_id, note_number, note_text, related_article_id)
+        VALUES (#{monographId}, #{noteNumber}, #{noteText}, #{relatedArticleId})
+    </insert>
+
+    <delete id="deleteCriticalNotesByMonograph">
+        DELETE FROM monograph_critical_notes WHERE monograph_id = #{monographId}
+    </delete>
+
+    <select id="getCriticalNotesByMonograph"
+            resultType="com.masasilam.app.model.dto.monograph.MonographCriticalNoteResponse">
+        SELECT
+        mcn.note_number as number,
+        mcn.note_text as noteText,
+        mcn.related_article_id as relatedArticleId,
+        na.slug as relatedArticleSlug,
+        ns.slug as relatedArticleSourceSlug
+        FROM monograph_critical_notes mcn
+        LEFT JOIN newspaper_articles na ON na.id = mcn.related_article_id
+        LEFT JOIN newspaper_sources ns ON ns.id = na.source_id
+        WHERE mcn.monograph_id = #{monographId}
+        ORDER BY mcn.note_number
+    </select>
+
+    <insert id="insertGlossaryTerm" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monograph_glossary (monograph_id, term, definition, term_order)
+        VALUES (#{monographId}, #{term}, #{definition}, #{termOrder})
+    </insert>
+
+    <delete id="deleteGlossaryByMonograph">
+        DELETE FROM monograph_glossary WHERE monograph_id = #{monographId}
+    </delete>
+
+    <select id="getGlossaryByMonograph" resultType="com.masasilam.app.model.dto.monograph.MonographGlossaryResponse">
+        SELECT term, definition FROM monograph_glossary
+        WHERE monograph_id = #{monographId}
+        ORDER BY term_order, term
+    </select>
+
+    <insert id="insertIndexEntry" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO monograph_index_entries (monograph_id, index_type, label)
+        VALUES (#{monographId}, #{indexType}, #{label})
+    </insert>
+
+    <insert id="insertIndexRef">
+        INSERT INTO monograph_index_refs (index_entry_id, article_id) VALUES (#{indexEntryId}, #{articleId})
+    </insert>
+
+    <delete id="deleteIndexByMonograph">
+        DELETE FROM monograph_index_entries WHERE monograph_id = #{monographId}
+    </delete>
+
+    <select id="getIndexEntriesByType" resultType="com.masasilam.app.model.dto.monograph.MonographIndexEntryRow">
+        SELECT
+        mie.label as label,
+        na.id as articleId,
+        na.slug as articleSlug,
+        ns.slug as sourceSlug,
+        na.title as title
+        FROM monograph_index_entries mie
+        JOIN monograph_index_refs mir ON mir.index_entry_id = mie.id
+        JOIN newspaper_articles na ON na.id = mir.article_id
+        JOIN newspaper_sources ns ON ns.id = na.source_id
+        WHERE mie.monograph_id = #{monographId} AND mie.index_type = #{indexType}
+        ORDER BY mie.label
+    </select>
+
+    <select id="countTotalEntries" resultType="int">
+        SELECT COUNT(*) FROM monograph_entries WHERE monograph_id = #{monographId}
+    </select>
+
+    <select id="countChapters" resultType="int">
+        SELECT COUNT(*) FROM monograph_chapters WHERE monograph_id = #{monographId}
+    </select>
+
+    <select id="countChaptersWithoutEntries" resultType="int">
+        SELECT COUNT(*) FROM monograph_chapters mc
+        WHERE mc.monograph_id = #{monographId}
+        AND NOT EXISTS (SELECT 1 FROM monograph_entries me WHERE me.chapter_id = mc.id)
+    </select>
+
+    <select id="countInactiveEntryArticles" resultType="int">
+        SELECT COUNT(*) FROM monograph_entries me
+        JOIN newspaper_articles na ON na.id = me.article_id
+        WHERE me.monograph_id = #{monographId} AND na.is_active = false
+    </select>
+
+    <select id="hasViewByHash" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM monograph_views WHERE viewer_hash = #{viewerHash})
+    </select>
+
+    <insert id="insertMonographView">
+        INSERT INTO monograph_views (monograph_id, user_id, ip_address, user_agent, viewer_hash)
+        VALUES (#{monographId}, #{userId}, #{ipAddress}, #{userAgent}, #{viewerHash})
+        ON CONFLICT (viewer_hash) DO NOTHING
+    </insert>
+
+    <update id="incrementViewCount">
+        UPDATE monographs SET view_count = view_count + 1 WHERE id = #{monographId}
+    </update>
+
+    <select id="getSourceNameById" resultType="string">
+        SELECT name FROM newspaper_sources WHERE id = #{sourceId}
+    </select>
+
+    <!--
+        BARU: parent_article_id & article_level dipakai scaffold untuk menandai artikel
+        yang merupakan sambungan (cerita bersambung) dari edisi sebelumnya, agar service
+        bisa menyarankan role carry_forward alih-alih main_arc/peripheral/appendix biasa.
+    -->
+    <select id="getArticlesForScaffold" resultType="com.masasilam.app.model.dto.monograph.MonographScaffoldArticle">
+        SELECT
+        na.id as articleId,
+        na.title as title,
+        na.subtitle as subtitle,
+        na.slug as slug,
+        na.page_number as pageNumber,
+        na.word_count as wordCount,
+        na.publish_date as publishDate,
+        na.parent_article_id as parentArticleId,
+        na.article_level as articleLevel
+        FROM newspaper_articles na
+        WHERE na.source_id = #{sourceId}
+        AND na.is_active = true
+        AND na.publish_date BETWEEN #{fromDate} AND #{toDate}
+        ORDER BY na.publish_date, na.page_number, na.id
+    </select>
+
+    <!-- ===== BARU: navigasi antar-edisi (GET /api/monographs/{id}/adjacent) ===== -->
+
+    <select id="getSourceSlugById" resultType="string">
+        SELECT slug FROM newspaper_sources WHERE id = #{sourceId}
+    </select>
+
+    <select id="getPreviousMonograph"
+            resultType="com.masasilam.app.model.dto.monograph.MonographAdjacentResponse$MonographNeighbor">
+        SELECT id, slug, title, edition_date as editionDate, cover_image_url as coverImageUrl
+        FROM monographs
+        WHERE newspaper_source_id = #{sourceId}
+        AND is_active = true AND status = 'published'
+        AND (edition_date &lt; #{editionDate} OR (edition_date = #{editionDate} AND id &lt; #{id}))
+        ORDER BY edition_date DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <select id="getNextMonograph"
+            resultType="com.masasilam.app.model.dto.monograph.MonographAdjacentResponse$MonographNeighbor">
+        SELECT id, slug, title, edition_date as editionDate, cover_image_url as coverImageUrl
+        FROM monographs
+        WHERE newspaper_source_id = #{sourceId}
+        AND is_active = true AND status = 'published'
+        AND (edition_date &gt; #{editionDate} OR (edition_date = #{editionDate} AND id &gt; #{id}))
+        ORDER BY edition_date ASC, id ASC
+        LIMIT 1
+    </select>
+</mapper>

@@ -6,6 +6,9 @@
         DELETE FROM trending_weekly WHERE content_type = #{contentType}
     </delete>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         BOOK: dedup per (viewer, action_type, hari) + sinyal read + kualitas Bayesian
+         ═══════════════════════════════════════════════════════════════ -->
     <insert id="insertBookTrending">
         INSERT INTO trending_weekly
         (content_type, content_id, slug, title, cover_image_url, author_names, description,
@@ -15,160 +18,208 @@
         (SELECT STRING_AGG(a.name, ', ' ORDER BY a.name) FROM book_authors ba
         JOIN authors a ON ba.author_id = a.id WHERE ba.book_id = b.id),
         b.description,
-        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
-        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        agg.view_count, agg.download_count, agg.unique_viewers,
+        agg.raw_score * COALESCE(quality.quality_multiplier, 1.0) AS score,
+        ROW_NUMBER() OVER (ORDER BY agg.raw_score * COALESCE(quality.quality_multiplier, 1.0) DESC, b.id ASC),
         NOW()
         FROM (
         SELECT
         book_id,
         COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
         COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
-        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        COUNT(DISTINCT viewer_key) AS unique_viewers,
         SUM(
         CASE action_type
         WHEN 'download' THEN #{downloadWeight}
-        WHEN 'view' THEN #{viewWeight}
+        WHEN 'read'     THEN #{readWeight}
+        WHEN 'view'     THEN #{viewWeight}
         ELSE 0
         END
-        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - viewed_at)) / (86400.0 * #{halfLifeDays}))
-        ) AS score
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - day_bucket)) / (86400.0 * #{halfLifeDays}))
+        ) AS raw_score
+        FROM (
+        -- Dedup: satu (viewer, action_type, hari) dihitung sekali,
+        -- mencegah refresh berulang menggelembungkan skor
+        SELECT
+        book_id, action_type,
+        COALESCE(user_id::text, viewer_hash) AS viewer_key,
+        date_trunc('day', viewed_at) AS day_bucket
         FROM book_views
         WHERE viewed_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY book_id, action_type, COALESCE(user_id::text, viewer_hash), date_trunc('day', viewed_at)
+        ) deduped
         GROUP BY book_id
         ) agg
         JOIN books b ON b.id = agg.book_id AND b.is_active = true
-        ORDER BY agg.score DESC
+        LEFT JOIN (
+        SELECT
+        br.book_id,
+        -- Bayesian-adjusted rating, dinormalisasi ke multiplier terbatas
+        -- supaya kualitas mempengaruhi urutan tanpa membalik traffic secara ekstrem
+        #{qualityMin} + (#{qualityMax} - #{qualityMin}) * (
+        (COUNT(*) * AVG(br.rating) + #{qualityMinRatings} * 3.5) / (COUNT(*) + #{qualityMinRatings}) / 5.0
+        ) AS quality_multiplier
+        FROM book_ratings br
+        WHERE br.rating IS NOT NULL
+        GROUP BY br.book_id
+        ) quality ON quality.book_id = b.id
+        ORDER BY score DESC
         LIMIT #{limit}
     </insert>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         ZINE: pola identik dengan BOOK
+         ═══════════════════════════════════════════════════════════════ -->
     <insert id="insertZineTrending">
         INSERT INTO trending_weekly
         (content_type, content_id, slug, title, cover_image_url, author_names, description, subtitle,
         view_count, download_count, unique_viewers, score, rank_position, computed_at)
         SELECT
         'ZINE', z.id, z.slug, z.title, z.cover_image_url, z.first_publisher, z.description, z.subtitle,
-        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
-        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        agg.view_count, agg.download_count, agg.unique_viewers,
+        agg.raw_score * COALESCE(quality.quality_multiplier, 1.0) AS score,
+        ROW_NUMBER() OVER (ORDER BY agg.raw_score * COALESCE(quality.quality_multiplier, 1.0) DESC, z.id ASC),
         NOW()
         FROM (
         SELECT
         zine_id,
         COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
         COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
-        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        COUNT(DISTINCT viewer_key) AS unique_viewers,
         SUM(
         CASE action_type
         WHEN 'download' THEN #{downloadWeight}
-        WHEN 'view' THEN #{viewWeight}
+        WHEN 'read'     THEN #{readWeight}
+        WHEN 'view'     THEN #{viewWeight}
         ELSE 0
         END
-        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - created_at)) / (86400.0 * #{halfLifeDays}))
-        ) AS score
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - day_bucket)) / (86400.0 * #{halfLifeDays}))
+        ) AS raw_score
+        FROM (
+        SELECT
+        zine_id, action_type,
+        COALESCE(user_id::text, viewer_hash) AS viewer_key,
+        date_trunc('day', created_at) AS day_bucket
         FROM zine_views
         WHERE created_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY zine_id, action_type, COALESCE(user_id::text, viewer_hash), date_trunc('day', created_at)
+        ) deduped
         GROUP BY zine_id
         ) agg
         JOIN zines z ON z.id = agg.zine_id AND z.is_active = true
-        ORDER BY agg.score DESC
+        LEFT JOIN (
+        SELECT
+        zr.zine_id,
+        #{qualityMin} + (#{qualityMax} - #{qualityMin}) * (
+        (COUNT(*) * AVG(zr.rating) + #{qualityMinRatings} * 3.5) / (COUNT(*) + #{qualityMinRatings}) / 5.0
+        ) AS quality_multiplier
+        FROM zine_ratings zr
+        WHERE zr.rating IS NOT NULL
+        GROUP BY zr.zine_id
+        ) quality ON quality.zine_id = z.id
+        ORDER BY score DESC
         LIMIT #{limit}
     </insert>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         FILM: tidak ada konsep 'read', tidak ada tabel rating per-film yang
+         dikonfirmasi — dedup + tie-breaker saja, tanpa quality multiplier
+         ═══════════════════════════════════════════════════════════════ -->
     <insert id="insertFilmTrending">
         INSERT INTO trending_weekly
         (content_type, content_id, slug, title, cover_image_url, poster_portrait_url, release_year, description,
         view_count, download_count, unique_viewers, score, rank_position, computed_at)
         SELECT
         'FILM', f.id, f.slug, f.judul, f.poster_url, f.poster_portrait_url, f.tahun_rilis, f.deskripsi,
-        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
-        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.raw_score AS score,
+        ROW_NUMBER() OVER (ORDER BY agg.raw_score DESC, f.id ASC),
         NOW()
         FROM (
         SELECT
         film_id,
         COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
         COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
-        COUNT(DISTINCT COALESCE(user_id::text, viewer_hash)) AS unique_viewers,
+        COUNT(DISTINCT viewer_key) AS unique_viewers,
         SUM(
         CASE action_type
         WHEN 'download' THEN #{downloadWeight}
-        WHEN 'view' THEN #{viewWeight}
+        WHEN 'view'     THEN #{viewWeight}
         ELSE 0
         END
-        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - viewed_at)) / (86400.0 * #{halfLifeDays}))
-        ) AS score
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - day_bucket)) / (86400.0 * #{halfLifeDays}))
+        ) AS raw_score
+        FROM (
+        SELECT
+        film_id, action_type,
+        COALESCE(user_id::text, viewer_hash) AS viewer_key,
+        date_trunc('day', viewed_at) AS day_bucket
         FROM film_views
         WHERE viewed_at >= NOW() - (#{days}::text || ' days')::interval
+        GROUP BY film_id, action_type, COALESCE(user_id::text, viewer_hash), date_trunc('day', viewed_at)
+        ) deduped
         GROUP BY film_id
         ) agg
         JOIN film f ON f.id = agg.film_id
-        ORDER BY agg.score DESC
+        ORDER BY score DESC
         LIMIT #{limit}
     </insert>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         NEWSPAPER: tetap per-source (dikonfirmasi by design) — dedup + tie-breaker
+         ═══════════════════════════════════════════════════════════════ -->
     <insert id="insertNewspaperTrending">
         INSERT INTO trending_weekly
         (content_type, content_id, slug, title, cover_image_url,
         view_count, download_count, unique_viewers, score, rank_position, computed_at)
         SELECT
         'NEWSPAPER', ns.id, ns.slug, ns.name, ns.logo_url,
-        agg.view_count, agg.download_count, agg.unique_viewers, agg.score,
-        ROW_NUMBER() OVER (ORDER BY agg.score DESC),
+        agg.view_count, agg.download_count, agg.unique_viewers, agg.raw_score AS score,
+        ROW_NUMBER() OVER (ORDER BY agg.raw_score DESC, ns.id ASC),
         NOW()
         FROM (
         SELECT
-        na.source_id,
-        COUNT(*) FILTER (WHERE av.action_type::text = 'view') AS view_count,
-        COUNT(*) FILTER (WHERE av.action_type::text = 'download') AS download_count,
-        COUNT(DISTINCT COALESCE(av.user_id::text, av.viewer_hash)) AS unique_viewers,
+        source_id,
+        COUNT(*) FILTER (WHERE action_type = 'view') AS view_count,
+        COUNT(*) FILTER (WHERE action_type = 'download') AS download_count,
+        COUNT(DISTINCT viewer_key) AS unique_viewers,
         SUM(
-        CASE av.action_type::text
+        CASE action_type
         WHEN 'download' THEN #{downloadWeight}
-        WHEN 'view' THEN #{viewWeight}
+        WHEN 'view'     THEN #{viewWeight}
         ELSE 0
         END
-        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - av.created_at)) / (86400.0 * #{halfLifeDays}))
-        ) AS score
+        * POWER(2, - EXTRACT(EPOCH FROM (NOW() - day_bucket)) / (86400.0 * #{halfLifeDays}))
+        ) AS raw_score
+        FROM (
+        SELECT
+        na.source_id, av.action_type::text AS action_type,
+        COALESCE(av.user_id::text, av.viewer_hash) AS viewer_key,
+        date_trunc('day', av.created_at) AS day_bucket
         FROM article_views av
         JOIN newspaper_articles na ON na.id = av.article_id AND na.is_active = true
         WHERE av.created_at >= NOW() - (#{days}::text || ' days')::interval
-        GROUP BY na.source_id
+        GROUP BY na.source_id, av.action_type::text, COALESCE(av.user_id::text, av.viewer_hash), date_trunc('day', av.created_at)
+        ) deduped
+        GROUP BY source_id
         ) agg
         JOIN newspaper_sources ns ON ns.id = agg.source_id AND ns.is_active = true
-        ORDER BY agg.score DESC
+        ORDER BY score DESC
         LIMIT #{limit}
     </insert>
 
-    <update id="normalizeScores">
-        UPDATE trending_weekly t
-        SET normalized_score = CASE WHEN m.max_score > 0 THEN t.score / m.max_score ELSE 0 END
-        FROM (
-        SELECT content_type, MAX(score) AS max_score
-        FROM trending_weekly
-        GROUP BY content_type
-        ) m
-        WHERE t.content_type = m.content_type
-    </update>
+    <!-- normalizeScores DIHAPUS:
+         min-max normalization per content_type membuat skor antar kategori
+         yang skalanya jauh berbeda disamaratakan secara artifisial.
+         findTopOverall sekarang mengurutkan skor mentah langsung. -->
 
     <select id="findByType" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
         SELECT
-        content_type AS contentType,
-        content_id AS contentId,
-        slug,
-        title,
-        subtitle,
-        cover_image_url AS coverImageUrl,
-        poster_portrait_url AS posterPortraitUrl,
-        author_names AS authorNames,
-        release_year AS releaseYear,
-        description,
-        source_slug AS sourceSlug,
-        view_count AS viewCount,
-        download_count AS downloadCount,
-        unique_viewers AS uniqueViewers,
-        score,
-        normalized_score AS normalizedScore,
-        rank_position AS rankPosition,
-        computed_at AS computedAt
+        content_type AS contentType, content_id AS contentId, slug, title, subtitle,
+        cover_image_url AS coverImageUrl, poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames, release_year AS releaseYear, description,
+        source_slug AS sourceSlug, view_count AS viewCount, download_count AS downloadCount,
+        unique_viewers AS uniqueViewers, score, normalized_score AS normalizedScore,
+        rank_position AS rankPosition, computed_at AS computedAt
         FROM trending_weekly
         WHERE content_type = #{contentType}
         ORDER BY rank_position ASC
@@ -177,51 +228,29 @@
 
     <select id="findAll" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
         SELECT
-        content_type AS contentType,
-        content_id AS contentId,
-        slug,
-        title,
-        subtitle,
-        cover_image_url AS coverImageUrl,
-        poster_portrait_url AS posterPortraitUrl,
-        author_names AS authorNames,
-        release_year AS releaseYear,
-        description,
-        source_slug AS sourceSlug,
-        view_count AS viewCount,
-        download_count AS downloadCount,
-        unique_viewers AS uniqueViewers,
-        score,
-        normalized_score AS normalizedScore,
-        rank_position AS rankPosition,
-        computed_at AS computedAt
+        content_type AS contentType, content_id AS contentId, slug, title, subtitle,
+        cover_image_url AS coverImageUrl, poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames, release_year AS releaseYear, description,
+        source_slug AS sourceSlug, view_count AS viewCount, download_count AS downloadCount,
+        unique_viewers AS uniqueViewers, score, normalized_score AS normalizedScore,
+        rank_position AS rankPosition, computed_at AS computedAt
         FROM trending_weekly
         WHERE rank_position &lt;= #{limitPerType}
         ORDER BY content_type ASC, rank_position ASC
     </select>
 
+    <!-- findTopOverall: skor absolut lintas kategori (opsi 4a) — jujur
+         merepresentasikan popularitas riil, bukan disamaratakan per kategori -->
     <select id="findTopOverall" resultType="com.masasilam.app.model.dto.response.TrendingItemResponse">
         SELECT
-        content_type AS contentType,
-        content_id AS contentId,
-        slug,
-        title,
-        subtitle,
-        cover_image_url AS coverImageUrl,
-        poster_portrait_url AS posterPortraitUrl,
-        author_names AS authorNames,
-        release_year AS releaseYear,
-        description,
-        source_slug AS sourceSlug,
-        view_count AS viewCount,
-        download_count AS downloadCount,
-        unique_viewers AS uniqueViewers,
-        score,
-        normalized_score AS normalizedScore,
-        rank_position AS rankPosition,
-        computed_at AS computedAt
+        content_type AS contentType, content_id AS contentId, slug, title, subtitle,
+        cover_image_url AS coverImageUrl, poster_portrait_url AS posterPortraitUrl,
+        author_names AS authorNames, release_year AS releaseYear, description,
+        source_slug AS sourceSlug, view_count AS viewCount, download_count AS downloadCount,
+        unique_viewers AS uniqueViewers, score, normalized_score AS normalizedScore,
+        rank_position AS rankPosition, computed_at AS computedAt
         FROM trending_weekly
-        ORDER BY normalized_score DESC, score DESC
+        ORDER BY score DESC, content_id ASC
         LIMIT #{limit}
     </select>
 </mapper>
